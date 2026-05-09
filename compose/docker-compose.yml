@@ -47,11 +47,14 @@ services:
     labels:
       caddy: pmndigital.co, www.pmndigital.co
       caddy.encode: zstd gzip
-      caddy.@api.path: /api/*
-      caddy.0_reverse_proxy: "@api backend:3001"
+      caddy.@nextauth.path: /api/auth/*
+      caddy.0_reverse_proxy: "@nextauth {{upstreams 3000}}"
       caddy.0_reverse_proxy.import: upstream-tuned
-      caddy.1_reverse_proxy: "{{upstreams 3000}}"
+      caddy.@api.path: /api/*
+      caddy.1_reverse_proxy: "@api backend:3001"
       caddy.1_reverse_proxy.import: upstream-tuned
+      caddy.2_reverse_proxy: "{{upstreams 3000}}"
+      caddy.2_reverse_proxy.import: upstream-tuned
       caddy.request_body.max_size: 20MB
 
 networks:
