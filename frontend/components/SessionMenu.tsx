@@ -28,9 +28,12 @@ export function SessionMenu() {
 
   return (
     <div className="flex items-center gap-3">
-      <span className="text-[10px] font-semibold uppercase tracking-[0.25em] text-blue-200/80">
+      <Link
+        href="/profile/general"
+        className="text-[10px] font-semibold uppercase tracking-[0.25em] text-blue-200/80 transition hover:text-blue-100"
+      >
         {session.user.name ?? session.user.email}
-      </span>
+      </Link>
       <button
         onClick={() => void signOut({ callbackUrl: "/" })}
         className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.25em] text-slate-300 backdrop-blur-md transition hover:border-rose-400/30 hover:bg-rose-500/[0.06] hover:text-rose-200"

@@ -32,6 +32,17 @@ function LoginForm() {
     setLoading(false);
 
     if (!result || result.error) {
+      // NextAuth surfaces our backend error code via result.code
+      const errCode = (result as { code?: string } | null)?.code;
+      if (errCode === "TWO_FACTOR_REQUIRED") {
+        const url = new URL("/login/2fa", window.location.origin);
+        url.searchParams.set("email", email);
+        url.searchParams.set("callbackUrl", callbackUrl);
+        // Stash password in sessionStorage so the 2FA page can retry signIn
+        sessionStorage.setItem("pmn_login_pending_pw", password);
+        router.push(url.pathname + url.search);
+        return;
+      }
       setError("Invalid email or password");
       return;
     }
