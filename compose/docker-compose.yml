@@ -8,9 +8,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      # Absolute path so compose works the same whether deployed by Komodo
-      # files-on-host mode (compose at /opt/docker/main-pmndigital/) or
-      # git mode (Komodo clones repo to its own dir).
       - /opt/docker/main-pmndigital/db:/var/lib/postgresql/data
     networks: [app-net]
     healthcheck:
@@ -28,6 +25,14 @@ services:
       PORT: '3001'
       DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      UPLOADS_DIR: /app/uploads
+      ERP_PMN_URL: ${ERP_PMN_URL:-http://erp-pmn-app:3000}
+      ERP_PMN_API_USER: ${ERP_PMN_API_USER:-}
+      ERP_PMN_API_PASSWORD: ${ERP_PMN_API_PASSWORD:-}
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
+    volumes:
+      - /opt/docker/main-pmndigital/uploads:/app/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -45,6 +50,10 @@ services:
       BACKEND_URL: http://backend:3001
       NEXTAUTH_URL: ${NEXTAUTH_URL}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+    volumes:
+      # Read-only mount: frontend serves /uploads via Next.js public assets fallback,
+      # but actual writes happen on backend container.
+      - /opt/docker/main-pmndigital/uploads:/app/public/uploads:ro
     depends_on: [backend]
     networks: [app-net, proxy-net]
     labels:
@@ -53,11 +62,14 @@ services:
       caddy.@nextauth.path: /api/auth/*
       caddy.0_reverse_proxy: "@nextauth {{upstreams 3000}}"
       caddy.0_reverse_proxy.import: upstream-tuned
-      caddy.@api.path: /api/*
-      caddy.1_reverse_proxy: "@api backend:3001"
+      caddy.@uploads.path: /uploads/*
+      caddy.1_reverse_proxy: "@uploads backend:3001"
       caddy.1_reverse_proxy.import: upstream-tuned
-      caddy.2_reverse_proxy: "{{upstreams 3000}}"
+      caddy.@api.path: /api/*
+      caddy.2_reverse_proxy: "@api backend:3001"
       caddy.2_reverse_proxy.import: upstream-tuned
+      caddy.3_reverse_proxy: "{{upstreams 3000}}"
+      caddy.3_reverse_proxy.import: upstream-tuned
       caddy.request_body.max_size: 20MB
 
 networks:
