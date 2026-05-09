@@ -92,4 +92,22 @@ export class UsersController {
     const id = userIdFromHeaders(req);
     return { user: await this.users.deleteAvatar(id, auditContext(req)) };
   }
+
+  @Get('me/orders')
+  async myOrders(@Req() req: Request) {
+    const id = userIdFromHeaders(req);
+    return { items: await this.users.getOrders(id) };
+  }
+
+  @Get('me/products')
+  async myProducts(@Req() req: Request) {
+    const id = userIdFromHeaders(req);
+    return { items: await this.users.getProducts(id) };
+  }
+
+  @Get('me/licenses')
+  async myLicenses(@Req() req: Request) {
+    const id = userIdFromHeaders(req);
+    return { items: await this.users.getLicenses(id) };
+  }
 }

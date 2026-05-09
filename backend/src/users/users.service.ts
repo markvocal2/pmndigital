@@ -14,6 +14,12 @@ import { User } from './user.entity';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { AuditService } from '../audit/audit.service';
+import {
+  ErpService,
+  ErpLicense,
+  ErpOrder,
+  ErpProduct,
+} from '../erp/erp.service';
 
 const UPLOADS_DIR = process.env.UPLOADS_DIR ?? '/app/uploads';
 const AVATAR_MIME = ['image/jpeg', 'image/png', 'image/webp'];
@@ -30,6 +36,7 @@ export class UsersService {
     @InjectRepository(User)
     private readonly users: Repository<User>,
     private readonly audit: AuditService,
+    private readonly erp: ErpService,
   ) {}
 
   static toSafe(user: User): SafeUser {
@@ -46,7 +53,7 @@ export class UsersService {
       erpSyncedAt: user.erpSyncedAt,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
-    } as SafeUser;
+    };
   }
 
   async findById(id: number): Promise<User> {
@@ -178,5 +185,50 @@ export class UsersService {
       });
     }
     return UsersService.toSafe(user);
+  }
+
+  async ensureErpSync(id: number): Promise<number | null> {
+    const user = await this.findById(id);
+    if (user.erpCustomerId) return user.erpCustomerId;
+    if (!this.erp.isConfigured()) return null;
+    const customer = await this.erp.syncCustomer({
+      userId: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      displayName: user.displayName,
+    });
+    if (!customer) {
+      await this.audit.log('erp_sync_failed', {
+        userId: id,
+        metadata: { reason: 'no_response_from_erp' },
+      });
+      return null;
+    }
+    user.erpCustomerId = customer.id;
+    user.erpSyncedAt = new Date();
+    await this.users.save(user);
+    await this.audit.log('erp_sync_success', {
+      userId: id,
+      metadata: { erpCustomerId: customer.id },
+    });
+    return customer.id;
+  }
+
+  async getOrders(id: number): Promise<ErpOrder[]> {
+    const customerId = await this.ensureErpSync(id);
+    return this.erp.getCustomerOrders(customerId);
+  }
+
+  async getProducts(id: number): Promise<ErpProduct[]> {
+    // id is currently unused (no per-user filtering yet) but kept for the
+    // future: products filtered by customer tier / org / region.
+    void id;
+    return this.erp.getProducts();
+  }
+
+  async getLicenses(id: number): Promise<ErpLicense[]> {
+    const customerId = await this.ensureErpSync(id);
+    return this.erp.getCustomerLicenses(customerId);
   }
 }

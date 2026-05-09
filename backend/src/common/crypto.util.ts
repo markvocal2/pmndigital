@@ -44,5 +44,7 @@ export function decrypt(payload: string, masterSecret: string): string {
   const key = deriveKey(masterSecret);
   const decipher = createDecipheriv(ALG, key, iv);
   decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(ct), decipher.final()]).toString('utf8');
+  return Buffer.concat([decipher.update(ct), decipher.final()]).toString(
+    'utf8',
+  );
 }

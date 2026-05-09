@@ -22,13 +22,14 @@ export class AuditService {
     } = {},
   ): Promise<void> {
     try {
-      await this.logs.insert({
+      const entry = this.logs.create({
         event,
         userId: options.userId ?? null,
         ip: options.ip ?? null,
         userAgent: options.userAgent ?? null,
         metadata: options.metadata ?? null,
       });
+      await this.logs.save(entry);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       this.logger.warn(`audit log insert failed for ${event}: ${msg}`);
