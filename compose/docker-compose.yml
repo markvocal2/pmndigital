@@ -8,7 +8,10 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - ./db:/var/lib/postgresql/data
+      # Absolute path so compose works the same whether deployed by Komodo
+      # files-on-host mode (compose at /opt/docker/main-pmndigital/) or
+      # git mode (Komodo clones repo to its own dir).
+      - /opt/docker/main-pmndigital/db:/var/lib/postgresql/data
     networks: [app-net]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
