@@ -47,3 +47,4 @@ Push to `main` → GitHub Actions handles everything. Rollback = edit `BACKEND_T
 
 Runtime secrets live in `/opt/docker/main-pmndigital/.env` on the VPS (gitignored, root-owned, 600).
 Never commit `.env` or hardcode credentials in `compose/docker-compose.yml`.
+<!-- pipeline verified 2026-05-09T04:09:27Z -->
