@@ -1,0 +1,62 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: main-pmndigital-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./db:/var/lib/postgresql/data
+    networks: [app-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  backend:
+    image: ghcr.io/markvocal2/pmndigital-backend:${BACKEND_TAG:-latest}
+    container_name: main-pmndigital-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: '3001'
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [app-net, proxy-net]
+
+  frontend:
+    image: ghcr.io/markvocal2/pmndigital-frontend:${FRONTEND_TAG:-latest}
+    container_name: main-pmndigital-app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: '3000'
+      DATABASE_URL: ${DATABASE_URL}
+      BACKEND_URL: http://backend:3001
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+    depends_on: [backend]
+    networks: [app-net, proxy-net]
+    labels:
+      caddy: pmndigital.co, www.pmndigital.co
+      caddy.encode: zstd gzip
+      caddy.@api.path: /api/*
+      caddy.0_reverse_proxy: "@api backend:3001"
+      caddy.0_reverse_proxy.import: upstream-tuned
+      caddy.1_reverse_proxy: "{{upstreams 3000}}"
+      caddy.1_reverse_proxy.import: upstream-tuned
+      caddy.request_body.max_size: 20MB
+
+networks:
+  app-net:
+    driver: bridge
+  proxy-net:
+    external: true
+    name: proxy-net

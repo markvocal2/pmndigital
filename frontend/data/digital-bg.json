@@ -1,0 +1,29 @@
+{
+  "$comment": "Lightweight JSON-driven animation config — particles + grid + pulse rings",
+  "grid": {
+    "size": 60,
+    "color": "#3b82f6",
+    "opacity": 0.07
+  },
+  "rings": {
+    "count": 4,
+    "duration": 6,
+    "delayStep": 1.5,
+    "color": "#3b82f6",
+    "originalRadius": 40
+  },
+  "particles": [
+    { "x": 8,  "y": 18, "size": 1.5, "delay": 0,   "duration": 9,  "color": "#60a5fa" },
+    { "x": 22, "y": 65, "size": 2,   "delay": 1.4, "duration": 11, "color": "#3b82f6" },
+    { "x": 35, "y": 32, "size": 1,   "delay": 0.6, "duration": 8,  "color": "#06b6d4" },
+    { "x": 47, "y": 85, "size": 1.8, "delay": 2.1, "duration": 12, "color": "#60a5fa" },
+    { "x": 58, "y": 14, "size": 1.2, "delay": 0.9, "duration": 10, "color": "#3b82f6" },
+    { "x": 68, "y": 55, "size": 2.2, "delay": 1.8, "duration": 14, "color": "#06b6d4" },
+    { "x": 75, "y": 25, "size": 1,   "delay": 0.3, "duration": 9,  "color": "#60a5fa" },
+    { "x": 82, "y": 78, "size": 1.6, "delay": 2.5, "duration": 11, "color": "#3b82f6" },
+    { "x": 92, "y": 40, "size": 1.4, "delay": 1.1, "duration": 13, "color": "#60a5fa" },
+    { "x": 14, "y": 92, "size": 1.2, "delay": 3.2, "duration": 10, "color": "#06b6d4" },
+    { "x": 88, "y": 8,  "size": 1.8, "delay": 0.4, "duration": 12, "color": "#3b82f6" },
+    { "x": 30, "y": 50, "size": 1,   "delay": 2.8, "duration": 9,  "color": "#60a5fa" }
+  ]
+}
