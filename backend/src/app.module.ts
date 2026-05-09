@@ -4,6 +4,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
+import { ErpModule } from './erp/erp.module';
+import { PaymentsModule } from './payments/payments.module';
+import { AuditModule } from './audit/audit.module';
 
 @Module({
   imports: [
@@ -15,7 +19,11 @@ import { AuthModule } from './auth/auth.module';
       synchronize: false,
       migrationsRun: false,
     }),
+    AuditModule,
+    ErpModule,
     AuthModule,
+    UsersModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

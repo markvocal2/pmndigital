@@ -1,29 +1,48 @@
-import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
+import NextAuth, { CredentialsSignin } from 'next-auth';
+import Credentials from 'next-auth/providers/credentials';
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://backend:3001";
+const BACKEND_URL = process.env.BACKEND_URL ?? 'http://backend:3001';
+
+class TwoFactorRequiredError extends CredentialsSignin {
+  code = 'TWO_FACTOR_REQUIRED';
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
   providers: [
     Credentials({
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
+        twoFactorCode: { label: '2FA Code', type: 'text' },
       },
       authorize: async (credentials) => {
         const email = credentials?.email;
         const password = credentials?.password;
-        if (typeof email !== "string" || typeof password !== "string") {
+        const twoFactorCode = credentials?.twoFactorCode;
+        if (typeof email !== 'string' || typeof password !== 'string') {
           return null;
         }
         try {
+          const body: Record<string, string> = { email, password };
+          if (typeof twoFactorCode === 'string' && twoFactorCode.length > 0) {
+            body.twoFactorCode = twoFactorCode;
+          }
           const res = await fetch(`${BACKEND_URL}/api/auth/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password }),
-            cache: "no-store",
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            cache: 'no-store',
           });
+          if (res.status === 401) {
+            const json = (await res.json().catch(() => ({}))) as {
+              code?: string;
+            };
+            if (json.code === 'TWO_FACTOR_REQUIRED') {
+              throw new TwoFactorRequiredError();
+            }
+            return null;
+          }
           if (!res.ok) return null;
           const data = (await res.json()) as {
             user: { id: number; email: string; name: string | null };
@@ -33,14 +52,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             email: data.user.email,
             name: data.user.name ?? null,
           };
-        } catch {
+        } catch (e) {
+          if (e instanceof TwoFactorRequiredError) throw e;
           return null;
         }
       },
     }),
   ],
-  pages: { signIn: "/login" },
-  session: { strategy: "jwt" },
+  pages: { signIn: '/login' },
+  session: { strategy: 'jwt' },
   callbacks: {
     jwt({ token, user }) {
       if (user) {
@@ -49,7 +69,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return token;
     },
     session({ session, token }) {
-      if (session.user && typeof token.id === "string") {
+      if (session.user && typeof token.id === 'string') {
         session.user.id = token.id;
       }
       return session;
@@ -57,7 +77,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
 });
 
-declare module "next-auth" {
+declare module 'next-auth' {
   interface Session {
     user: {
       id: string;
