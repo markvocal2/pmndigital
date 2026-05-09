@@ -9,8 +9,44 @@ datasource db {
 model User {
   id           Int      @id @default(autoincrement())
   email        String   @unique
-  name         String?
   passwordHash String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt @default(now())
+
+  // Profile
+  firstName   String?
+  lastName    String?
+  displayName String?
+  name        String? // legacy field, deprecate later
+  avatarUrl   String? // /uploads/avatars/<id>-<hash>.<ext>
+
+  // 2FA (TOTP)
+  twoFactorEnabled     Boolean @default(false)
+  twoFactorSecret      String? // base32 secret, AES-256-GCM encrypted at rest
+  twoFactorBackupCodes Json? // array of {hash: bcrypt(code), used: boolean}
+
+  // ERP linkage
+  erpCustomerId Int?
+  erpSyncedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+
+  auditLogs AuthAuditLog[]
+
+  @@index([erpCustomerId])
+}
+
+// Audit log for security-sensitive actions
+model AuthAuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  event     String // login_success, login_failed, password_changed, 2fa_enabled, 2fa_disabled, 2fa_failed, 2fa_succeeded, profile_updated, avatar_updated
+  ip        String?
+  userAgent String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([event, createdAt])
 }
