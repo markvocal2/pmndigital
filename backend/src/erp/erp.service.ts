@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 
 const ERP_PMN_URL = process.env.ERP_PMN_URL ?? 'http://erp-pmn-app:3000';
+const ERP_PUBLIC_HOST = process.env.ERP_PMN_PUBLIC_HOST ?? 'erp.pmndigital.co';
 const ERP_USER = process.env.ERP_PMN_API_USER ?? '';
 const ERP_PASS = process.env.ERP_PMN_API_PASSWORD ?? '';
 
@@ -75,6 +76,33 @@ export class ErpService implements OnModuleInit {
   }
 
   /**
+   * Combine an array of `Set-Cookie` header values into a Cookie request
+   * header, deduplicating by name and keeping the LAST occurrence.
+   * NextAuth occasionally rotates the csrf-token in the same response (sets
+   * it twice). The body returns the rotated value, so the request must send
+   * the rotated cookie — keeping the FIRST cookie causes MissingCSRF.
+   */
+  private static buildCookieHeader(rawCookies: string[]): string {
+    const map = new Map<string, string>();
+    for (const c of rawCookies) {
+      const nameValue = c.split(';')[0];
+      const eq = nameValue.indexOf('=');
+      if (eq < 0) continue;
+      const name = nameValue.slice(0, eq);
+      map.set(name, nameValue);
+    }
+    return Array.from(map.values()).join('; ');
+  }
+
+  // Headers required so erp-pmn's NextAuth treats this internal request as
+  // coming from the canonical public host (matches NEXTAUTH_URL). Without
+  // these the cookie origin check + Secure-prefix logic fails.
+  private static readonly forwardHeaders = {
+    'X-Forwarded-Proto': 'https',
+    'X-Forwarded-Host': ERP_PUBLIC_HOST,
+  } as const;
+
+  /**
    * Hit erp-pmn /api/auth/csrf then /api/auth/callback/credentials to obtain
    * a NextAuth session cookie. Returns the Cookie header value or null.
    */
@@ -83,15 +111,17 @@ export class ErpService implements OnModuleInit {
     try {
       const csrfRes = await fetch(`${ERP_PMN_URL}/api/auth/csrf`, {
         cache: 'no-store',
+        headers: ErpService.forwardHeaders,
       });
       if (!csrfRes.ok) {
         this.logger.warn(`erp csrf failed (HTTP ${csrfRes.status})`);
         return null;
       }
-      const csrfCookies = csrfRes.headers.get('set-cookie') ?? '';
+      const csrfCookieArr = csrfRes.headers.getSetCookie?.() ?? [];
       const csrfBody = (await csrfRes.json()) as { csrfToken?: string };
       const csrfToken = csrfBody.csrfToken;
       if (!csrfToken) return null;
+      const csrfCookieHeader = ErpService.buildCookieHeader(csrfCookieArr);
 
       const form = new URLSearchParams();
       form.set('csrfToken', csrfToken);
@@ -105,8 +135,9 @@ export class ErpService implements OnModuleInit {
         {
           method: 'POST',
           headers: {
+            ...ErpService.forwardHeaders,
             'Content-Type': 'application/x-www-form-urlencoded',
-            cookie: csrfCookies,
+            cookie: csrfCookieHeader,
           },
           body: form.toString(),
           redirect: 'manual',
@@ -114,16 +145,20 @@ export class ErpService implements OnModuleInit {
         },
       );
 
-      const setCookie = loginRes.headers.get('set-cookie');
-      if (!setCookie) {
+      const allCookies = [
+        ...csrfCookieArr,
+        ...(loginRes.headers.getSetCookie?.() ?? []),
+      ];
+      if (allCookies.length === 0) {
         this.logger.warn('erp login: no set-cookie header in response');
         return null;
       }
-      // Combine the relevant cookies into a single Cookie header value
-      return setCookie
-        .split(/, (?=[A-Za-z0-9_-]+=)/)
-        .map((c) => c.split(';')[0])
-        .join('; ');
+      const location = loginRes.headers.get('location') ?? '';
+      if (location.includes('error=')) {
+        this.logger.warn(`erp login refused: ${location}`);
+        return null;
+      }
+      return ErpService.buildCookieHeader(allCookies);
     } catch (e) {
       this.logger.warn(
         `erp login error: ${e instanceof Error ? e.message : String(e)}`,
@@ -153,6 +188,7 @@ export class ErpService implements OnModuleInit {
       return fetch(url, {
         method,
         headers: {
+          ...ErpService.forwardHeaders,
           'Content-Type': 'application/json',
           cookie: cookieHeader,
         },
@@ -181,28 +217,18 @@ export class ErpService implements OnModuleInit {
     lastName?: string | null;
     displayName?: string | null;
   }): Promise<ErpCustomer | null> {
-    // erp-pmn doesn't yet have /api/customers/sync. Try GET-by-email then PATCH/POST.
     const externalId = `pmn-${input.userId}`;
-    const search = await this.request<{ items: ErpCustomer[] }>(
-      'GET',
-      `/api/customers?search=${encodeURIComponent(input.email)}`,
-    );
-    const existing = search?.items?.find((c) => c.email === input.email);
-    if (existing) {
-      return existing;
-    }
-    // Fall back to creating a new Customer (org type) — best effort.
-    const created = await this.request<ErpCustomer>('POST', '/api/customers', {
-      type: 'INDIVIDUAL',
-      name:
-        input.displayName ??
-        [input.firstName, input.lastName].filter(Boolean).join(' ') ??
-        input.email,
-      email: input.email,
+    const name =
+      input.displayName ||
+      [input.firstName, input.lastName].filter(Boolean).join(' ') ||
+      input.email;
+    return this.request<ErpCustomer>('PUT', '/api/customers/sync', {
       externalId,
       externalSource: 'pmndigital',
+      type: 'INDIVIDUAL',
+      name,
+      email: input.email,
     });
-    return created;
   }
 
   async getCustomerOrders(customerId: number | null): Promise<ErpOrder[]> {
@@ -224,11 +250,9 @@ export class ErpService implements OnModuleInit {
 
   async getCustomerLicenses(customerId: number | null): Promise<ErpLicense[]> {
     if (!customerId) return [];
-    // The /api/licenses endpoint will be added in a future erp-pmn PR.
-    // Until then we return an empty array so the products page renders cleanly.
     const data = await this.request<{ items: ErpLicense[] }>(
       'GET',
-      `/api/licenses?customerId=${customerId}`,
+      `/api/customers/${customerId}/licenses`,
     );
     return data?.items ?? [];
   }
