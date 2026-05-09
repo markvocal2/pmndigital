@@ -16,7 +16,16 @@ describe('AppController', () => {
 
   describe('root', () => {
     it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+      expect(appController.hello()).toBe('Hello World!');
+    });
+  });
+
+  describe('health', () => {
+    it('should return ok status', () => {
+      const result = appController.health();
+      expect(result.status).toBe('ok');
+      expect(result.service).toBe('main-pmndigital-backend');
+      expect(result.ts).toBeDefined();
     });
   });
 });
