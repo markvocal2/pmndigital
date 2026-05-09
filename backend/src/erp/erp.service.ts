@@ -207,7 +207,20 @@ export class ErpService implements OnModuleInit {
       this.logger.warn(`erp ${method} ${pathname} → HTTP ${res.status}`);
       return null;
     }
-    return (await res.json()) as T;
+    // erp-pmn lib/api.ts wraps every response as {ok: true, data: ...} or
+    // {ok: false, error: {...}}. Unwrap so callers get the entity directly.
+    const wrapped = (await res.json()) as {
+      ok?: boolean;
+      data?: T;
+      error?: { code?: string; message?: string };
+    };
+    if (wrapped && wrapped.ok === false) {
+      this.logger.warn(
+        `erp ${method} ${pathname} → ok=false ${wrapped.error?.message ?? ''}`,
+      );
+      return null;
+    }
+    return wrapped?.data ?? null;
   }
 
   async syncCustomer(input: {
