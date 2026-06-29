@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { Article, ArticleCategory } from '@/lib/cms';
-import { isVideoUrl } from '@/lib/cms';
+import { MediaImg } from '@/components/ui/Skeleton';
 import { fetchArticles } from '@/lib/blog-client';
 
 const PAGE_SIZE = 20;
@@ -112,8 +112,21 @@ export function BlogList({
         </div>
       </div>
 
-      {items.length === 0 ? (
-        <p className="py-16 text-center text-slate-500">{busy ? 'กำลังโหลด…' : 'ยังไม่มีบทความในหมวดนี้'}</p>
+      {items.length === 0 && busy ? (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
+              <div className="pmn-skel aspect-[16/10]" />
+              <div className="space-y-2 p-5">
+                <div className="pmn-skel h-4 w-3/4" />
+                <div className="pmn-skel h-3 w-full" />
+                <div className="pmn-skel h-3 w-1/3" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : items.length === 0 ? (
+        <p className="py-16 text-center text-slate-500">ยังไม่มีบทความในหมวดนี้</p>
       ) : (
         <div className={`grid gap-6 sm:grid-cols-2 lg:grid-cols-3 ${busy ? 'opacity-60 transition' : ''}`}>
           {items.map((a) => (
@@ -124,12 +137,7 @@ export function BlogList({
             >
               <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-[#10203f] to-[#0a1426]">
                 {a.coverImageUrl ? (
-                  isVideoUrl(a.coverImageUrl) ? (
-                    <video src={a.coverImageUrl} muted loop playsInline preload="metadata" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-                  ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={a.coverImageUrl} alt={a.title} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-                  )
+                  <MediaImg src={a.coverImageUrl} alt={a.title} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
                 ) : (
                   <div className="grid h-full place-items-center font-mono text-3xl font-bold text-blue-400/30">{a.title.slice(0, 1)}</div>
                 )}

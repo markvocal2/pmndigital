@@ -61,6 +61,17 @@ export function Comments({ slug }: { slug: string }) {
       </h2>
 
       <div className="space-y-5">
+        {!loaded &&
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex gap-3.5">
+              <span className="pmn-skel h-10 w-10 shrink-0 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <span className="pmn-skel h-3 w-32" />
+                <span className="pmn-skel h-3 w-full" />
+                <span className="pmn-skel h-3 w-2/3" />
+              </div>
+            </div>
+          ))}
         {loaded && list.length === 0 && (
           <p className="text-sm text-slate-500">ยังไม่มีความคิดเห็น — เป็นคนแรกที่ร่วมแสดงความคิดเห็น</p>
         )}
