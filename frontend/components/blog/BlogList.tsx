@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { Article, ArticleCategory } from '@/lib/cms';
+import { isVideoUrl } from '@/lib/cms';
 import { fetchArticles } from '@/lib/blog-client';
 
 const PAGE_SIZE = 20;
@@ -123,8 +124,12 @@ export function BlogList({
             >
               <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-[#10203f] to-[#0a1426]">
                 {a.coverImageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={a.coverImageUrl} alt={a.title} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                  isVideoUrl(a.coverImageUrl) ? (
+                    <video src={a.coverImageUrl} muted loop playsInline preload="metadata" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={a.coverImageUrl} alt={a.title} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                  )
                 ) : (
                   <div className="grid h-full place-items-center font-mono text-3xl font-bold text-blue-400/30">{a.title.slice(0, 1)}</div>
                 )}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type CSSProperties } from 'react';
 import type { Article } from '@/lib/cms';
+import { isVideoUrl } from '@/lib/cms';
 
 const MONO = "'IBM Plex Mono', monospace";
 
@@ -42,12 +43,23 @@ function ArticleCard({ a }: { a: Article }) {
     >
       <div style={{ position: 'relative', aspectRatio: '16 / 10', overflow: 'hidden', background: 'linear-gradient(135deg,#10203f,#0a1426)' }}>
         {a.coverImageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={a.coverImageUrl}
-            alt={a.title}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', transform: hover ? 'scale(1.06)' : 'none', transition: 'transform .5s' }}
-          />
+          isVideoUrl(a.coverImageUrl) ? (
+            <video
+              src={a.coverImageUrl}
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              style={{ width: '100%', height: '100%', objectFit: 'cover', transform: hover ? 'scale(1.06)' : 'none', transition: 'transform .5s' }}
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={a.coverImageUrl}
+              alt={a.title}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', transform: hover ? 'scale(1.06)' : 'none', transition: 'transform .5s' }}
+            />
+          )
         ) : (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(96,165,250,.4)', fontSize: 40, fontWeight: 700, fontFamily: MONO }}>
             {a.title.slice(0, 1)}

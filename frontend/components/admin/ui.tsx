@@ -3,6 +3,7 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { uploadMediaAction } from '@/lib/cms-actions';
 import { MediaPicker } from './MediaPicker';
+import { isVideoUrl } from '@/lib/cms';
 
 export function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
   return (
@@ -113,11 +114,13 @@ export function ImageUpload({
   value,
   onChange,
   dark = true,
+  allowVideo = false,
 }: {
   label: string;
   value: string;
   onChange: (url: string) => void;
   dark?: boolean;
+  allowVideo?: boolean;
 }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -129,8 +132,8 @@ export function ImageUpload({
     e.target.value = '';
     if (!file) return;
     setErr(null);
-    if (file.size > 10 * 1024 * 1024) {
-      setErr(`ไฟล์ใหญ่เกินไป (${(file.size / 1048576).toFixed(1)}MB) — สูงสุด 10MB`);
+    if (file.size > 50 * 1024 * 1024) {
+      setErr(`ไฟล์ใหญ่เกินไป (${(file.size / 1048576).toFixed(1)}MB) — สูงสุด 50MB`);
       return;
     }
     setBusy(true);
@@ -154,20 +157,24 @@ export function ImageUpload({
     <div>
       <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-slate-400">{label}</span>
       <div className="flex items-center gap-3">
-        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} disabled={busy} />
+        <input ref={fileRef} type="file" accept={allowVideo ? 'image/*,video/mp4,video/webm,video/quicktime' : 'image/*'} className="hidden" onChange={onFile} disabled={busy} />
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={busy}
-          title="คลิกเพื่ออัปโหลดรูป"
+          title={allowVideo ? 'คลิกเพื่ออัปโหลดรูป/วิดีโอ' : 'คลิกเพื่ออัปโหลดรูป'}
           className={[
             'group relative grid h-16 w-28 place-items-center overflow-hidden rounded-md border border-white/10 transition hover:border-blue-400/50',
             dark ? 'bg-[#0b1020]' : 'bg-white',
           ].join(' ')}
         >
           {value ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={value} alt="" className="max-h-14 max-w-[100px] object-contain" />
+            isVideoUrl(value) ? (
+              <video src={value} muted loop playsInline className="max-h-14 max-w-[100px] object-contain" />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={value} alt="" className="max-h-14 max-w-[100px] object-contain" />
+            )
           ) : (
             <span className="text-[10px] text-slate-400">＋ อัปโหลด</span>
           )}

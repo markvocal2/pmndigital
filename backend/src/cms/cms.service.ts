@@ -16,8 +16,13 @@ const IMG_MIME: Record<string, string> = {
   'image/x-icon': 'ico',
   'image/vnd.microsoft.icon': 'ico',
   'image/gif': 'gif',
+  'image/avif': 'avif',
+  // video (e.g. article cover videos)
+  'video/mp4': 'mp4',
+  'video/webm': 'webm',
+  'video/quicktime': 'mov',
 };
-const IMG_MAX_BYTES = 10 * 1024 * 1024;
+const IMG_MAX_BYTES = 50 * 1024 * 1024;
 
 @Injectable()
 export class CmsService {
@@ -59,11 +64,11 @@ export class CmsService {
     const ext = IMG_MIME[file.mimetype];
     if (!ext) {
       throw new BadRequestException(
-        'Unsupported image type. Allowed: ' + Object.keys(IMG_MIME).join(', '),
+        'Unsupported file type. Allowed: ' + Object.keys(IMG_MIME).join(', '),
       );
     }
     if (file.size > IMG_MAX_BYTES) {
-      throw new BadRequestException('Image too large (max 10 MB)');
+      throw new BadRequestException('File too large (max 50 MB)');
     }
     const hash = createHash('sha256').update(file.buffer).digest('hex').slice(0, 12);
     const filename = hash + '.' + ext;

@@ -156,7 +156,7 @@ export function ArticleEditor({
           </div>
         </div>
         <StringListEditor label="แท็ก (Tags)" items={a.tags} onChange={(v) => set('tags', v)} placeholder="เช่น erp" />
-        <ImageUpload label="รูปปก (Cover)" value={a.coverImageUrl} onChange={(u) => set('coverImageUrl', u)} />
+        <ImageUpload label="ภาพ/วิดีโอปก (Cover · รองรับ mp4/webm)" value={a.coverImageUrl} onChange={(u) => set('coverImageUrl', u)} allowVideo />
       </Section>
 
       <Section title="SEO" hint="meta title/description · canonical · OG · index">

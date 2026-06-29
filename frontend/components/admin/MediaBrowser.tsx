@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { MediaItem } from '@/lib/cms';
+import { isVideoUrl } from '@/lib/cms';
 import { listMediaAction, deleteMediaAction, uploadMediaAction } from '@/lib/cms-actions';
 
 function fmtSize(b: number) {
@@ -31,8 +32,8 @@ export function MediaBrowser({ onPick }: { onPick?: (url: string) => void }) {
     e.target.value = '';
     if (!f) return;
     setMsg(null);
-    if (f.size > 10 * 1024 * 1024) {
-      setMsg(`ไฟล์ใหญ่เกินไป (${(f.size / 1048576).toFixed(1)}MB) — สูงสุด 10MB`);
+    if (f.size > 50 * 1024 * 1024) {
+      setMsg(`ไฟล์ใหญ่เกินไป (${(f.size / 1048576).toFixed(1)}MB) — สูงสุด 50MB`);
       return;
     }
     setBusy(true);
@@ -77,7 +78,7 @@ export function MediaBrowser({ onPick }: { onPick?: (url: string) => void }) {
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <label className="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500">
           {busy ? 'กำลังอัปโหลด…' : '+ อัปโหลดไฟล์'}
-          <input type="file" accept="image/*" className="hidden" onChange={onFile} disabled={busy} />
+          <input type="file" accept="image/*,video/mp4,video/webm,video/quicktime" className="hidden" onChange={onFile} disabled={busy} />
         </label>
         <input
           value={q}
@@ -104,8 +105,12 @@ export function MediaBrowser({ onPick }: { onPick?: (url: string) => void }) {
                 title={onPick ? 'เลือกรูปนี้' : 'คลิกเพื่อคัดลอก URL'}
               >
                 <div className="grid aspect-square place-items-center p-2">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={m.url} alt={m.filename} className="max-h-full max-w-full object-contain" />
+                  {isVideoUrl(m.url) ? (
+                    <video src={m.url} muted playsInline preload="metadata" className="max-h-full max-w-full object-contain" />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={m.url} alt={m.filename} className="max-h-full max-w-full object-contain" />
+                  )}
                 </div>
               </button>
               <button

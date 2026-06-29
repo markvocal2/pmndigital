@@ -228,3 +228,8 @@ export async function getServerStatus(): Promise<ServerStatus | null> {
     return null;
   }
 }
+
+/** True if a cover/media URL points to a video file. */
+export function isVideoUrl(u?: string | null): boolean {
+  return !!u && /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(u);
+}

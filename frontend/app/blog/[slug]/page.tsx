@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getPublicArticle, getPublicCategories, getRelatedArticles, getPublicSettings } from '@/lib/cms';
+import { getPublicArticle, getPublicCategories, getRelatedArticles, getPublicSettings, isVideoUrl } from '@/lib/cms';
 import { renderMarkdown, plainText } from '@/lib/md';
 import { Comments } from '@/components/blog/Comments';
 
@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!art) return { title: 'ไม่พบบทความ' };
   const title = art.metaTitle || art.title;
   const description = art.metaDesc || art.excerpt || plainText(art.bodyMarkdown);
-  const img = abs(art.ogImageUrl || art.coverImageUrl);
+  const img = abs(art.ogImageUrl || (isVideoUrl(art.coverImageUrl) ? null : art.coverImageUrl));
   return {
     title,
     description,
@@ -67,7 +67,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
       '@type': art.schemaType || 'Article',
       headline: art.title,
       description: art.metaDesc || art.excerpt || undefined,
-      image: abs(art.coverImageUrl) ? [abs(art.coverImageUrl)] : undefined,
+      image: !isVideoUrl(art.coverImageUrl) && abs(art.coverImageUrl) ? [abs(art.coverImageUrl)] : undefined,
       datePublished: art.publishedAt || undefined,
       dateModified: art.updatedAt,
       author: { '@type': 'Organization', name },
@@ -116,8 +116,12 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
       {/* HERO */}
       {art.coverImageUrl ? (
         <div className="relative h-[46vh] min-h-[340px] w-full overflow-hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={art.coverImageUrl} alt={art.title} className="absolute inset-0 h-full w-full object-cover" />
+          {isVideoUrl(art.coverImageUrl) ? (
+            <video src={art.coverImageUrl!} autoPlay muted loop playsInline className="absolute inset-0 h-full w-full object-cover" />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={art.coverImageUrl!} alt={art.title} className="absolute inset-0 h-full w-full object-cover" />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-[#05070E] via-[#05070E]/75 to-[#05070E]/25" />
           <div className="absolute inset-x-0 bottom-0">
             <div className="mx-auto max-w-[820px] px-6 pb-9">
@@ -213,8 +217,12 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               <Link key={r.id} href={`/blog/${encodeURIComponent(r.slug)}`} className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.025] transition hover:-translate-y-1 hover:border-blue-400/40">
                 <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-[#10203f] to-[#0a1426]">
                   {r.coverImageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={r.coverImageUrl} alt={r.title} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                    isVideoUrl(r.coverImageUrl) ? (
+                      <video src={r.coverImageUrl} muted loop playsInline preload="metadata" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={r.coverImageUrl} alt={r.title} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                    )
                   ) : (
                     <div className="grid h-full place-items-center font-mono text-3xl font-bold text-blue-400/30">{r.title.slice(0, 1)}</div>
                   )}
