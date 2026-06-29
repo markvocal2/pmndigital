@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, Fragment } from 'react';
+import { mergeHome } from '@/lib/home-content';
+import { submitLeadAction } from '@/lib/cms-actions';
 
-/* Parse an inline CSS declaration string ("a:b;c:d") into a React style object,
-   so the design's inline styles can be ported verbatim without hand camel-casing. */
+/* Parse an inline CSS declaration string ("a:b;c:d") into a React style object. */
 function css(s: string): CSSProperties {
   const o: Record<string, string> = {};
   for (const decl of s.split(';')) {
@@ -11,88 +12,24 @@ function css(s: string): CSSProperties {
     if (i < 0) continue;
     const prop = decl.slice(0, i).trim();
     if (!prop) continue;
-    o[prop.replace(/-([a-z])/g, (_m, c: string) => c.toUpperCase())] = decl.slice(i + 1).trim();
+    o[prop.replace(/-([a-z])/g, (_m, x: string) => x.toUpperCase())] = decl.slice(i + 1).trim();
   }
   return o as CSSProperties;
 }
 
-const C = {
-  accent: '#2563EB',
-  text: '#EAEEF6',
-  bg: '#05070E',
-};
-
-const CLIENTS = ['NIMBUS', 'SIAM LOGISTICS', 'METROBANK', 'VOLT RETAIL', 'AETHER HEALTH', 'ORBIT FINANCE', 'THANA GROUP', 'KASET CO-OP'];
-
-const SVCS = [
-  { t: 'Database Systems', th: 'ออกแบบ & วิศวกรรมฐานข้อมูล', d: 'ออกแบบโครงสร้างข้อมูล จัดการ migration และปรับจูนประสิทธิภาพให้เร็วและปลอดภัย', icon: 'db' },
-  { t: 'ERP', th: 'บริหารทรัพยากรองค์กร', d: 'บัญชี การเงิน คลังสินค้า จัดซื้อ ผลิต และ HR รวมไว้ในระบบเดียวที่เชื่อมกัน', icon: 'erp' },
-  { t: 'CRM', th: 'บริหารลูกค้าสัมพันธ์', d: 'ดูแลไปป์ไลน์การขาย บริการหลังการขาย และการตลาดอัตโนมัติแบบครบวงจร', icon: 'crm' },
-  { t: 'Custom Software', th: 'ซอฟต์แวร์สั่งทำเฉพาะทาง', d: 'เว็บแอป ระบบอัตโนมัติ API และแดชบอร์ดที่ออกแบบตามโจทย์ธุรกิจของคุณ', icon: 'code' },
-];
-
-const TECHS = ['PostgreSQL', 'MySQL', 'MongoDB', 'Redis', 'Node.js', '.NET', 'Python', 'React', 'Next.js', 'AWS', 'Google Cloud', 'Docker', 'Kubernetes'];
-
-const STEPS = [
-  { n: '01', t: 'Discovery', d: 'เข้าใจธุรกิจ เป้าหมาย และปัญหาที่แท้จริง' },
-  { n: '02', t: 'Design', d: 'ออกแบบสถาปัตยกรรมระบบและ UX ที่ใช้ง่าย' },
-  { n: '03', t: 'Build', d: 'พัฒนาเป็นสปรินต์ พร้อมเดโมให้เห็นทุกช่วง' },
-  { n: '04', t: 'Deploy', d: 'นำขึ้นใช้งานจริง ทดสอบ และส่งมอบ' },
-  { n: '05', t: 'Support', d: 'ดูแล อัปเดต และพัฒนาต่อยอดต่อเนื่อง' },
-];
-
-const WORKS = [
-  { tag: 'ERP · Manufacturing', t: 'ระบบ ERP โรงงานผลิต', m: 'ลดต้นทุนสต็อก 32%', hue: '#2563EB' },
-  { tag: 'CRM · Retail', t: 'CRM เครือค้าปลีก', m: 'ยอดซื้อซ้ำ +28%', hue: '#38BDF8' },
-  { tag: 'Database · Fintech', t: 'ปรับสถาปัตยกรรมฐานข้อมูล', m: 'Query เร็วขึ้น 5 เท่า', hue: '#60A5FA' },
-];
-
-const PRIVS = [
-  { t: 'ส่วนลด 20% สำหรับโปรเจกต์แรก', d: 'ใช้ได้กับทุกบริการ' },
-  { t: 'ปรึกษาวางระบบฟรี 1 ชั่วโมง', d: 'มูลค่า ฿3,500 กับผู้เชี่ยวชาญ' },
-  { t: 'ตรวจสุขภาพระบบ/ฐานข้อมูลฟรี', d: 'System & Database Audit' },
-  { t: 'Priority support 3 เดือน', d: 'ตอบกลับเร็วเป็นพิเศษ' },
-];
-
-const QUOTES = [
-  { q: 'ทีม PMN เข้าใจปัญหาหน้างานจริง ระบบ ERP ที่ได้ช่วยให้เราปิดบัญชีเร็วขึ้นมาก', n: 'คุณวีระ ส.', r: 'ผู้จัดการโรงงาน, SIAM LOGISTICS' },
-  { q: 'ทำงานออนไลน์ตลอด เห็นความคืบหน้าทุกสัปดาห์ ส่งมอบตรงเวลาแบบที่หาได้ยาก', n: 'คุณนภัส ก.', r: 'COO, VOLT RETAIL' },
-  { q: 'ฐานข้อมูลที่เคยช้ามาก หลังปรับใหม่เร็วขึ้นหลายเท่า คุ้มค่ามาก', n: 'คุณธนา พ.', r: 'CTO, ORBIT FINANCE' },
-];
-
-const SOCIALS = [
-  { label: 'LinkedIn', d: 'M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z' },
-  { label: 'Facebook', d: 'M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z' },
-  { label: 'X', d: 'M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z' },
-  { label: 'Instagram', d: 'M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z' },
-];
-
-const FAQS = [
-  { q: 'เริ่มต้นโปรเจกต์ต้องทำอย่างไร?', a: 'เริ่มจากนัดคุยฟรีเพื่อเข้าใจโจทย์ จากนั้นเราสรุปขอบเขตงานและใบเสนอราคาให้ — ขั้นปรึกษาไม่มีค่าใช้จ่าย' },
-  { q: 'ระยะเวลาในการพัฒนานานแค่ไหน?', a: 'ขึ้นกับขอบเขต โดยทั่วไประบบขนาดเล็ก 4–8 สัปดาห์ และระบบองค์กรขนาดใหญ่ 3–6 เดือน เราทำงานเป็นสปรินต์พร้อมเดโมเป็นระยะ' },
-  { q: 'มีบริการดูแลหลังส่งมอบไหม?', a: 'มีครับ ทุกแพ็กเกจรวมระยะดูแลฟรี และต่อสัญญา support รายเดือน/รายปีเพื่อดูแลและพัฒนาต่อยอดได้' },
-  { q: 'ราคาที่แสดงรวมอะไรบ้าง?', a: 'รวมการออกแบบ พัฒนา ทดสอบ ติดตั้ง และอบรมการใช้งานเบื้องต้น ส่วนค่าคลาวด์/ไลเซนส์ภายนอกแจ้งแยกตามจริง' },
-  { q: 'ทำงานกับธุรกิจขนาดเล็กไหม?', a: 'แน่นอน แพ็กเกจ Starter ออกแบบมาเพื่อ SME โดยเฉพาะ เริ่มต้นได้ในงบที่จับต้องได้' },
-];
-
-const ALL_WORK = [
-  { cat: 'erp', tag: 'ERP · Manufacturing', t: 'ระบบ ERP โรงงานผลิตชิ้นส่วน', d: 'รวมการผลิต คลัง และบัญชีไว้ในระบบเดียว', m: 'ลดต้นทุนสต็อก 32%' },
-  { cat: 'crm', tag: 'CRM · Retail', t: 'CRM เครือร้านค้าปลีก 40 สาขา', d: 'รวมข้อมูลลูกค้าและโปรแกรมสมาชิก', m: 'ยอดซื้อซ้ำ +28%' },
-  { cat: 'database', tag: 'Database · Fintech', t: 'ปรับสถาปัตยกรรมฐานข้อมูล', d: 'ออกแบบใหม่และทำ indexing เชิงลึก', m: 'Query เร็วขึ้น 5 เท่า' },
-  { cat: 'custom', tag: 'Custom · Logistics', t: 'แพลตฟอร์มติดตามขนส่งเรียลไทม์', d: 'เว็บแอป + แดชบอร์ด + API', m: 'ลดเวลาตรวจงาน 45%' },
-  { cat: 'erp', tag: 'ERP · Distribution', t: 'ระบบจัดจำหน่ายและคลังกระจายสินค้า', d: 'จัดการหลายคลังและเส้นทางจัดส่ง', m: 'ส่งตรงเวลา 99.2%' },
-  { cat: 'custom', tag: 'Custom · Healthcare', t: 'ระบบนัดหมายและเวชระเบียน', d: 'ออกแบบ UX สำหรับบุคลากรแพทย์', m: 'ลดเวลารอคิว 38%' },
-];
-
-const FILTERS = [
-  { label: 'ทั้งหมด', cat: 'all' },
-  { label: 'ERP', cat: 'erp' },
-  { label: 'CRM', cat: 'crm' },
-  { label: 'Database', cat: 'database' },
-  { label: 'Custom', cat: 'custom' },
-];
+/* Render a string that may contain <br> into React nodes. */
+function ml(text: string) {
+  const parts = text.split(/<br\s*\/?>/i);
+  return parts.map((p, i) => (
+    <Fragment key={i}>
+      {p}
+      {i < parts.length - 1 && <br />}
+    </Fragment>
+  ));
+}
 
 const fmt = (n: number) => '฿' + n.toLocaleString('en-US');
+const MONO = "font-family:'IBM Plex Mono',monospace";
 
 const SVC_ICON = '#60A5FA';
 function ServiceIcon({ kind }: { kind: string }) {
@@ -117,6 +54,13 @@ function ServiceIcon({ kind }: { kind: string }) {
   );
   return <span style={css(`width:16px;height:16px;border:1.6px solid ${SVC_ICON};transform:rotate(45deg);border-radius:3px`)} />;
 }
+
+const SOCIAL_GLYPHS: { key: string; label: string; d: string }[] = [
+  { key: 'linkedin', label: 'LinkedIn', d: 'M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z' },
+  { key: 'facebook', label: 'Facebook', d: 'M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z' },
+  { key: 'x', label: 'X', d: 'M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z' },
+  { key: 'instagram', label: 'Instagram', d: 'M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z' },
+];
 
 const STYLE = `
 *{box-sizing:border-box}
@@ -181,26 +125,42 @@ html{scroll-behavior:smooth}
 
 const CTA_P = 'display:inline-flex;align-items:center;gap:9px;background:#2563EB;color:#fff;border:none;border-radius:12px;padding:15px 26px;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 12px 34px -10px rgba(37,99,235,.85)';
 const CTA_G = 'display:inline-flex;align-items:center;gap:9px;background:rgba(255,255,255,.04);color:#EAEEF6;border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:15px 26px;font-size:16px;font-weight:500;cursor:pointer';
-const MONO = "font-family:'IBM Plex Mono',monospace";
 const INP = 'width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 14px;color:#EAEEF6;font-size:14.5px;outline:none';
 const CHECK = 'display:flex;gap:10px;font-size:14.5px;color:#C7D0E0';
 const SERVICE_OPTS = ['ระบบฐานข้อมูล (Database)', 'ระบบ ERP', 'ระบบ CRM', 'ซอฟต์แวร์สั่งทำ (Custom)', 'อื่น ๆ / ยังไม่แน่ใจ'];
 
 type Page = 'home' | 'services' | 'portfolio' | 'pricing' | 'contact';
 
-export default function AgencySite() {
+interface SettingsLite {
+  logoDarkUrl?: string | null;
+  logoLightUrl?: string | null;
+  socials?: Record<string, string> | null;
+  siteName?: string;
+}
+
+export default function AgencySite({
+  content,
+  settings,
+}: {
+  content?: unknown;
+  settings?: SettingsLite | null;
+}) {
+  const c = mergeHome(content);
+  const logoUrl = settings?.logoDarkUrl || '/assets/logo-white.png';
+  const socials = settings?.socials || {};
+
   const [page, setPage] = useState<Page>('home');
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [discount, setDiscount] = useState(true);
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
   const [workFilter, setWorkFilter] = useState('all');
-  const [reg, setReg] = useState({ name: '', email: '', phone: '', service: SERVICE_OPTS[0] });
+  const [reg, setReg] = useState({ name: '', email: '', phone: '', service: SERVICE_OPTS[0], hp: '' });
   const [regSubmitted, setRegSubmitted] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [contact, setContact] = useState({ name: '', email: '', company: '', service: SERVICE_OPTS[0], msg: '' });
+  const [contact, setContact] = useState({ name: '', email: '', company: '', service: SERVICE_OPTS[0], msg: '', hp: '' });
   const [cSubmitted, setCSubmitted] = useState(false);
-  const [stats, setStats] = useState({ projects: 0, clients: 0, years: 0, uptime: 0 });
+  const [stats, setStats] = useState<number[]>(c.stats.map(() => 0));
 
   const progressRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLElement>(null);
@@ -224,17 +184,12 @@ export default function AgencySite() {
   function runCounter() {
     if (counted.current) return;
     counted.current = true;
-    const targets = { projects: 120, clients: 80, years: 8, uptime: 99.9 };
+    const targets = c.stats.map((s) => s.target);
     const dur = 1500, t0 = performance.now();
     const tick = (now: number) => {
       const k = Math.min(1, (now - t0) / dur);
       const e = 1 - Math.pow(1 - k, 3);
-      setStats({
-        projects: Math.round(targets.projects * e),
-        clients: Math.round(targets.clients * e),
-        years: Math.round(targets.years * e),
-        uptime: +(targets.uptime * e).toFixed(1),
-      });
+      setStats(targets.map((t) => (Number.isInteger(t) ? Math.round(t * e) : +(t * e).toFixed(1))));
       if (k < 1) requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
@@ -254,9 +209,9 @@ export default function AgencySite() {
         return;
       }
       io = new IntersectionObserver((entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) {
-            const el = e.target as HTMLElement;
+        entries.forEach((ev) => {
+          if (ev.isIntersecting) {
+            const el = ev.target as HTMLElement;
             el.style.animation = 'fadeUp .7s cubic-bezier(.22,.7,.2,1) both';
             io!.unobserve(el);
             if (el.hasAttribute('data-count')) runCounter();
@@ -288,10 +243,22 @@ export default function AgencySite() {
   };
   const onHeroLeave = () => { if (heroVisualRef.current) heroVisualRef.current.style.transform = 'rotateY(0deg) rotateX(0deg)'; };
   const copyCoupon = () => {
-    try { navigator.clipboard?.writeText('PMN-WELCOME20')?.catch(() => {}); } catch { /* noop */ }
+    try { navigator.clipboard?.writeText(c.register.couponCode)?.catch(() => {}); } catch { /* noop */ }
     setCopied(true);
     setTimeout(() => setCopied(false), 1900);
   };
+
+  function submitReg(e: React.FormEvent) {
+    e.preventDefault();
+    void submitLeadAction({ type: 'REGISTER', name: reg.name, email: reg.email, phone: reg.phone, service: reg.service, source: 'home-register', hp: reg.hp });
+    setRegSubmitted(true);
+    setCopied(false);
+  }
+  function submitContact(e: React.FormEvent) {
+    e.preventDefault();
+    void submitLeadAction({ type: 'CONTACT', name: contact.name, email: contact.email, company: contact.company, service: contact.service, message: contact.msg, source: 'contact-page', hp: contact.hp });
+    setCSubmitted(true);
+  }
 
   const navStyle = (p: Page): CSSProperties => ({
     display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none',
@@ -302,11 +269,15 @@ export default function AgencySite() {
     { p: 'home', label: 'Home' }, { p: 'services', label: 'Services' }, { p: 'portfolio', label: 'Portfolio' },
     { p: 'pricing', label: 'Pricing' }, { p: 'contact', label: 'Contact' },
   ];
-
   const Logo = ({ h = 30 }: { h?: number }) => (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src="/assets/logo-white.png" alt="PMN Digital" style={{ height: h, width: 'auto', display: 'block' }} />
+    <img src={logoUrl} alt={settings?.siteName || 'PMN Digital'} style={{ height: h, width: 'auto', display: 'block' }} />
   );
+
+  const statDisplay = (i: number) => {
+    const v = stats[i] ?? 0;
+    return (Number.isInteger(c.stats[i].target) ? v : v.toFixed(1)) + c.stats[i].suffix;
+  };
 
   /* ---------------- HOME ---------------- */
   const renderHome = () => (
@@ -319,17 +290,17 @@ export default function AgencySite() {
           <div>
             <div style={css('display:inline-flex;align-items:center;gap:9px;padding:7px 14px;border:1px solid rgba(255,255,255,.12);border-radius:100px;background:rgba(255,255,255,.03);margin-bottom:26px;animation:fadeUp .6s .05s both')}>
               <span style={css('width:7px;height:7px;border-radius:50%;background:#38BDF8;box-shadow:0 0 10px #38BDF8;animation:pulseDot 2s infinite')} />
-              <span style={css(`${MONO};font-size:11.5px;letter-spacing:.22em;color:#9FC0FF;text-transform:uppercase`)}>Digital Systems Agency</span>
+              <span style={css(`${MONO};font-size:11.5px;letter-spacing:.22em;color:#9FC0FF;text-transform:uppercase`)}>{c.hero.badge}</span>
             </div>
-            <h1 style={css('margin:0 0 22px;font-size:clamp(38px,5vw,62px);line-height:1.06;letter-spacing:-.02em;font-weight:700;animation:fadeUp .6s .12s both')}>ออกแบบ <span style={css('background:linear-gradient(100deg,#60A5FA,#38BDF8);-webkit-background-clip:text;background-clip:text;color:transparent')}>“ระบบ”</span> ที่ธุรกิจคุณ<br />ต้องการจริง ๆ</h1>
-            <p style={css('margin:0 0 34px;max-width:540px;font-size:18px;line-height:1.7;color:#A7B0C4;font-weight:300;animation:fadeUp .6s .2s both')}>PMN Digital รับออกแบบและพัฒนา <strong style={css('color:#EAEEF6;font-weight:500')}>ระบบฐานข้อมูล · ERP · CRM</strong> และซอฟต์แวร์เฉพาะทางแบบครบวงจร ทำงานออนไลน์ บริหารโดยทีมยุคใหม่ที่เข้าใจทั้งเทคโนโลยีและธุรกิจของคุณ</p>
+            <h1 style={css('margin:0 0 22px;font-size:clamp(38px,5vw,62px);line-height:1.06;letter-spacing:-.02em;font-weight:700;animation:fadeUp .6s .12s both')}>
+              {c.hero.title1} <span style={css('background:linear-gradient(100deg,#60A5FA,#38BDF8);-webkit-background-clip:text;background-clip:text;color:transparent')}>{c.hero.highlight}</span> {ml(c.hero.title2)}
+            </h1>
+            <p style={css('margin:0 0 34px;max-width:540px;font-size:18px;line-height:1.7;color:#A7B0C4;font-weight:300;animation:fadeUp .6s .2s both')}>{c.hero.subtitle}</p>
             <div style={css('display:flex;flex-wrap:wrap;gap:14px;margin-bottom:36px;animation:fadeUp .6s .28s both')}>
-              <button className="agP" onClick={goReg} style={css(CTA_P)}>รับสิทธิพิเศษฟรี<span>→</span></button>
-              <button className="agG" onClick={() => go('services')} style={css(CTA_G)}>ดูบริการทั้งหมด</button>
+              <button className="agP" onClick={goReg} style={css(CTA_P)}>{c.hero.ctaPrimary}<span>→</span></button>
+              <button className="agG" onClick={() => go('services')} style={css(CTA_G)}>{c.hero.ctaSecondary}</button>
             </div>
-            <div style={css(`display:flex;align-items:center;gap:10px;${MONO};font-size:12.5px;color:#5C6680;letter-spacing:.04em;animation:fadeUp .6s .36s both`)}>
-              <span style={css('color:#9FC0FF')}>80+</span> องค์กรไว้วางใจ<span style={css('opacity:.4')}>·</span><span style={css('color:#9FC0FF')}>120+</span> โปรเจกต์ส่งมอบแล้ว
-            </div>
+            <div style={css(`display:flex;align-items:center;gap:10px;${MONO};font-size:12.5px;color:#9FC0FF;letter-spacing:.04em;animation:fadeUp .6s .36s both`)}>{c.hero.statNote}</div>
           </div>
           <div style={css('perspective:1400px;animation:fadeUp .7s .2s both')}>
             <div ref={heroVisualRef} style={css('position:relative;transform-style:preserve-3d;transition:transform .35s cubic-bezier(.2,.7,.2,1)')}>
@@ -374,11 +345,11 @@ export default function AgencySite() {
 
       <section style={css('padding:34px 24px 20px;border-top:1px solid rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.05)')}>
         <div style={css('max-width:1240px;margin:0 auto')}>
-          <p style={css(`text-align:center;${MONO};font-size:11px;letter-spacing:.22em;color:#5C6680;text-transform:uppercase;margin:0 0 22px`)}>หน่วยงานที่ไว้วางใจ — Trusted by teams</p>
+          <p style={css(`text-align:center;${MONO};font-size:11px;letter-spacing:.22em;color:#5C6680;text-transform:uppercase;margin:0 0 22px`)}>{c.trustedLabel}</p>
           <div style={css('overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)')}>
             <div style={css('display:flex;gap:64px;width:max-content;animation:marquee 32s linear infinite;align-items:center;opacity:.62')}>
-              {[...CLIENTS, ...CLIENTS].map((c, i) => (
-                <span key={i} style={css("font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:20px;letter-spacing:.04em;color:#C7D0E0;white-space:nowrap")}>{c}</span>
+              {[...c.clients, ...c.clients].map((cl, i) => (
+                <span key={i} style={css("font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:20px;letter-spacing:.04em;color:#C7D0E0;white-space:nowrap")}>{cl}</span>
               ))}
             </div>
           </div>
@@ -387,18 +358,9 @@ export default function AgencySite() {
 
       <section data-reveal style={css('padding:104px 24px')}>
         <div style={css('max-width:1240px;margin:0 auto')}>
-          <div style={css('display:flex;align-items:flex-end;justify-content:space-between;gap:28px;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.1);padding-top:24px;margin-bottom:46px')}>
-            <div style={css('display:flex;align-items:baseline;gap:16px')}>
-              <span style={css(`${MONO};font-size:13px;color:#3f6fc4;font-weight:500`)}>01</span>
-              <div>
-                <div style={css(`${MONO};font-size:11px;letter-spacing:.2em;color:#5C6680;text-transform:uppercase;margin-bottom:10px`)}>What we build</div>
-                <h2 style={css('margin:0;font-size:clamp(29px,3.5vw,43px);line-height:1.08;letter-spacing:-.025em;font-weight:700')}>บริการที่เราดำเนินการให้</h2>
-              </div>
-            </div>
-            <button className="agG" onClick={() => go('services')} style={css('display:inline-flex;align-items:center;gap:8px;background:none;border:1px solid rgba(255,255,255,.16);color:#EAEEF6;border-radius:10px;padding:12px 18px;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap;align-self:flex-end')}>ดูบริการทั้งหมด →</button>
-          </div>
+          {sectionHead('01', 'What we build', 'บริการที่เราดำเนินการให้', <button className="agG" onClick={() => go('services')} style={css('display:inline-flex;align-items:center;gap:8px;background:none;border:1px solid rgba(255,255,255,.16);color:#EAEEF6;border-radius:10px;padding:12px 18px;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap;align-self:flex-end')}>ดูบริการทั้งหมด →</button>)}
           <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:18px')} data-svc-grid>
-            {SVCS.map((sv, i) => (
+            {c.services.map((sv, i) => (
               <div key={i} className="agCard" style={css('background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:26px 22px;cursor:default')}>
                 <div style={css('width:46px;height:46px;border-radius:12px;background:rgba(37,99,235,.14);border:1px solid rgba(37,99,235,.32);display:flex;align-items:center;justify-content:center;margin-bottom:18px')}><ServiceIcon kind={sv.icon} /></div>
                 <div style={css(`${MONO};font-size:11px;letter-spacing:.1em;color:#7FB0FF;text-transform:uppercase;margin-bottom:8px`)}>{sv.t}</div>
@@ -412,10 +374,10 @@ export default function AgencySite() {
 
       <section data-reveal data-count style={css('padding:24px 24px 96px')}>
         <div style={css('max-width:1240px;margin:0 auto;border-top:1px solid rgba(255,255,255,.12);border-bottom:1px solid rgba(255,255,255,.12);display:grid;grid-template-columns:repeat(4,1fr)')} data-stats-grid>
-          {[[`${stats.projects}+`, 'โปรเจกต์ที่ส่งมอบ', true], [`${stats.clients}+`, 'องค์กรที่ไว้วางใจ', true], [`${stats.years}+`, 'ปีของประสบการณ์', true], [`${stats.uptime}%`, 'ความเสถียรเฉลี่ย', false]].map(([v, l, br], i) => (
-            <div key={i} style={css(`padding:36px 30px${br ? ';border-right:1px solid rgba(255,255,255,.08)' : ''}`)}>
-              <div style={css('font-size:clamp(34px,4.4vw,54px);font-weight:700;letter-spacing:-.035em;line-height:1')}>{v}</div>
-              <div style={css('color:#7B86A1;font-size:13.5px;margin-top:10px')}>{l}</div>
+          {c.stats.map((st, i) => (
+            <div key={i} style={css(`padding:36px 30px${i < c.stats.length - 1 ? ';border-right:1px solid rgba(255,255,255,.08)' : ''}`)}>
+              <div style={css('font-size:clamp(34px,4.4vw,54px);font-weight:700;letter-spacing:-.035em;line-height:1')}>{statDisplay(i)}</div>
+              <div style={css('color:#7B86A1;font-size:13.5px;margin-top:10px')}>{st.label}</div>
             </div>
           ))}
         </div>
@@ -427,30 +389,25 @@ export default function AgencySite() {
             <div style={css('display:flex;align-items:baseline;gap:16px')}>
               <span style={css(`${MONO};font-size:13px;color:#3f6fc4;font-weight:500`)}>02</span>
               <div>
-                <div style={css(`${MONO};font-size:11px;letter-spacing:.2em;color:#5C6680;text-transform:uppercase;margin-bottom:10px`)}>Why PMN</div>
-                <h2 style={css('margin:0;font-size:clamp(29px,3.5vw,43px);line-height:1.06;letter-spacing:-.025em;font-weight:700')}>ทีมยุคใหม่<br />ที่เข้าใจธุรกิจ</h2>
+                <div style={css(`${MONO};font-size:11px;letter-spacing:.2em;color:#5C6680;text-transform:uppercase;margin-bottom:10px`)}>{c.why.eyebrow}</div>
+                <h2 style={css('margin:0;font-size:clamp(29px,3.5vw,43px);line-height:1.06;letter-spacing:-.025em;font-weight:700')}>{ml(c.why.title)}</h2>
               </div>
             </div>
-            <p style={css('margin:0 0 4px;color:#A7B0C4;font-size:16px;line-height:1.72;font-weight:300')}>เราไม่ได้แค่เขียนโค้ด — เราเข้าใจกระบวนการทำงานของคุณ แล้วออกแบบระบบให้คนใช้งานได้จริง วัดผลได้ และเติบโตต่อไปกับธุรกิจ</p>
+            <p style={css('margin:0 0 4px;color:#A7B0C4;font-size:16px;line-height:1.72;font-weight:300')}>{c.why.subtitle}</p>
           </div>
           <div style={css('display:grid;grid-template-columns:1.4fr 1fr 1fr;grid-auto-rows:minmax(0,auto);gap:18px')} data-bento>
             <div style={css('grid-row:span 2;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:30px;position:relative;overflow:hidden')}>
               <div style={css('position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,.35),transparent 65%);filter:blur(20px)')} />
               <div style={css('position:relative')}>
                 <div style={css(`${MONO};font-size:11px;letter-spacing:.16em;color:#9FC0FF;text-transform:uppercase;margin-bottom:14px`)}>Tech Stack</div>
-                <h3 style={css('margin:0 0 10px;font-size:22px;font-weight:600;letter-spacing:-.01em')}>เครื่องมือระดับโลก เลือกใช้ให้เหมาะกับงาน</h3>
-                <p style={css('margin:0 0 22px;color:#A7B0C4;font-size:14.5px;line-height:1.65')}>เราเลือกเทคโนโลยีจากโจทย์จริง ไม่ยึดติดเครื่องมือเดียว เพื่อความเร็ว ความปลอดภัย และการดูแลระยะยาว</p>
-                <div style={css('display:flex;flex-wrap:wrap;gap:8px')}>{TECHS.map((t) => <span key={t} style={css(`${MONO};font-size:12px;color:#C7D0E0;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 11px`)}>{t}</span>)}</div>
+                <h3 style={css('margin:0 0 10px;font-size:22px;font-weight:600;letter-spacing:-.01em')}>{c.why.techTitle}</h3>
+                <p style={css('margin:0 0 22px;color:#A7B0C4;font-size:14.5px;line-height:1.65')}>{c.why.techDesc}</p>
+                <div style={css('display:flex;flex-wrap:wrap;gap:8px')}>{c.techs.map((t) => <span key={t} style={css(`${MONO};font-size:12px;color:#C7D0E0;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 11px`)}>{t}</span>)}</div>
               </div>
             </div>
-            {[
-              { icon: css('width:16px;height:16px;border:2px solid #60A5FA;border-radius:50%'), h: 'ทำงานออนไลน์ 100%', d: 'ประชุม ส่งงาน ติดตามความคืบหน้าผ่านระบบออนไลน์ โปร่งใส ตรวจสอบได้ทุกขั้นตอน' },
-              { icon: css('width:15px;height:18px;border:2px solid #60A5FA;border-radius:4px'), h: 'ความปลอดภัยเป็นมาตรฐาน', d: 'เข้ารหัสข้อมูล สำรองอัตโนมัติ และวางสิทธิ์การเข้าถึงตามบทบาท ตั้งแต่วันแรก' },
-              { icon: css('width:16px;height:16px;border:2px solid #60A5FA;transform:rotate(45deg)'), h: 'ส่งมอบตรงเวลา', d: 'วางแผนเป็นสปรินต์ มีเดโมให้เห็นภาพทุกช่วง ลดความเสี่ยงงานบานปลาย' },
-              { icon: css('width:18px;height:12px;border:2px solid #60A5FA;border-radius:3px'), h: 'ดูแลต่อเนื่องหลังส่งมอบ', d: 'มีทีม support คอยดูแล อัปเดต และพัฒนาต่อยอดให้ระบบโตไปกับธุรกิจ' },
-            ].map((b, i) => (
+            {c.why.bento.map((b, i) => (
               <div key={i} className="agCard" style={css('background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:26px')}>
-                <div style={css('width:42px;height:42px;border-radius:11px;background:rgba(37,99,235,.16);border:1px solid rgba(37,99,235,.35);display:flex;align-items:center;justify-content:center;margin-bottom:16px')}><span style={{ ...b.icon, display: 'block' }} /></div>
+                <div style={css('width:42px;height:42px;border-radius:11px;background:rgba(37,99,235,.16);border:1px solid rgba(37,99,235,.35);display:flex;align-items:center;justify-content:center;margin-bottom:16px')}><span style={css('width:16px;height:16px;border:2px solid #60A5FA;border-radius:5px;display:block')} /></div>
                 <h3 style={css('margin:0 0 8px;font-size:17px;font-weight:600')}>{b.h}</h3>
                 <p style={css('margin:0;color:#8B95AC;font-size:13.5px;line-height:1.6')}>{b.d}</p>
               </div>
@@ -461,34 +418,16 @@ export default function AgencySite() {
 
       <section data-reveal style={css('padding:30px 24px 100px')}>
         <div style={css('max-width:1240px;margin:0 auto')}>
-          <div style={css('display:flex;align-items:flex-end;justify-content:space-between;gap:28px;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.1);padding-top:24px;margin-bottom:46px')}>
-            <div style={css('display:flex;align-items:baseline;gap:16px')}>
-              <span style={css(`${MONO};font-size:13px;color:#3f6fc4;font-weight:500`)}>03</span>
-              <div>
-                <div style={css(`${MONO};font-size:11px;letter-spacing:.2em;color:#5C6680;text-transform:uppercase;margin-bottom:10px`)}>How we work</div>
-                <h2 style={css('margin:0;font-size:clamp(29px,3.5vw,43px);line-height:1.08;letter-spacing:-.025em;font-weight:700')}>กระบวนการทำงานแบบครบวงจร</h2>
-              </div>
-            </div>
-            <div style={css(`${MONO};font-size:12px;color:#5C6680;letter-spacing:.04em;align-self:flex-end`)}>5 ขั้นตอน · จบในทีมเดียว</div>
-          </div>
+          {sectionHead('03', 'How we work', 'กระบวนการทำงานแบบครบวงจร', <div style={css(`${MONO};font-size:12px;color:#5C6680;letter-spacing:.04em;align-self:flex-end`)}>5 ขั้นตอน · จบในทีมเดียว</div>)}
           <div style={css('display:grid;grid-template-columns:repeat(5,1fr);gap:14px;position:relative')} data-process>{renderSteps()}</div>
         </div>
       </section>
 
       <section data-reveal style={css('padding:30px 24px 100px')}>
         <div style={css('max-width:1240px;margin:0 auto')}>
-          <div style={css('display:flex;align-items:flex-end;justify-content:space-between;gap:28px;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.1);padding-top:24px;margin-bottom:46px')}>
-            <div style={css('display:flex;align-items:baseline;gap:16px')}>
-              <span style={css(`${MONO};font-size:13px;color:#3f6fc4;font-weight:500`)}>04</span>
-              <div>
-                <div style={css(`${MONO};font-size:11px;letter-spacing:.2em;color:#5C6680;text-transform:uppercase;margin-bottom:10px`)}>Selected work</div>
-                <h2 style={css('margin:0;font-size:clamp(29px,3.5vw,43px);line-height:1.08;letter-spacing:-.025em;font-weight:700')}>ผลงานล่าสุด</h2>
-              </div>
-            </div>
-            <button className="agG" onClick={() => go('portfolio')} style={css('display:inline-flex;align-items:center;gap:8px;background:none;border:1px solid rgba(255,255,255,.16);color:#EAEEF6;border-radius:10px;padding:12px 18px;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap;align-self:flex-end')}>ดูผลงานทั้งหมด →</button>
-          </div>
+          {sectionHead('04', 'Selected work', 'ผลงานล่าสุด', <button className="agG" onClick={() => go('portfolio')} style={css('display:inline-flex;align-items:center;gap:8px;background:none;border:1px solid rgba(255,255,255,.16);color:#EAEEF6;border-radius:10px;padding:12px 18px;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap;align-self:flex-end')}>ดูผลงานทั้งหมด →</button>)}
           <div style={css('display:grid;grid-template-columns:repeat(3,1fr);gap:20px')} data-work-grid>
-            {WORKS.map((w, i) => (
+            {c.works.map((w, i) => (
               <div key={i} className="agWork" onClick={() => go('portfolio')} style={css('background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:18px;overflow:hidden;cursor:pointer')}>
                 <div style={css('aspect-ratio:16/10;background:repeating-linear-gradient(135deg,#0e1424,#0e1424 11px,#0b101d 11px,#0b101d 22px);display:flex;align-items:center;justify-content:center;position:relative;border-bottom:1px solid rgba(255,255,255,.06)')}>
                   <span style={css(`position:absolute;inset:0;background:radial-gradient(circle at 70% 20%,${w.hue}22,transparent 60%)`)} />
@@ -507,16 +446,7 @@ export default function AgencySite() {
 
       <section data-reveal style={css('padding:30px 24px 100px')}>
         <div style={css('max-width:1240px;margin:0 auto')}>
-          <div style={css('display:flex;align-items:flex-end;justify-content:space-between;gap:28px;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.1);padding-top:24px;margin-bottom:38px')}>
-            <div style={css('display:flex;align-items:baseline;gap:16px')}>
-              <span style={css(`${MONO};font-size:13px;color:#3f6fc4;font-weight:500`)}>05</span>
-              <div>
-                <div style={css(`${MONO};font-size:11px;letter-spacing:.2em;color:#5C6680;text-transform:uppercase;margin-bottom:10px`)}>Plans</div>
-                <h2 style={css('margin:0;font-size:clamp(29px,3.5vw,43px);line-height:1.08;letter-spacing:-.025em;font-weight:700')}>แพ็กเกจที่ยืดหยุ่นตามธุรกิจ</h2>
-              </div>
-            </div>
-            {renderDiscountToggle('align-self:flex-end')}
-          </div>
+          {sectionHead('05', 'Plans', 'แพ็กเกจที่ยืดหยุ่นตามธุรกิจ', renderDiscountToggle('align-self:flex-end'))}
           <div style={css('display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:stretch')} data-pricing-mini>{renderPricingMini()}</div>
         </div>
       </section>
@@ -527,10 +457,10 @@ export default function AgencySite() {
           <div style={css('position:relative;display:grid;grid-template-columns:1fr 1fr;gap:40px;padding:52px 46px')} data-reg-grid>
             <div>
               <div style={css('display:inline-flex;align-items:center;gap:8px;padding:6px 13px;border:1px solid rgba(56,189,248,.4);background:rgba(56,189,248,.1);border-radius:100px;margin-bottom:22px')}><span style={css(`${MONO};font-size:11px;letter-spacing:.18em;color:#7FD7FF;text-transform:uppercase`)}>Members only</span></div>
-              <h2 style={css('margin:0 0 16px;font-size:clamp(28px,3.2vw,40px);line-height:1.14;letter-spacing:-.02em;font-weight:700')}>ลงทะเบียนวันนี้<br />รับสิทธิพิเศษทันที</h2>
-              <p style={css('margin:0 0 26px;color:#B6C0D4;font-size:16px;line-height:1.7;font-weight:300;max-width:440px')}>กรอกข้อมูลสั้น ๆ เพื่อรับคูปองส่วนลดและสิทธิ์เฉพาะสมาชิก ใช้ได้กับทุกบริการของ PMN Digital</p>
+              <h2 style={css('margin:0 0 16px;font-size:clamp(28px,3.2vw,40px);line-height:1.14;letter-spacing:-.02em;font-weight:700')}>{ml(c.register.title)}</h2>
+              <p style={css('margin:0 0 26px;color:#B6C0D4;font-size:16px;line-height:1.7;font-weight:300;max-width:440px')}>{c.register.subtitle}</p>
               <div style={css('display:flex;flex-direction:column;gap:14px')}>
-                {PRIVS.map((p, i) => (
+                {c.register.privileges.map((p, i) => (
                   <div key={i} style={css('display:flex;align-items:flex-start;gap:13px')}>
                     <span style={css(`flex-shrink:0;width:24px;height:24px;border-radius:7px;background:rgba(56,189,248,.14);border:1px solid rgba(56,189,248,.4);color:#7FD7FF;display:flex;align-items:center;justify-content:center;font-size:13px;margin-top:1px`)}>✓</span>
                     <div><div style={css('font-size:15px;font-weight:500;color:#EAEEF6')}>{p.t}</div><div style={css('font-size:13px;color:#8B95AC;margin-top:2px')}>{p.d}</div></div>
@@ -546,15 +476,15 @@ export default function AgencySite() {
                   <p style={css('margin:0 0 22px;color:#A7B0C4;font-size:14.5px;line-height:1.6')}>คูปองของคุณพร้อมใช้งานแล้ว ทีมงานจะติดต่อกลับภายใน 24 ชม.</p>
                   <div style={css(`${MONO};font-size:11px;letter-spacing:.14em;color:#7B86A1;text-transform:uppercase;margin-bottom:8px`)}>คูปองส่วนลดของคุณ</div>
                   <div style={css('display:flex;align-items:center;gap:10px;background:rgba(37,99,235,.12);border:1px dashed rgba(96,165,250,.6);border-radius:12px;padding:14px 16px;margin-bottom:14px')}>
-                    <span style={css(`${MONO};font-size:22px;font-weight:600;letter-spacing:.06em;color:#9FC0FF;flex:1`)}>PMN-WELCOME20</span>
+                    <span style={css(`${MONO};font-size:22px;font-weight:600;letter-spacing:.06em;color:#9FC0FF;flex:1`)}>{c.register.couponCode}</span>
                     <button className="agP" onClick={copyCoupon} style={css('background:#2563EB;color:#fff;border:none;border-radius:9px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap')}>{copied ? 'Copied ✓' : 'Copy'}</button>
                   </div>
-                  <div style={css('font-size:13px;color:#8B95AC;line-height:1.6;margin-bottom:24px')}>ส่วนลด <strong style={css('color:#EAEEF6')}>20%</strong> สำหรับโปรเจกต์แรก + สิทธิ์สมาชิกทั้งหมดด้านซ้าย</div>
-                  <button className="agG" onClick={() => { setRegSubmitted(false); setReg({ name: '', email: '', phone: '', service: SERVICE_OPTS[0] }); setCopied(false); }} style={css('background:none;border:1px solid rgba(255,255,255,.16);color:#A7B0C4;border-radius:10px;padding:11px;font-size:13.5px;cursor:pointer')}>ลงทะเบียนอีกครั้ง</button>
+                  <button className="agG" onClick={() => { setRegSubmitted(false); setReg({ name: '', email: '', phone: '', service: SERVICE_OPTS[0], hp: '' }); setCopied(false); }} style={css('background:none;border:1px solid rgba(255,255,255,.16);color:#A7B0C4;border-radius:10px;padding:11px;font-size:13.5px;cursor:pointer')}>ลงทะเบียนอีกครั้ง</button>
                 </div>
               ) : (
-                <form onSubmit={(e) => { e.preventDefault(); setRegSubmitted(true); setCopied(false); }} style={css('background:rgba(8,12,22,.6);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:30px;display:flex;flex-direction:column;gap:14px')}>
+                <form onSubmit={submitReg} style={css('background:rgba(8,12,22,.6);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:30px;display:flex;flex-direction:column;gap:14px')}>
                   <div style={css(`${MONO};font-size:11px;letter-spacing:.14em;color:#7B86A1;text-transform:uppercase;margin-bottom:2px`)}>Register form</div>
+                  <input value={reg.hp} onChange={(e) => setReg({ ...reg, hp: e.target.value })} tabIndex={-1} autoComplete="off" style={{ position: 'absolute', left: '-9999px', width: 1, height: 1 }} aria-hidden />
                   <div>
                     <label style={css('display:block;font-size:13px;color:#A7B0C4;margin-bottom:7px')}>ชื่อ-นามสกุล</label>
                     <input className="agInp" value={reg.name} onChange={(e) => setReg({ ...reg, name: e.target.value })} required placeholder="ชื่อของคุณ" style={css(INP)} />
@@ -575,7 +505,7 @@ export default function AgencySite() {
                       {SERVICE_OPTS.map((o) => <option key={o} style={css('background:#0b101d')}>{o}</option>)}
                     </select>
                   </div>
-                  <button className="agP" type="submit" style={css('margin-top:6px;background:#2563EB;color:#fff;border:none;border-radius:11px;padding:15px;font-size:15.5px;font-weight:600;cursor:pointer;box-shadow:0 12px 30px -10px rgba(37,99,235,.8)')}>รับสิทธิพิเศษฟรี →</button>
+                  <button className="agP" type="submit" style={css('margin-top:6px;background:#2563EB;color:#fff;border:none;border-radius:11px;padding:15px;font-size:15.5px;font-weight:600;cursor:pointer;box-shadow:0 12px 30px -10px rgba(37,99,235,.8)')}>{c.hero.ctaPrimary} →</button>
                   <p style={css('margin:2px 0 0;font-size:11.5px;color:#5C6680;text-align:center')}>เราเคารพความเป็นส่วนตัวของคุณ · ไม่มีค่าใช้จ่าย</p>
                 </form>
               )}
@@ -586,18 +516,9 @@ export default function AgencySite() {
 
       <section data-reveal style={css('padding:30px 24px 110px')}>
         <div style={css('max-width:1240px;margin:0 auto')}>
-          <div style={css('display:flex;align-items:flex-end;justify-content:space-between;gap:28px;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.1);padding-top:24px;margin-bottom:46px')}>
-            <div style={css('display:flex;align-items:baseline;gap:16px')}>
-              <span style={css(`${MONO};font-size:13px;color:#3f6fc4;font-weight:500`)}>06</span>
-              <div>
-                <div style={css(`${MONO};font-size:11px;letter-spacing:.2em;color:#5C6680;text-transform:uppercase;margin-bottom:10px`)}>Testimonials</div>
-                <h2 style={css('margin:0;font-size:clamp(29px,3.5vw,43px);line-height:1.08;letter-spacing:-.025em;font-weight:700')}>ลูกค้าพูดถึงเรา</h2>
-              </div>
-            </div>
-            <div style={css(`${MONO};font-size:12px;color:#5C6680;letter-spacing:.04em;align-self:flex-end`)}>จากลูกค้าจริงของเรา</div>
-          </div>
+          {sectionHead('06', 'Testimonials', 'ลูกค้าพูดถึงเรา', <div style={css(`${MONO};font-size:12px;color:#5C6680;letter-spacing:.04em;align-self:flex-end`)}>จากลูกค้าจริงของเรา</div>)}
           <div style={css('display:grid;grid-template-columns:repeat(3,1fr);gap:18px')} data-quotes>
-            {QUOTES.map((q, i) => (
+            {c.testimonials.map((q, i) => (
               <div key={i} style={css('background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:32px 28px;display:flex;flex-direction:column;gap:18px')}>
                 <div style={css("font-family:'IBM Plex Sans',serif;font-size:46px;line-height:1;color:#33508a;height:22px;user-select:none")}>“</div>
                 <p style={css('margin:0;font-size:16px;line-height:1.72;color:#D6DDEA;flex:1')}>{q.q}</p>
@@ -615,10 +536,10 @@ export default function AgencySite() {
         <div style={css('max-width:1080px;margin:0 auto;position:relative;border:1px solid rgba(255,255,255,.1);border-radius:26px;padding:64px 40px;text-align:center;overflow:hidden;background:radial-gradient(ellipse 80% 120% at 50% 0%,rgba(37,99,235,.22),rgba(7,10,20,.2))')}>
           <div style={css('position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:40px 40px;-webkit-mask-image:radial-gradient(ellipse 70% 80% at 50% 30%,#000,transparent 75%);mask-image:radial-gradient(ellipse 70% 80% at 50% 30%,#000,transparent 75%)')} />
           <div style={css('position:relative')}>
-            <h2 style={css('margin:0 0 16px;font-size:clamp(28px,3.6vw,46px);line-height:1.12;letter-spacing:-.02em;font-weight:700')}>พร้อมเปลี่ยนธุรกิจให้เป็นระบบแล้วหรือยัง?</h2>
-            <p style={css('margin:0 auto 30px;max-width:520px;color:#B6C0D4;font-size:17px;line-height:1.7;font-weight:300')}>นัดคุยกับทีม PMN ฟรี ไม่มีข้อผูกมัด — เราจะช่วยวางแผนระบบที่เหมาะกับคุณที่สุด</p>
+            <h2 style={css('margin:0 0 16px;font-size:clamp(28px,3.6vw,46px);line-height:1.12;letter-spacing:-.02em;font-weight:700')}>{c.ctaBand.title}</h2>
+            <p style={css('margin:0 auto 30px;max-width:520px;color:#B6C0D4;font-size:17px;line-height:1.7;font-weight:300')}>{c.ctaBand.subtitle}</p>
             <div style={css('display:flex;gap:14px;justify-content:center;flex-wrap:wrap')}>
-              <button className="agP" onClick={goReg} style={css('background:#2563EB;color:#fff;border:none;border-radius:12px;padding:15px 28px;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 12px 34px -10px rgba(37,99,235,.85)')}>รับสิทธิพิเศษฟรี →</button>
+              <button className="agP" onClick={goReg} style={css('background:#2563EB;color:#fff;border:none;border-radius:12px;padding:15px 28px;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 12px 34px -10px rgba(37,99,235,.85)')}>{c.hero.ctaPrimary} →</button>
               <button className="agG" onClick={() => go('contact')} style={css('background:rgba(255,255,255,.04);color:#EAEEF6;border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:15px 28px;font-size:16px;font-weight:500;cursor:pointer')}>ติดต่อทีมงาน</button>
             </div>
           </div>
@@ -627,8 +548,23 @@ export default function AgencySite() {
     </div>
   );
 
+  function sectionHead(num: string, eyebrow: string, title: string, right: React.ReactNode) {
+    return (
+      <div style={css('display:flex;align-items:flex-end;justify-content:space-between;gap:28px;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.1);padding-top:24px;margin-bottom:46px')}>
+        <div style={css('display:flex;align-items:baseline;gap:16px')}>
+          <span style={css(`${MONO};font-size:13px;color:#3f6fc4;font-weight:500`)}>{num}</span>
+          <div>
+            <div style={css(`${MONO};font-size:11px;letter-spacing:.2em;color:#5C6680;text-transform:uppercase;margin-bottom:10px`)}>{eyebrow}</div>
+            <h2 style={css('margin:0;font-size:clamp(29px,3.5vw,43px);line-height:1.08;letter-spacing:-.025em;font-weight:700')}>{title}</h2>
+          </div>
+        </div>
+        {right}
+      </div>
+    );
+  }
+
   function renderSteps() {
-    return STEPS.map((st, i) => (
+    return c.process.map((st, i) => (
       <div key={i} style={css('background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:22px 18px;position:relative')}>
         <div style={css(`${MONO};font-size:13px;font-weight:600;color:#2563EB;margin-bottom:14px`)}>{st.n}</div>
         <div style={css('width:34px;height:2px;background:linear-gradient(90deg,#2563EB,transparent);margin-bottom:14px')} />
@@ -648,12 +584,7 @@ export default function AgencySite() {
   }
 
   function renderPricingMini() {
-    const tiers = [
-      { name: 'Starter', th: 'ธุรกิจเริ่มต้น / SME', base: 35000, disc: 28000, custom: false, feats: ['ระบบเดียว ขอบเขตชัดเจน', 'ฐานข้อมูลมาตรฐาน', 'ดูแลฟรี 3 เดือน'], popular: false },
-      { name: 'Pro', th: 'ธุรกิจกำลังเติบโต', base: 149000, disc: 119000, custom: false, feats: ['หลายโมดูลเชื่อมกัน', 'ออกแบบ UX เฉพาะ + API', 'ดูแลฟรี 6 เดือน'], popular: true },
-      { name: 'Enterprise', th: 'องค์กรขนาดใหญ่', base: 0, disc: 0, custom: true, feats: ['ออกแบบสถาปัตยกรรมเฉพาะ', 'รองรับสเกล + ความปลอดภัยสูง', 'SLA + ทีมดูแลเฉพาะ'], popular: false },
-    ];
-    return tiers.map((t, i) => (
+    return c.pricing.tiers.map((t, i) => (
       <div key={i} style={css(`background:${t.popular ? 'linear-gradient(165deg,rgba(37,99,235,.16),rgba(255,255,255,.02))' : 'rgba(255,255,255,.025)'};border:${t.popular ? '1px solid rgba(96,165,250,.5)' : '1px solid rgba(255,255,255,.08)'};border-radius:20px;padding:28px 26px;position:relative;display:flex;flex-direction:column;box-shadow:${t.popular ? '0 24px 60px -28px rgba(37,99,235,.7)' : 'none'}`)}>
         {t.popular && <div style={css('position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:#2563EB;color:#fff;font-size:11px;font-weight:600;letter-spacing:.04em;padding:5px 14px;border-radius:100px;white-space:nowrap;box-shadow:0 8px 20px -6px rgba(37,99,235,.8)')}>แนะนำ · MOST POPULAR</div>}
         <div style={css(`${MONO};font-size:12px;letter-spacing:.12em;color:${t.popular ? '#9FC0FF' : '#7B86A1'};text-transform:uppercase;margin-bottom:6px`)}>{t.name}</div>
@@ -681,35 +612,23 @@ export default function AgencySite() {
   }
 
   /* ---------------- SERVICES ---------------- */
-  const SVC_DETAILS = [
-    { n: '01 · Database', h: 'ออกแบบ & วิศวกรรมฐานข้อมูล', p: 'หัวใจของทุกระบบคือข้อมูลที่ออกแบบมาดี เราวางโครงสร้างให้ขยายได้ ปลอดภัย และเร็ว พร้อมย้ายข้อมูลเดิมอย่างไร้รอยต่อ', feats: ['Data Modeling & Schema Design', 'Migration จากระบบเดิมอย่างปลอดภัย', 'Query Optimization & Indexing', 'Backup, Replication & Security'] },
-    { n: '02 · ERP', h: 'ระบบบริหารทรัพยากรองค์กร', p: 'รวมทุกฝ่ายให้ทำงานบนข้อมูลชุดเดียวกัน ลดงานซ้ำซ้อน เห็นภาพรวมธุรกิจแบบเรียลไทม์ ตัดสินใจได้เร็วขึ้น', feats: ['บัญชี การเงิน และงบประมาณ', 'คลังสินค้า จัดซื้อ และซัพพลายเชน', 'การผลิตและการวางแผน (MRP)', 'HR และระบบเงินเดือน'] },
-    { n: '03 · CRM', h: 'ระบบบริหารลูกค้าสัมพันธ์', p: 'ดูแลลูกค้าตั้งแต่ลีดแรกจนปิดการขายและบริการหลังการขาย เก็บทุกปฏิสัมพันธ์ไว้ในที่เดียว เพิ่มยอดขายซ้ำ', feats: ['Sales Pipeline & Lead Management', 'Ticketing & บริการหลังการขาย', 'Marketing Automation', 'รายงานและการวิเคราะห์ลูกค้า'] },
-    { n: '04 · Custom', h: 'ซอฟต์แวร์สั่งทำเฉพาะทาง', p: 'เมื่อระบบสำเร็จรูปไม่ตอบโจทย์ เราสร้างให้ตรงกับกระบวนการของคุณเป๊ะ ๆ ทั้งเว็บแอป ระบบอัตโนมัติ และการเชื่อมต่อ', feats: ['Web Application & Dashboard', 'Workflow & Process Automation', 'API & System Integration', 'Mobile-ready & Cloud-native'] },
-  ];
-  const MORE = [
-    { k: 'CLOUD', h: 'Cloud & DevOps', d: 'ติดตั้งบนคลาวด์ ปรับขนาดอัตโนมัติ และ CI/CD' },
-    { k: 'DATA', h: 'Analytics & BI', d: 'แดชบอร์ดและรายงานที่อ่านง่าย ตัดสินใจไว' },
-    { k: 'CONNECT', h: 'System Integration', d: 'เชื่อมระบบเดิม ภาครัฐ และ third-party' },
-    { k: 'CARE', h: 'Maintenance & Support', d: 'ดูแล อัปเดต และพัฒนาต่อยอดต่อเนื่อง' },
-  ];
   const renderServices = () => (
     <div style={css('animation:fadeUp .55s cubic-bezier(.22,.7,.2,1) both;padding-top:40px')}>
       <section style={css('padding:96px 24px 40px;text-align:center;position:relative;overflow:hidden')}>
         <div style={css('position:absolute;top:-120px;left:50%;transform:translateX(-50%);width:680px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,.28),transparent 65%);filter:blur(50px);pointer-events:none')} />
         <div style={css('position:relative;max-width:820px;margin:0 auto')}>
           <div style={css(`${MONO};font-size:11.5px;letter-spacing:.22em;color:#9FC0FF;text-transform:uppercase;margin-bottom:16px`)}>Services</div>
-          <h1 style={css('margin:0 0 20px;font-size:clamp(34px,4.6vw,56px);line-height:1.08;letter-spacing:-.02em;font-weight:700')}>บริการที่เราดำเนินการให้<br /><span style={css('color:#5C6680')}>ครบทุกขั้นตอน ในที่เดียว</span></h1>
-          <p style={css('margin:0;font-size:18px;line-height:1.7;color:#A7B0C4;font-weight:300')}>ตั้งแต่วางสถาปัตยกรรมข้อมูล จนถึงระบบที่พนักงานใช้งานจริงทุกวัน — PMN ออกแบบ พัฒนา ติดตั้ง และดูแลให้แบบจบในทีมเดียว</p>
+          <h1 style={css('margin:0 0 20px;font-size:clamp(34px,4.6vw,56px);line-height:1.08;letter-spacing:-.02em;font-weight:700')}>{c.servicesPage.title}<br /><span style={css('color:#5C6680')}>{c.servicesPage.titleMuted}</span></h1>
+          <p style={css('margin:0;font-size:18px;line-height:1.7;color:#A7B0C4;font-weight:300')}>{c.servicesPage.subtitle}</p>
         </div>
       </section>
       <section data-reveal style={css('padding:50px 24px 30px')}>
         <div style={css('max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:20px')}>
-          {SVC_DETAILS.map((s, i) => (
+          {c.servicesPage.details.map((s, i) => (
             <div key={i} style={css('background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:38px;display:grid;grid-template-columns:1fr 1fr;gap:40px')} data-svc-detail>
               <div>
                 <div style={css('display:flex;align-items:center;gap:14px;margin-bottom:18px')}>
-                  <div style={css('width:52px;height:52px;border-radius:14px;background:rgba(37,99,235,.16);border:1px solid rgba(37,99,235,.35);display:flex;align-items:center;justify-content:center')}><ServiceIcon kind={SVCS[i].icon} /></div>
+                  <div style={css('width:52px;height:52px;border-radius:14px;background:rgba(37,99,235,.16);border:1px solid rgba(37,99,235,.35);display:flex;align-items:center;justify-content:center')}><ServiceIcon kind={c.services[i]?.icon ?? 'code'} /></div>
                   <div><div style={css(`${MONO};font-size:11px;letter-spacing:.12em;color:#7FB0FF;text-transform:uppercase`)}>{s.n}</div><h2 style={css('margin:4px 0 0;font-size:24px;font-weight:700;letter-spacing:-.01em')}>{s.h}</h2></div>
                 </div>
                 <p style={css('margin:0;color:#A7B0C4;font-size:15px;line-height:1.7')}>{s.p}</p>
@@ -723,9 +642,9 @@ export default function AgencySite() {
       </section>
       <section data-reveal style={css('padding:50px 24px 40px')}>
         <div style={css('max-width:1180px;margin:0 auto')}>
-          <div style={css('text-align:center;margin-bottom:40px')}><div style={css(`${MONO};font-size:11.5px;letter-spacing:.22em;color:#9FC0FF;text-transform:uppercase;margin-bottom:14px`)}>More</div><h2 style={css('margin:0;font-size:clamp(26px,3vw,38px);line-height:1.14;letter-spacing:-.02em;font-weight:700')}>บริการเสริมที่ทำให้ระบบสมบูรณ์</h2></div>
+          <div style={css('text-align:center;margin-bottom:40px')}><div style={css(`${MONO};font-size:11.5px;letter-spacing:.22em;color:#9FC0FF;text-transform:uppercase;margin-bottom:14px`)}>More</div><h2 style={css('margin:0;font-size:clamp(26px,3vw,38px);line-height:1.14;letter-spacing:-.02em;font-weight:700')}>{c.servicesPage.moreTitle}</h2></div>
           <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:16px')} data-more-grid>
-            {MORE.map((m, i) => (
+            {c.servicesPage.more.map((m, i) => (
               <div key={i} className="agMore" style={css('background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:24px')}>
                 <div style={css(`${MONO};font-size:11px;color:#7FB0FF;letter-spacing:.1em;margin-bottom:10px`)}>{m.k}</div>
                 <h3 style={css('margin:0 0 8px;font-size:16px;font-weight:600')}>{m.h}</h3>
@@ -740,10 +659,10 @@ export default function AgencySite() {
           <div style={css('display:grid;grid-template-columns:1fr 1.2fr;gap:40px;align-items:center')} data-exp-grid>
             <div>
               <div style={css(`${MONO};font-size:11.5px;letter-spacing:.22em;color:#9FC0FF;text-transform:uppercase;margin-bottom:14px`)}>Expertise</div>
-              <h2 style={css('margin:0 0 14px;font-size:clamp(24px,2.6vw,34px);line-height:1.18;letter-spacing:-.02em;font-weight:700')}>ความเชี่ยวชาญด้านเทคโนโลยี</h2>
-              <p style={css('margin:0;color:#A7B0C4;font-size:15px;line-height:1.7')}>เราเลือกเครื่องมือจากโจทย์จริง ผสานความรู้ด้านสถาปัตยกรรมระบบ ความปลอดภัย และประสบการณ์จากหลายอุตสาหกรรม</p>
+              <h2 style={css('margin:0 0 14px;font-size:clamp(24px,2.6vw,34px);line-height:1.18;letter-spacing:-.02em;font-weight:700')}>{c.servicesPage.expertiseTitle}</h2>
+              <p style={css('margin:0;color:#A7B0C4;font-size:15px;line-height:1.7')}>{c.servicesPage.expertiseDesc}</p>
             </div>
-            <div style={css('display:flex;flex-wrap:wrap;gap:8px')}>{TECHS.map((t) => <span key={t} style={css(`${MONO};font-size:12px;color:#C7D0E0;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 11px`)}>{t}</span>)}</div>
+            <div style={css('display:flex;flex-wrap:wrap;gap:8px')}>{c.techs.map((t) => <span key={t} style={css(`${MONO};font-size:12px;color:#C7D0E0;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 11px`)}>{t}</span>)}</div>
           </div>
         </div>
       </section>
@@ -758,7 +677,7 @@ export default function AgencySite() {
           <h2 style={css('margin:0 0 14px;font-size:clamp(26px,3.4vw,40px);line-height:1.14;letter-spacing:-.02em;font-weight:700')}>ไม่แน่ใจว่าธุรกิจคุณต้องการระบบแบบไหน?</h2>
           <p style={css('margin:0 auto 28px;max-width:520px;color:#B6C0D4;font-size:16px;line-height:1.7;font-weight:300')}>คุยกับเราฟรี เราจะช่วยวิเคราะห์และแนะนำแนวทางที่เหมาะกับคุณที่สุด</p>
           <div style={css('display:flex;gap:14px;justify-content:center;flex-wrap:wrap')}>
-            <button className="agP" onClick={goReg} style={css('background:#2563EB;color:#fff;border:none;border-radius:12px;padding:15px 28px;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 12px 34px -10px rgba(37,99,235,.85)')}>รับสิทธิพิเศษฟรี →</button>
+            <button className="agP" onClick={goReg} style={css('background:#2563EB;color:#fff;border:none;border-radius:12px;padding:15px 28px;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 12px 34px -10px rgba(37,99,235,.85)')}>{c.hero.ctaPrimary} →</button>
             <button className="agG" onClick={() => go('pricing')} style={css('background:rgba(255,255,255,.04);color:#EAEEF6;border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:15px 28px;font-size:16px;font-weight:500;cursor:pointer')}>ดูแพ็กเกจและราคา</button>
           </div>
         </div>
@@ -767,15 +686,19 @@ export default function AgencySite() {
   );
 
   /* ---------------- PORTFOLIO ---------------- */
-  const filteredWork = workFilter === 'all' ? ALL_WORK : ALL_WORK.filter((w) => w.cat === workFilter);
+  const FILTERS = [
+    { label: 'ทั้งหมด', cat: 'all' }, { label: 'ERP', cat: 'erp' }, { label: 'CRM', cat: 'crm' },
+    { label: 'Database', cat: 'database' }, { label: 'Custom', cat: 'custom' },
+  ];
+  const filteredWork = workFilter === 'all' ? c.portfolio.allWork : c.portfolio.allWork.filter((w) => w.cat === workFilter);
   const renderPortfolio = () => (
     <div style={css('animation:fadeUp .55s cubic-bezier(.22,.7,.2,1) both;padding-top:40px')}>
       <section style={css('padding:96px 24px 24px;text-align:center;position:relative;overflow:hidden')}>
         <div style={css('position:absolute;top:-120px;left:50%;transform:translateX(-50%);width:680px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,.26),transparent 65%);filter:blur(50px);pointer-events:none')} />
         <div style={css('position:relative;max-width:780px;margin:0 auto')}>
           <div style={css(`${MONO};font-size:11.5px;letter-spacing:.22em;color:#9FC0FF;text-transform:uppercase;margin-bottom:16px`)}>Portfolio</div>
-          <h1 style={css('margin:0 0 18px;font-size:clamp(34px,4.6vw,56px);line-height:1.08;letter-spacing:-.02em;font-weight:700')}>ผลงานที่เราภูมิใจ <span style={css('color:#5C6680')}>วัดผลได้จริง</span></h1>
-          <p style={css('margin:0;font-size:18px;line-height:1.7;color:#A7B0C4;font-weight:300')}>ระบบที่เราส่งมอบให้ลูกค้าหลากหลายอุตสาหกรรม พร้อมผลลัพธ์ที่จับต้องได้</p>
+          <h1 style={css('margin:0 0 18px;font-size:clamp(34px,4.6vw,56px);line-height:1.08;letter-spacing:-.02em;font-weight:700')}>{c.portfolio.title} <span style={css('color:#5C6680')}>{c.portfolio.titleMuted}</span></h1>
+          <p style={css('margin:0;font-size:18px;line-height:1.7;color:#A7B0C4;font-weight:300')}>{c.portfolio.subtitle}</p>
         </div>
       </section>
       <section data-reveal style={css('padding:24px 24px 20px')}>
@@ -806,8 +729,8 @@ export default function AgencySite() {
       </section>
       <section data-reveal style={css('padding:20px 24px 50px')}>
         <div style={css('max-width:1180px;margin:0 auto;background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(56,189,248,.06));border:1px solid rgba(255,255,255,.09);border-radius:22px;padding:40px;display:grid;grid-template-columns:repeat(4,1fr);gap:24px')}>
-          {[['120+', 'โปรเจกต์ส่งมอบ'], ['80+', 'องค์กรลูกค้า'], ['14', 'อุตสาหกรรม'], ['98%', 'ลูกค้ากลับมาใช้ซ้ำ']].map(([v, l]) => (
-            <div key={l} style={css('text-align:center')}><div style={css('font-size:clamp(30px,3.4vw,44px);font-weight:700;letter-spacing:-.02em;background:linear-gradient(180deg,#fff,#9FC0FF);-webkit-background-clip:text;background-clip:text;color:transparent')}>{v}</div><div style={css('color:#A7B0C4;font-size:14px;margin-top:6px')}>{l}</div></div>
+          {c.portfolio.stats.map((st, i) => (
+            <div key={i} style={css('text-align:center')}><div style={css('font-size:clamp(30px,3.4vw,44px);font-weight:700;letter-spacing:-.02em;background:linear-gradient(180deg,#fff,#9FC0FF);-webkit-background-clip:text;background-clip:text;color:transparent')}>{st.v}</div><div style={css('color:#A7B0C4;font-size:14px;margin-top:6px')}>{st.l}</div></div>
           ))}
         </div>
       </section>
@@ -816,7 +739,7 @@ export default function AgencySite() {
           <h2 style={css('margin:0 0 14px;font-size:clamp(26px,3.4vw,40px);line-height:1.14;letter-spacing:-.02em;font-weight:700')}>อยากให้ธุรกิจคุณเป็นผลงานชิ้นต่อไป?</h2>
           <p style={css('margin:0 auto 28px;max-width:520px;color:#B6C0D4;font-size:16px;line-height:1.7;font-weight:300')}>เริ่มต้นด้วยการลงทะเบียนรับสิทธิพิเศษ แล้วเราจะติดต่อกลับเพื่อวางแผนร่วมกัน</p>
           <div style={css('display:flex;gap:14px;justify-content:center;flex-wrap:wrap')}>
-            <button className="agP" onClick={goReg} style={css('background:#2563EB;color:#fff;border:none;border-radius:12px;padding:15px 28px;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 12px 34px -10px rgba(37,99,235,.85)')}>รับสิทธิพิเศษฟรี →</button>
+            <button className="agP" onClick={goReg} style={css('background:#2563EB;color:#fff;border:none;border-radius:12px;padding:15px 28px;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 12px 34px -10px rgba(37,99,235,.85)')}>{c.hero.ctaPrimary} →</button>
             <button className="agG" onClick={() => go('contact')} style={css('background:rgba(255,255,255,.04);color:#EAEEF6;border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:15px 28px;font-size:16px;font-weight:500;cursor:pointer')}>ติดต่อเรา</button>
           </div>
         </div>
@@ -825,8 +748,8 @@ export default function AgencySite() {
   );
 
   /* ---------------- PRICING ---------------- */
-  const starterPrice = discount ? fmt(28000) : fmt(35000);
-  const proPrice = discount ? fmt(119000) : fmt(149000);
+  const starterPrice = discount ? fmt(c.pricing.tiers[0]?.disc ?? 28000) : fmt(c.pricing.tiers[0]?.base ?? 35000);
+  const proPrice = discount ? fmt(c.pricing.tiers[1]?.disc ?? 119000) : fmt(c.pricing.tiers[1]?.base ?? 149000);
   const cmpRows: [string, string, string, string][] = [
     ['จำนวนโมดูล', '1', 'สูงสุด 5', 'ไม่จำกัด'],
     ['ออกแบบ UX เฉพาะ', '—', '✓', '✓'],
@@ -842,59 +765,35 @@ export default function AgencySite() {
         <div style={css('position:absolute;top:-120px;left:50%;transform:translateX(-50%);width:680px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,.26),transparent 65%);filter:blur(50px);pointer-events:none')} />
         <div style={css('position:relative;max-width:780px;margin:0 auto')}>
           <div style={css(`${MONO};font-size:11.5px;letter-spacing:.22em;color:#9FC0FF;text-transform:uppercase;margin-bottom:16px`)}>Pricing</div>
-          <h1 style={css('margin:0 0 18px;font-size:clamp(34px,4.6vw,56px);line-height:1.08;letter-spacing:-.02em;font-weight:700')}>ราคาที่โปร่งใส <span style={css('color:#5C6680')}>ยืดหยุ่นตามธุรกิจ</span></h1>
-          <p style={css('margin:0 0 30px;font-size:18px;line-height:1.7;color:#A7B0C4;font-weight:300')}>เลือกแพ็กเกจที่เหมาะกับขนาดธุรกิจคุณ ทุกแพ็กเกจปรับแต่งได้ และมีทีมดูแลหลังส่งมอบ</p>
+          <h1 style={css('margin:0 0 18px;font-size:clamp(34px,4.6vw,56px);line-height:1.08;letter-spacing:-.02em;font-weight:700')}>{c.pricingPage.title} <span style={css('color:#5C6680')}>{c.pricingPage.titleMuted}</span></h1>
+          <p style={css('margin:0 0 30px;font-size:18px;line-height:1.7;color:#A7B0C4;font-weight:300')}>{c.pricingPage.subtitle}</p>
           <div style={css('display:flex;justify-content:center')}>{renderDiscountToggle('')}</div>
         </div>
       </section>
       <section data-reveal style={css('padding:30px 24px 30px')}>
         <div style={css('max-width:1180px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:stretch')} data-price-grid>
-          <div style={css('background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:32px 30px;display:flex;flex-direction:column')}>
-            <div style={css(`${MONO};font-size:12px;letter-spacing:.12em;color:#7B86A1;text-transform:uppercase;margin-bottom:6px`)}>Starter</div>
-            <div style={css('font-size:14px;color:#A7B0C4;margin-bottom:14px')}>ธุรกิจเริ่มต้น / SME</div>
-            <div style={css('margin-bottom:8px;min-height:30px')}>
-              {discount && <span style={css('font-size:16px;color:#5C6680;text-decoration:line-through;margin-right:9px')}>{fmt(35000)}</span>}
-              <span style={css('font-size:34px;font-weight:700;letter-spacing:-.02em;color:#fff')}>{starterPrice}</span>
+          {c.pricing.tiers.map((t, i) => (
+            <div key={i} style={css(`background:${t.popular ? 'linear-gradient(165deg,rgba(37,99,235,.18),rgba(255,255,255,.02))' : 'rgba(255,255,255,.025)'};border:${t.popular ? '1px solid rgba(96,165,250,.5)' : '1px solid rgba(255,255,255,.08)'};border-radius:22px;padding:32px 30px;display:flex;flex-direction:column;position:relative;${t.popular ? 'box-shadow:0 28px 70px -30px rgba(37,99,235,.8)' : ''}`)}>
+              {t.popular && <div style={css('position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:#2563EB;color:#fff;font-size:11px;font-weight:600;letter-spacing:.04em;padding:6px 15px;border-radius:100px;white-space:nowrap;box-shadow:0 8px 20px -6px rgba(37,99,235,.8)')}>แนะนำ · MOST POPULAR</div>}
+              <div style={css(`${MONO};font-size:12px;letter-spacing:.12em;color:${t.popular ? '#9FC0FF' : '#7B86A1'};text-transform:uppercase;margin-bottom:6px`)}>{t.name}</div>
+              <div style={css('font-size:14px;color:#A7B0C4;margin-bottom:14px')}>{t.th}</div>
+              <div style={css('margin-bottom:8px;min-height:30px')}>
+                {t.custom ? (
+                  <span style={css('font-size:34px;font-weight:700;letter-spacing:-.02em;color:#fff')}>Custom</span>
+                ) : (
+                  <>
+                    {discount && <span style={css('font-size:16px;color:#5C6680;text-decoration:line-through;margin-right:9px')}>{fmt(t.base)}</span>}
+                    <span style={css('font-size:34px;font-weight:700;letter-spacing:-.02em;color:#fff')}>{fmt(discount ? t.disc : t.base)}</span>
+                  </>
+                )}
+              </div>
+              <div style={css('font-size:13px;color:#8B95AC;margin-bottom:24px')}>{t.custom ? 'ราคาตามขอบเขตงาน' : 'เริ่มต้น · ราคาต่อโปรเจกต์'}</div>
+              <div style={css('display:flex;flex-direction:column;gap:12px;margin-bottom:28px;flex:1')}>
+                {t.feats.map((f, j) => <div key={j} style={css('display:flex;gap:10px;font-size:14px;color:#C7D0E0')}><span style={css('color:#60A5FA')}>✓</span> {f}</div>)}
+              </div>
+              <button className={t.popular ? 'agP' : 'agG'} onClick={t.custom ? () => go('contact') : goReg} style={css(`background:${t.popular ? '#2563EB' : 'rgba(255,255,255,.05)'};color:#fff;border:${t.popular ? 'none' : '1px solid rgba(255,255,255,.16)'};border-radius:11px;padding:13px;font-size:14.5px;font-weight:600;cursor:pointer`)}>{t.custom ? 'ขอใบเสนอราคา' : 'เลือกแพ็กเกจนี้'}</button>
             </div>
-            <div style={css('font-size:13px;color:#8B95AC;margin-bottom:24px')}>เริ่มต้น · ราคาต่อโปรเจกต์</div>
-            <div style={css('display:flex;flex-direction:column;gap:12px;margin-bottom:28px;flex:1')}>
-              {['ระบบเดียว ขอบเขตชัดเจน', 'ฐานข้อมูลมาตรฐาน', 'ออกแบบ UI พื้นฐาน', 'อบรมการใช้งาน', 'ดูแลฟรี 3 เดือน'].map((f) => <div key={f} style={css('display:flex;gap:10px;font-size:14px;color:#C7D0E0')}><span style={css('color:#60A5FA')}>✓</span> {f}</div>)}
-            </div>
-            <button className="agG" onClick={goReg} style={css('background:rgba(255,255,255,.05);color:#fff;border:1px solid rgba(255,255,255,.16);border-radius:11px;padding:13px;font-size:14.5px;font-weight:600;cursor:pointer')}>เริ่มต้นแพ็กเกจนี้</button>
-          </div>
-          <div style={css('background:linear-gradient(165deg,rgba(37,99,235,.18),rgba(255,255,255,.02));border:1px solid rgba(96,165,250,.5);border-radius:22px;padding:32px 30px;display:flex;flex-direction:column;position:relative;box-shadow:0 28px 70px -30px rgba(37,99,235,.8)')}>
-            <div style={css('position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:#2563EB;color:#fff;font-size:11px;font-weight:600;letter-spacing:.04em;padding:6px 15px;border-radius:100px;white-space:nowrap;box-shadow:0 8px 20px -6px rgba(37,99,235,.8)')}>แนะนำ · MOST POPULAR</div>
-            <div style={css(`${MONO};font-size:12px;letter-spacing:.12em;color:#9FC0FF;text-transform:uppercase;margin-bottom:6px`)}>Pro</div>
-            <div style={css('font-size:14px;color:#A7B0C4;margin-bottom:14px')}>ธุรกิจกำลังเติบโต</div>
-            <div style={css('margin-bottom:8px;min-height:30px')}>
-              {discount && <span style={css('font-size:16px;color:#7B86A1;text-decoration:line-through;margin-right:9px')}>{fmt(149000)}</span>}
-              <span style={css('font-size:34px;font-weight:700;letter-spacing:-.02em;color:#fff')}>{proPrice}</span>
-            </div>
-            <div style={css('font-size:13px;color:#A7B0C4;margin-bottom:24px')}>เริ่มต้น · ราคาต่อโปรเจกต์</div>
-            <div style={css('display:flex;flex-direction:column;gap:12px;margin-bottom:28px;flex:1')}>
-              {['หลายโมดูลเชื่อมกัน (สูงสุด 5)', 'ออกแบบ UX เฉพาะธุรกิจ', 'API & System Integration', 'รายงาน & แดชบอร์ด BI', 'ดูแลฟรี 6 เดือน + Priority support'].map((f) => <div key={f} style={css('display:flex;gap:10px;font-size:14px;color:#EAEEF6')}><span style={css('color:#60A5FA')}>✓</span> {f}</div>)}
-            </div>
-            <button className="agP" onClick={goReg} style={css('background:#2563EB;color:#fff;border:none;border-radius:11px;padding:13px;font-size:14.5px;font-weight:600;cursor:pointer;box-shadow:0 12px 30px -10px rgba(37,99,235,.8)')}>เลือกแพ็กเกจนี้</button>
-          </div>
-          <div style={css('background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:32px 30px;display:flex;flex-direction:column')}>
-            <div style={css(`${MONO};font-size:12px;letter-spacing:.12em;color:#7B86A1;text-transform:uppercase;margin-bottom:6px`)}>Enterprise</div>
-            <div style={css('font-size:14px;color:#A7B0C4;margin-bottom:14px')}>องค์กรขนาดใหญ่</div>
-            <div style={css('margin-bottom:8px;min-height:30px')}><span style={css('font-size:34px;font-weight:700;letter-spacing:-.02em;color:#fff')}>Custom</span></div>
-            <div style={css('font-size:13px;color:#8B95AC;margin-bottom:24px')}>ราคาตามขอบเขตงาน</div>
-            <div style={css('display:flex;flex-direction:column;gap:12px;margin-bottom:28px;flex:1')}>
-              {['ออกแบบสถาปัตยกรรมเฉพาะ', 'รองรับสเกลสูง + ความปลอดภัยองค์กร', 'Integration ไม่จำกัด', 'SLA + ทีมดูแลเฉพาะ', 'On-premise / Private cloud'].map((f) => <div key={f} style={css('display:flex;gap:10px;font-size:14px;color:#C7D0E0')}><span style={css('color:#60A5FA')}>✓</span> {f}</div>)}
-            </div>
-            <button className="agG" onClick={() => go('contact')} style={css('background:rgba(255,255,255,.05);color:#fff;border:1px solid rgba(255,255,255,.16);border-radius:11px;padding:13px;font-size:14.5px;font-weight:600;cursor:pointer')}>ขอใบเสนอราคา</button>
-          </div>
-        </div>
-      </section>
-      <section data-reveal style={css('padding:20px 24px 40px')}>
-        <div style={css('max-width:1180px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;background:linear-gradient(135deg,rgba(56,189,248,.14),rgba(37,99,235,.08));border:1px dashed rgba(96,165,250,.5);border-radius:18px;padding:24px 30px')}>
-          <div style={css('display:flex;align-items:center;gap:16px')}>
-            <div style={css(`${MONO};font-size:15px;font-weight:600;color:#7FD7FF;border:1px dashed rgba(127,215,255,.5);border-radius:9px;padding:11px 13px;letter-spacing:.02em;white-space:nowrap`)}>−20%</div>
-            <div><div style={css('font-size:17px;font-weight:600;margin-bottom:3px')}>ลงทะเบียนรับคูปองส่วนลด 20%</div><div style={css('font-size:14px;color:#A7B0C4')}>โค้ด <span style={css(`${MONO};color:#9FC0FF`)}>PMN-WELCOME20</span> + ปรึกษาวางระบบฟรี 1 ชั่วโมง</div></div>
-          </div>
-          <button className="agP" onClick={goReg} style={css('background:#2563EB;color:#fff;border:none;border-radius:11px;padding:13px 22px;font-size:14.5px;font-weight:600;cursor:pointer;white-space:nowrap')}>รับคูปองเลย →</button>
+          ))}
         </div>
       </section>
       <section data-reveal style={css('padding:30px 24px 40px')}>
@@ -922,7 +821,7 @@ export default function AgencySite() {
         <div style={css('max-width:820px;margin:0 auto')}>
           <div style={css('text-align:center;margin-bottom:34px')}><div style={css(`${MONO};font-size:11.5px;letter-spacing:.22em;color:#9FC0FF;text-transform:uppercase;margin-bottom:12px`)}>FAQ</div><h2 style={css('margin:0;font-size:clamp(24px,2.8vw,36px);line-height:1.16;letter-spacing:-.02em;font-weight:700')}>คำถามที่พบบ่อย</h2></div>
           <div style={css('display:flex;flex-direction:column;gap:12px')}>
-            {FAQS.map((f, i) => {
+            {c.faqs.map((f, i) => {
               const open = faqOpen === i;
               return (
                 <div key={i} style={css('border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.02);overflow:hidden')}>
@@ -947,8 +846,8 @@ export default function AgencySite() {
         <div style={css('position:absolute;top:-120px;left:50%;transform:translateX(-50%);width:680px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,.26),transparent 65%);filter:blur(50px);pointer-events:none')} />
         <div style={css('position:relative;max-width:780px;margin:0 auto')}>
           <div style={css(`${MONO};font-size:11.5px;letter-spacing:.22em;color:#9FC0FF;text-transform:uppercase;margin-bottom:16px`)}>Contact</div>
-          <h1 style={css('margin:0 0 18px;font-size:clamp(34px,4.6vw,56px);line-height:1.08;letter-spacing:-.02em;font-weight:700')}>คุยกับทีม PMN <span style={css('color:#5C6680')}>เริ่มได้เลยวันนี้</span></h1>
-          <p style={css('margin:0;font-size:18px;line-height:1.7;color:#A7B0C4;font-weight:300')}>บอกโจทย์ของคุณกับเรา แล้วทีมงานจะติดต่อกลับภายใน 24 ชั่วโมง — ปรึกษาฟรี ไม่มีข้อผูกมัด</p>
+          <h1 style={css('margin:0 0 18px;font-size:clamp(34px,4.6vw,56px);line-height:1.08;letter-spacing:-.02em;font-weight:700')}>{c.contact.title} <span style={css('color:#5C6680')}>{c.contact.titleMuted}</span></h1>
+          <p style={css('margin:0;font-size:18px;line-height:1.7;color:#A7B0C4;font-weight:300')}>{c.contact.subtitle}</p>
         </div>
       </section>
       <section data-reveal style={css('padding:40px 24px 100px')}>
@@ -961,12 +860,13 @@ export default function AgencySite() {
                 <p style={css('margin:0 0 26px;color:#A7B0C4;font-size:15px;line-height:1.7')}>ขอบคุณที่ติดต่อ PMN Digital ทีมงานของเราจะติดต่อกลับภายใน 24 ชั่วโมง ระหว่างนี้อย่าลืมลงทะเบียนรับสิทธิพิเศษด้วยนะครับ</p>
                 <div style={css('display:flex;gap:12px;flex-wrap:wrap')}>
                   <button className="agP" onClick={goReg} style={css('background:#2563EB;color:#fff;border:none;border-radius:11px;padding:13px 22px;font-size:14.5px;font-weight:600;cursor:pointer')}>รับสิทธิพิเศษ →</button>
-                  <button className="agG" onClick={() => { setCSubmitted(false); setContact({ name: '', email: '', company: '', service: SERVICE_OPTS[0], msg: '' }); }} style={css('background:none;border:1px solid rgba(255,255,255,.16);color:#A7B0C4;border-radius:11px;padding:13px 22px;font-size:14.5px;cursor:pointer')}>ส่งอีกข้อความ</button>
+                  <button className="agG" onClick={() => { setCSubmitted(false); setContact({ name: '', email: '', company: '', service: SERVICE_OPTS[0], msg: '', hp: '' }); }} style={css('background:none;border:1px solid rgba(255,255,255,.16);color:#A7B0C4;border-radius:11px;padding:13px 22px;font-size:14.5px;cursor:pointer')}>ส่งอีกข้อความ</button>
                 </div>
               </div>
             ) : (
-              <form onSubmit={(e) => { e.preventDefault(); setCSubmitted(true); }} style={css('display:flex;flex-direction:column;gap:16px')}>
+              <form onSubmit={submitContact} style={css('display:flex;flex-direction:column;gap:16px')}>
                 <div style={css(`${MONO};font-size:11px;letter-spacing:.14em;color:#7B86A1;text-transform:uppercase`)}>Send a message</div>
+                <input value={contact.hp} onChange={(e) => setContact({ ...contact, hp: e.target.value })} tabIndex={-1} autoComplete="off" style={{ position: 'absolute', left: '-9999px', width: 1, height: 1 }} aria-hidden />
                 <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
                   <div><label style={css('display:block;font-size:13px;color:#A7B0C4;margin-bottom:7px')}>ชื่อ-นามสกุล</label><input className="agInp" value={contact.name} onChange={(e) => setContact({ ...contact, name: e.target.value })} required placeholder="ชื่อของคุณ" style={css(INP)} /></div>
                   <div><label style={css('display:block;font-size:13px;color:#A7B0C4;margin-bottom:7px')}>บริษัท / องค์กร</label><input className="agInp" value={contact.company} onChange={(e) => setContact({ ...contact, company: e.target.value })} placeholder="ชื่อองค์กร" style={css(INP)} /></div>
@@ -980,9 +880,9 @@ export default function AgencySite() {
           </div>
           <div style={css('display:flex;flex-direction:column;gap:14px')}>
             {[
-              { icon: css('width:18px;height:13px;border:1.7px solid #60A5FA;border-radius:3px'), k: 'EMAIL', v: 'hello@pmndigital.co' },
-              { icon: css('width:15px;height:15px;border:1.7px solid #60A5FA;border-radius:50%'), k: 'PHONE', v: '02-XXX-XXXX' },
-              { icon: css('width:13px;height:13px;border:1.7px solid #60A5FA;transform:rotate(45deg)'), k: 'OFFICE', v: 'กรุงเทพมหานคร, ประเทศไทย' },
+              { icon: css('width:18px;height:13px;border:1.7px solid #60A5FA;border-radius:3px'), k: 'EMAIL', v: c.contact.email },
+              { icon: css('width:15px;height:15px;border:1.7px solid #60A5FA;border-radius:50%'), k: 'PHONE', v: c.contact.phone },
+              { icon: css('width:13px;height:13px;border:1.7px solid #60A5FA;transform:rotate(45deg)'), k: 'OFFICE', v: c.contact.office },
             ].map((it) => (
               <div key={it.k} style={css('background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:22px;display:flex;align-items:center;gap:15px')}>
                 <div style={css('width:44px;height:44px;border-radius:11px;background:rgba(37,99,235,.14);border:1px solid rgba(37,99,235,.32);display:flex;align-items:center;justify-content:center;flex-shrink:0')}><span style={{ ...it.icon, display: 'block' }} /></div>
@@ -991,9 +891,9 @@ export default function AgencySite() {
             ))}
             <div style={css('background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(56,189,248,.05));border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:22px')}>
               <div style={css(`font-size:12px;color:#7B86A1;${MONO};letter-spacing:.06em;margin-bottom:10px`)}>HOURS</div>
-              <div style={css('display:flex;justify-content:space-between;font-size:14px;color:#C7D0E0;margin-bottom:6px')}><span>จันทร์ – ศุกร์</span><span>09:00 – 18:00</span></div>
-              <div style={css('display:flex;justify-content:space-between;font-size:14px;color:#8B95AC')}><span>เสาร์ – อาทิตย์</span><span>ตามนัดหมาย</span></div>
-              <div style={css('margin-top:14px;display:flex;align-items:center;gap:8px;font-size:13px;color:#4ade80')}><span style={css('width:7px;height:7px;border-radius:50%;background:#4ade80;box-shadow:0 0 8px #4ade80;animation:pulseDot 1.8s infinite')} />ตอบกลับเฉลี่ยภายใน 24 ชม.</div>
+              <div style={css('display:flex;justify-content:space-between;font-size:14px;color:#C7D0E0;margin-bottom:6px')}><span>จันทร์ – ศุกร์</span><span>{c.contact.hoursWeekday}</span></div>
+              <div style={css('display:flex;justify-content:space-between;font-size:14px;color:#8B95AC')}><span>เสาร์ – อาทิตย์</span><span>{c.contact.hoursWeekend}</span></div>
+              <div style={css('margin-top:14px;display:flex;align-items:center;gap:8px;font-size:13px;color:#4ade80')}><span style={css('width:7px;height:7px;border-radius:50%;background:#4ade80;box-shadow:0 0 8px #4ade80;animation:pulseDot 1.8s infinite')} />{c.contact.responseNote}</div>
             </div>
           </div>
         </div>
@@ -1002,7 +902,7 @@ export default function AgencySite() {
   );
 
   return (
-    <div className="ag-root" style={{ position: 'relative', minHeight: '100vh', background: C.bg, color: C.text, fontFamily: "'IBM Plex Sans','IBM Plex Sans Thai',system-ui,sans-serif", overflowX: 'clip' }}>
+    <div className="ag-root" style={{ position: 'relative', minHeight: '100vh', background: '#05070E', color: '#EAEEF6', fontFamily: "'IBM Plex Sans','IBM Plex Sans Thai',system-ui,sans-serif", overflowX: 'clip' }}>
       <style>{STYLE}</style>
       <div ref={progressRef} style={css('position:fixed;top:0;left:0;height:2px;width:100%;background:linear-gradient(90deg,#2563EB,#38BDF8);transform:scaleX(0);transform-origin:0 50%;z-index:120;transition:transform .1s linear')} />
 
@@ -1030,7 +930,7 @@ export default function AgencySite() {
           {NAV.map((n) => (
             <button key={n.p} onClick={() => go(n.p)} style={css('background:none;border:none;border-bottom:1px solid rgba(255,255,255,.08);text-align:left;color:#EAEEF6;font-size:22px;font-weight:600;padding:18px 4px;cursor:pointer')}>{n.label}</button>
           ))}
-          <button onClick={goReg} style={css('margin-top:24px;background:#2563EB;color:#fff;border:none;border-radius:12px;padding:16px;font-size:16px;font-weight:600;cursor:pointer')}>รับสิทธิพิเศษฟรี →</button>
+          <button onClick={goReg} style={css('margin-top:24px;background:#2563EB;color:#fff;border:none;border-radius:12px;padding:16px;font-size:16px;font-weight:600;cursor:pointer')}>{c.hero.ctaPrimary} →</button>
         </div>
       )}
 
@@ -1047,13 +947,16 @@ export default function AgencySite() {
           <div style={css('display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:36px;margin-bottom:48px')} data-footer-grid>
             <div>
               <div style={css('margin-bottom:18px')}><Logo h={34} /></div>
-              <p style={css('margin:0 0 18px;color:#8B95AC;font-size:14px;line-height:1.7;max-width:320px;font-weight:300')}>เอเจนซีออกแบบและพัฒนาระบบฐานข้อมูล ERP, CRM และซอฟต์แวร์เฉพาะทางแบบครบวงจร โดยทีมยุคใหม่ที่เข้าใจธุรกิจ</p>
+              <p style={css('margin:0 0 18px;color:#8B95AC;font-size:14px;line-height:1.7;max-width:320px;font-weight:300')}>{c.footer.desc}</p>
               <div style={css('display:flex;gap:10px')}>
-                {SOCIALS.map((s) => (
-                  <a key={s.label} href="#" aria-label={s.label} className="agSoc" onClick={(e) => e.preventDefault()} style={css('width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#A7B0C4;text-decoration:none')}>
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d={s.d} /></svg>
-                  </a>
-                ))}
+                {SOCIAL_GLYPHS.map((sg) => {
+                  const href = socials[sg.key] || '#';
+                  return (
+                    <a key={sg.key} href={href} aria-label={sg.label} target={href !== '#' ? '_blank' : undefined} rel="noopener noreferrer" className="agSoc" onClick={href === '#' ? (e) => e.preventDefault() : undefined} style={css('width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#A7B0C4;text-decoration:none')}>
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d={sg.d} /></svg>
+                    </a>
+                  );
+                })}
               </div>
             </div>
             <div>
@@ -1065,15 +968,15 @@ export default function AgencySite() {
               <button className="agLink" onClick={() => go('portfolio')} style={css('display:block;background:none;border:none;color:#A7B0C4;font-size:14px;padding:6px 0;cursor:pointer;text-align:left')}>ผลงาน</button>
               <button className="agLink" onClick={() => go('pricing')} style={css('display:block;background:none;border:none;color:#A7B0C4;font-size:14px;padding:6px 0;cursor:pointer;text-align:left')}>ราคา</button>
               <button className="agLink" onClick={() => go('contact')} style={css('display:block;background:none;border:none;color:#A7B0C4;font-size:14px;padding:6px 0;cursor:pointer;text-align:left')}>ติดต่อเรา</button>
-              <button className="agLink" onClick={goReg} style={css('display:block;background:none;border:none;color:#A7B0C4;font-size:14px;padding:6px 0;cursor:pointer;text-align:left')}>รับสิทธิพิเศษ</button>
+              <a className="agLink" href="/blog" style={css('display:block;color:#A7B0C4;font-size:14px;padding:6px 0;text-decoration:none')}>บทความ</a>
             </div>
             <div>
               <div style={css(`${MONO};font-size:11px;letter-spacing:.16em;color:#5C6680;text-transform:uppercase;margin-bottom:16px`)}>Contact</div>
-              <div style={css('color:#A7B0C4;font-size:14px;line-height:1.9')}>hello@pmndigital.co<br />02-XXX-XXXX<br />กรุงเทพมหานคร, ไทย</div>
+              <div style={css('color:#A7B0C4;font-size:14px;line-height:1.9')}>{c.contact.email}<br />{c.contact.phone}<br />{c.contact.office}</div>
             </div>
           </div>
           <div style={css('border-top:1px solid rgba(255,255,255,.07);padding-top:26px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap')}>
-            <span style={css(`${MONO};font-size:12px;color:#5C6680`)}>© 2027 PMN Digital Agency Co.,Ltd. — All rights reserved.</span>
+            <span style={css(`${MONO};font-size:12px;color:#5C6680`)}>© 2027 {settings?.siteName || 'PMN Digital'} Agency Co.,Ltd. — All rights reserved.</span>
             <span style={css(`${MONO};font-size:12px;color:#5C6680`)}>Crafted with precision in Bangkok</span>
           </div>
         </div>

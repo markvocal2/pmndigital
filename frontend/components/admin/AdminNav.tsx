@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 const NAV: { href: string; label: string; ready: boolean }[] = [
   { href: '/admin', label: 'แดชบอร์ด', ready: true },
   { href: '/admin/settings', label: 'ตั้งค่าเว็บไซต์', ready: true },
-  { href: '/admin/home', label: 'จัดการหน้าหลัก', ready: false },
+  { href: '/admin/home', label: 'จัดการหน้าหลัก', ready: true },
   { href: '/admin/articles', label: 'บทความ', ready: false },
   { href: '/admin/leads', label: 'รายชื่อติดต่อ (Leads)', ready: false },
 ];

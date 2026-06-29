@@ -1,15 +1,29 @@
+import type { Metadata } from "next";
 import AgencySite from "@/components/agency/AgencySite";
+import { getPublicHome, getPublicSettings } from "@/lib/cms";
 
-// Marketing homepage is deploy-updated content — render dynamically so neither the
-// browser nor Cloudflare serves a stale build (avoids the long s-maxage static cache).
 export const dynamic = "force-dynamic";
 
-export const metadata = {
-  title: "PMN Digital — รับออกแบบระบบฐานข้อมูล ERP, CRM และซอฟต์แวร์เฉพาะทาง",
-  description:
-    "PMN Digital เอเจนซีออกแบบและพัฒนาระบบฐานข้อมูล ERP, CRM และซอฟต์แวร์สั่งทำแบบครบวงจร ทำงานออนไลน์ บริหารโดยทีมยุคใหม่ที่เข้าใจทั้งเทคโนโลยีและธุรกิจ",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const [settings, home] = await Promise.all([getPublicSettings(), getPublicHome()]);
+  const name = settings?.siteName || "PMN Digital";
+  const seo = (home?.seo ?? {}) as { metaTitle?: string; metaDesc?: string; ogImage?: string };
+  const title = seo.metaTitle || settings?.defaultMetaTitle || `${name} — รับออกแบบระบบฐานข้อมูล ERP, CRM และซอฟต์แวร์เฉพาะทาง`;
+  const description =
+    seo.metaDesc ||
+    settings?.defaultMetaDesc ||
+    "PMN Digital เอเจนซีออกแบบและพัฒนาระบบฐานข้อมูล ERP, CRM และซอฟต์แวร์สั่งทำแบบครบวงจร";
+  const ogImage = seo.ogImage || settings?.ogDefaultUrl || undefined;
+  return {
+    title,
+    description,
+    alternates: { canonical: "/" },
+    openGraph: { title, description, type: "website", siteName: name, images: ogImage ? [ogImage] : undefined },
+    twitter: { card: "summary_large_image", title, description, images: ogImage ? [ogImage] : undefined },
+  };
+}
 
-export default function Home() {
-  return <AgencySite />;
+export default async function Home() {
+  const [home, settings] = await Promise.all([getPublicHome(), getPublicSettings()]);
+  return <AgencySite content={home?.data} settings={settings} />;
 }
