@@ -104,6 +104,7 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
     tagline: settings.tagline ?? '',
     logoLightUrl: settings.logoLightUrl ?? '',
     logoDarkUrl: settings.logoDarkUrl ?? '',
+    logoHeight: settings.logoHeight ?? 32,
     faviconUrl: settings.faviconUrl ?? '',
     ogDefaultUrl: settings.ogDefaultUrl ?? '',
     timezone: settings.timezone ?? 'Asia/Bangkok',
@@ -146,6 +147,7 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
       tagline: s.tagline,
       logoLightUrl: s.logoLightUrl,
       logoDarkUrl: s.logoDarkUrl,
+      logoHeight: s.logoHeight,
       faviconUrl: s.faviconUrl,
       ogDefaultUrl: s.ogDefaultUrl,
       timezone: s.timezone,
@@ -191,6 +193,36 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
           <ImageUpload label="โลโก้ — Light mode (พื้นสว่าง)" value={s.logoLightUrl} onChange={(u) => set('logoLightUrl')(u)} dark={false} />
           <ImageUpload label="Favicon" value={s.faviconUrl} onChange={(u) => set('faviconUrl')(u)} />
           <ImageUpload label="OG Image (แชร์โซเชียล)" value={s.ogDefaultUrl} onChange={(u) => set('ogDefaultUrl')(u)} />
+        </div>
+        <div className="mt-5">
+          <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-slate-400">ขนาดโลโก้ (ความสูง · navbar / footer / blog)</span>
+          <div className="flex items-center gap-4">
+            <input
+              type="range"
+              min={16}
+              max={120}
+              value={s.logoHeight}
+              onChange={(e) => setS((p) => ({ ...p, logoHeight: Number(e.target.value) }))}
+              className="h-2 flex-1 accent-blue-500"
+            />
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                min={16}
+                max={120}
+                value={s.logoHeight}
+                onChange={(e) => setS((p) => ({ ...p, logoHeight: Math.min(120, Math.max(16, Number(e.target.value) || 32)) }))}
+                className="w-20 rounded-md border border-white/10 bg-white/[0.03] px-2 py-1.5 text-sm text-slate-100 outline-none focus:border-blue-400/60"
+              />
+              <span className="text-xs text-slate-500">px</span>
+            </div>
+          </div>
+          {s.logoDarkUrl && (
+            <div className="mt-3 inline-flex items-center rounded-md border border-white/10 bg-[#0b1020] px-4 py-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={s.logoDarkUrl} alt="ตัวอย่างขนาดโลโก้" style={{ height: s.logoHeight, width: 'auto' }} />
+            </div>
+          )}
         </div>
       </Section>
 

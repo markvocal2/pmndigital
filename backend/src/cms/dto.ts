@@ -9,7 +9,9 @@ import {
   IsOptional,
   IsString,
   Matches,
+  Max,
   MaxLength,
+  Min,
   MinLength,
 } from 'class-validator';
 
@@ -19,6 +21,7 @@ export class UpdateSettingsDto {
   @IsOptional() @IsString() @MaxLength(240) tagline?: string;
   @IsOptional() @IsString() @MaxLength(500) logoLightUrl?: string;
   @IsOptional() @IsString() @MaxLength(500) logoDarkUrl?: string;
+  @IsOptional() @IsInt() @Min(8) @Max(200) logoHeight?: number;
   @IsOptional() @IsString() @MaxLength(500) faviconUrl?: string;
   @IsOptional() @IsString() @MaxLength(500) ogDefaultUrl?: string;
   @IsOptional() @IsString() @MaxLength(64) timezone?: string;

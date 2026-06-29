@@ -44,7 +44,7 @@ export default async function BlogIndex() {
       <header className="border-b border-white/10">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <Link href="/"><img src={logo} alt={name} style={{ height: 28, width: 'auto' }} /></Link>
+          <Link href="/"><img src={logo} alt={name} style={{ height: settings?.logoHeight || 28, width: 'auto' }} /></Link>
           <Link href="/" className="text-sm text-slate-400 hover:text-blue-200">← กลับหน้าหลัก</Link>
         </div>
       </header>

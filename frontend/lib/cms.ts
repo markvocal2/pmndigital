@@ -9,6 +9,7 @@ export interface SiteSettings {
   tagline: string | null;
   logoLightUrl: string | null;
   logoDarkUrl: string | null;
+  logoHeight: number;
   faviconUrl: string | null;
   ogDefaultUrl: string | null;
   timezone: string;

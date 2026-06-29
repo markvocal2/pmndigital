@@ -90,6 +90,7 @@ model SiteSetting {
   tagline          String?
   logoLightUrl     String?
   logoDarkUrl      String?
+  logoHeight       Int      @default(32)
   faviconUrl       String?
   ogDefaultUrl     String?
   timezone         String   @default("Asia/Bangkok")

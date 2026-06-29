@@ -37,6 +37,7 @@ export class SiteSetting {
   @Column({ type: 'text', nullable: true }) tagline: string | null;
   @Column({ type: 'text', nullable: true }) logoLightUrl: string | null;
   @Column({ type: 'text', nullable: true }) logoDarkUrl: string | null;
+  @Column({ type: 'integer', default: 32 }) logoHeight: number;
   @Column({ type: 'text', nullable: true }) faviconUrl: string | null;
   @Column({ type: 'text', nullable: true }) ogDefaultUrl: string | null;
   @Column({ type: 'text', default: 'Asia/Bangkok' }) timezone: string;

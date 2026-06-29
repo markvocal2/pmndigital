@@ -192,6 +192,7 @@ type Page = 'home' | 'services' | 'portfolio' | 'pricing' | 'contact';
 interface SettingsLite {
   logoDarkUrl?: string | null;
   logoLightUrl?: string | null;
+  logoHeight?: number | null;
   socials?: Record<string, string> | null;
   siteName?: string;
 }
@@ -209,6 +210,7 @@ export default function AgencySite({
 }) {
   const c = mergeHome(content);
   const logoUrl = settings?.logoDarkUrl || '/assets/logo-white.png';
+  const logoH = settings?.logoHeight || 30;
   const socials = settings?.socials || {};
 
   const [page, setPage] = useState<Page>('home');
@@ -331,9 +333,9 @@ export default function AgencySite({
     { p: 'home', label: 'Home' }, { p: 'services', label: 'Services' }, { p: 'portfolio', label: 'Portfolio' },
     { p: 'pricing', label: 'Pricing' }, { p: 'contact', label: 'Contact' },
   ];
-  const Logo = ({ h = 30 }: { h?: number }) => (
+  const Logo = ({ h }: { h?: number }) => (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={logoUrl} alt={settings?.siteName || 'PMN Digital'} style={{ height: h, width: 'auto', display: 'block' }} />
+    <img src={logoUrl} alt={settings?.siteName || 'PMN Digital'} style={{ height: h ?? logoH, width: 'auto', display: 'block' }} />
   );
 
   const statDisplay = (i: number) => {
@@ -1012,7 +1014,7 @@ export default function AgencySite({
         <div style={css('max-width:1240px;margin:0 auto')}>
           <div style={css('display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:36px;margin-bottom:48px')} data-footer-grid>
             <div>
-              <div style={css('margin-bottom:18px')}><Logo h={34} /></div>
+              <div style={css('margin-bottom:18px')}><Logo /></div>
               <p style={css('margin:0 0 18px;color:#8B95AC;font-size:14px;line-height:1.7;max-width:320px;font-weight:300')}>{c.footer.desc}</p>
               <div style={css('display:flex;gap:10px')}>
                 {SOCIAL_GLYPHS.map((sg) => {

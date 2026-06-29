@@ -108,7 +108,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
       <header className="sticky top-0 z-20 border-b border-white/10 bg-[#05070E]/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <Link href="/"><img src={logo} alt={name} style={{ height: 26, width: 'auto' }} /></Link>
+          <Link href="/"><img src={logo} alt={name} style={{ height: settings?.logoHeight || 26, width: 'auto' }} /></Link>
           <Link href="/blog" className="text-sm text-slate-400 hover:text-blue-200">← บทความทั้งหมด</Link>
         </div>
       </header>
