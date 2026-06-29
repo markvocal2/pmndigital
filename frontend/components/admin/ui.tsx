@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { uploadMediaAction } from '@/lib/cms-actions';
 import { MediaPicker } from './MediaPicker';
 
@@ -122,6 +122,7 @@ export function ImageUpload({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [pick, setPick] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -153,9 +154,14 @@ export function ImageUpload({
     <div>
       <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-slate-400">{label}</span>
       <div className="flex items-center gap-3">
-        <div
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} disabled={busy} />
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={busy}
+          title="คลิกเพื่ออัปโหลดรูป"
           className={[
-            'grid h-16 w-28 place-items-center overflow-hidden rounded-md border border-white/10',
+            'group relative grid h-16 w-28 place-items-center overflow-hidden rounded-md border border-white/10 transition hover:border-blue-400/50',
             dark ? 'bg-[#0b1020]' : 'bg-white',
           ].join(' ')}
         >
@@ -163,15 +169,17 @@ export function ImageUpload({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={value} alt="" className="max-h-14 max-w-[100px] object-contain" />
           ) : (
-            <span className="text-[10px] text-slate-500">ไม่มีรูป</span>
+            <span className="text-[10px] text-slate-400">＋ อัปโหลด</span>
           )}
-        </div>
+          <span className="pointer-events-none absolute inset-0 hidden items-center justify-center bg-black/55 text-[10px] font-medium text-white group-hover:flex">
+            {busy ? 'กำลังอัปโหลด…' : value ? 'เปลี่ยนรูป' : 'คลิกเพื่ออัปโหลด'}
+          </span>
+        </button>
         <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
-            <label className="inline-block cursor-pointer rounded-md border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-200 transition hover:border-blue-400/40">
+            <button type="button" onClick={() => fileRef.current?.click()} disabled={busy} className="rounded-md border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-200 transition hover:border-blue-400/40 disabled:opacity-50">
               {busy ? 'กำลังอัปโหลด…' : 'อัปโหลดรูป'}
-              <input type="file" accept="image/*" className="hidden" onChange={onFile} disabled={busy} />
-            </label>
+            </button>
             <button type="button" onClick={() => setPick(true)} className="rounded-md border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-blue-200 transition hover:border-blue-400/40">
               เลือกจากคลัง
             </button>
