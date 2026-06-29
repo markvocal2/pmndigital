@@ -7,6 +7,8 @@ const NAV: { href: string; label: string; ready: boolean }[] = [
   { href: '/admin', label: 'แดชบอร์ด', ready: true },
   { href: '/admin/settings', label: 'ตั้งค่าเว็บไซต์', ready: true },
   { href: '/admin/home', label: 'จัดการหน้าหลัก', ready: true },
+  { href: '/admin/promotions', label: 'โปรโมชั่น', ready: true },
+  { href: '/admin/coupons', label: 'คูปอง', ready: true },
   { href: '/admin/articles', label: 'บทความ', ready: true },
   { href: '/admin/comments', label: 'ความคิดเห็น (Comments)', ready: true },
   { href: '/admin/media', label: 'คลังสื่อ (Media)', ready: true },

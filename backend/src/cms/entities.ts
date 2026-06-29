@@ -26,6 +26,13 @@ export enum CommentStatus {
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
 }
+export enum DiscountType {
+  PERCENT = 'PERCENT',
+  FIXED = 'FIXED',
+  BUNDLE = 'BUNDLE',
+  FREE = 'FREE',
+  OTHER = 'OTHER',
+}
 
 /* ---------------- SiteSetting (singleton key="default") ---------------- */
 @Entity({ name: 'SiteSetting' })
@@ -128,6 +135,8 @@ export class Lead {
   @Column({ type: 'enum', enum: LeadStatus, enumName: 'LeadStatus', default: LeadStatus.NEW })
   status: LeadStatus;
   @Column({ type: 'text', nullable: true }) source: string | null;
+  @Column({ type: 'text', nullable: true }) couponCode: string | null;
+  @Column({ type: 'integer', nullable: true }) couponId: number | null;
   @Column({ type: 'text', nullable: true }) ip: string | null;
   @Column({ type: 'text', nullable: true }) userAgent: string | null;
   @CreateDateColumn() createdAt: Date;
@@ -160,5 +169,70 @@ export class Media {
   @Column({ type: 'text', nullable: true }) origName: string | null;
   @Column({ type: 'text', nullable: true }) mime: string | null;
   @Column({ type: 'integer', default: 0 }) size: number;
+  @CreateDateColumn() createdAt: Date;
+}
+
+/* ---------------- Promotion (campaigns shown on homepage + /promotions) ---------------- */
+@Entity({ name: 'Promotion' })
+@Index(['active', 'featured'])
+@Index(['startsAt', 'endsAt'])
+export class Promotion {
+  @PrimaryGeneratedColumn() id: number;
+  @Column({ type: 'text' }) title: string;
+  @Column({ type: 'text', nullable: true }) subtitle: string | null;
+  @Column({ type: 'text', nullable: true }) description: string | null;
+  @Column({ type: 'text', nullable: true }) badge: string | null;
+  @Column({ type: 'enum', enum: DiscountType, enumName: 'DiscountType', default: DiscountType.PERCENT })
+  discountType: DiscountType;
+  @Column({ type: 'double precision', nullable: true }) discountValue: number | null;
+  @Column({ type: 'double precision', nullable: true }) originalPrice: number | null;
+  @Column({ type: 'double precision', nullable: true }) finalPrice: number | null;
+  @Column({ type: 'text', nullable: true }) priceUnit: string | null;
+  @Column({ type: 'text', nullable: true }) imageUrl: string | null;
+  @Column({ type: 'text', nullable: true }) ctaText: string | null;
+  @Column({ type: 'text', nullable: true }) ctaUrl: string | null;
+  @Column({ type: 'text', nullable: true }) couponCode: string | null;
+  @Column({ type: 'text', nullable: true }) terms: string | null;
+  @Column({ type: 'text', nullable: true }) highlightColor: string | null;
+  @Column({ type: 'timestamp', nullable: true }) startsAt: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) endsAt: Date | null;
+  @Column({ type: 'boolean', default: true }) active: boolean;
+  @Column({ type: 'boolean', default: false }) featured: boolean;
+  @Column({ type: 'integer', default: 0 }) sortOrder: number;
+  @CreateDateColumn() createdAt: Date;
+  @UpdateDateColumn() updatedAt: Date;
+}
+
+/* ---------------- Coupon (limited-quantity codes, redeemed on lead submit) ---------------- */
+@Entity({ name: 'Coupon' })
+@Index(['active'])
+export class Coupon {
+  @PrimaryGeneratedColumn() id: number;
+  @Column({ type: 'text', unique: true }) code: string;
+  @Column({ type: 'text', nullable: true }) description: string | null;
+  @Column({ type: 'enum', enum: DiscountType, enumName: 'DiscountType', default: DiscountType.PERCENT })
+  discountType: DiscountType;
+  @Column({ type: 'double precision', default: 0 }) discountValue: number;
+  @Column({ type: 'integer', nullable: true }) maxRedemptions: number | null;
+  @Column({ type: 'integer', default: 0 }) redeemedCount: number;
+  @Column({ type: 'integer', nullable: true }) perEmailLimit: number | null;
+  @Column({ type: 'double precision', nullable: true }) minPurchase: number | null;
+  @Column({ type: 'integer', nullable: true }) promotionId: number | null;
+  @Column({ type: 'timestamp', nullable: true }) startsAt: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) endsAt: Date | null;
+  @Column({ type: 'boolean', default: true }) active: boolean;
+  @CreateDateColumn() createdAt: Date;
+  @UpdateDateColumn() updatedAt: Date;
+}
+
+/* ---------------- CouponRedemption (audit + per-email limit + accurate count) ---------------- */
+@Entity({ name: 'CouponRedemption' })
+@Index(['couponId', 'createdAt'])
+export class CouponRedemption {
+  @PrimaryGeneratedColumn() id: number;
+  @Column({ type: 'integer' }) couponId: number;
+  @Column({ type: 'text' }) code: string;
+  @Column({ type: 'integer', nullable: true }) leadId: number | null;
+  @Column({ type: 'text', nullable: true }) email: string | null;
   @CreateDateColumn() createdAt: Date;
 }

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import AgencySite from "@/components/agency/AgencySite";
-import { getPublicArticles, getPublicHome, getPublicSettings, getServerStatus } from "@/lib/cms";
+import { getPublicArticles, getPublicHome, getPublicPromotions, getPublicSettings, getServerStatus } from "@/lib/cms";
 
 export const dynamic = "force-dynamic";
 
@@ -24,11 +24,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function Home() {
-  const [home, settings, articles, serverStatus] = await Promise.all([
+  const [home, settings, articles, serverStatus, promotions] = await Promise.all([
     getPublicHome(),
     getPublicSettings(),
     getPublicArticles("limit=8&sort=latest"),
     getServerStatus(),
+    getPublicPromotions(),
   ]);
   return (
     <AgencySite
@@ -36,6 +37,7 @@ export default async function Home() {
       settings={settings}
       articles={articles.items}
       serverStatus={serverStatus}
+      promotions={promotions}
     />
   );
 }

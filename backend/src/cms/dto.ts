@@ -84,6 +84,7 @@ export class CreateLeadDto {
   @IsOptional() @IsString() @MaxLength(160) service?: string;
   @IsOptional() @IsString() @MaxLength(4000) message?: string;
   @IsOptional() @IsString() @MaxLength(60) source?: string;
+  @IsOptional() @IsString() @MaxLength(40) couponCode?: string;
   @IsOptional() @IsString() @MaxLength(200) hp?: string; // honeypot
 }
 
@@ -104,4 +105,57 @@ export class CreateCommentDto {
 
 export class CommentStatusDto {
   @IsIn(['PENDING', 'APPROVED', 'REJECTED']) status: string;
+}
+
+/* ---------------- Promotions & Coupons ---------------- */
+export class PromotionDto {
+  @IsString() @MinLength(1) @MaxLength(200) title: string;
+  @IsOptional() @IsString() @MaxLength(300) subtitle?: string | null;
+  @IsOptional() @IsString() @MaxLength(4000) description?: string | null;
+  @IsOptional() @IsString() @MaxLength(60) badge?: string | null;
+  @IsOptional() @IsIn(['PERCENT', 'FIXED', 'BUNDLE', 'FREE', 'OTHER']) discountType?: string;
+  @IsOptional() @IsNumber() discountValue?: number | null;
+  @IsOptional() @IsNumber() originalPrice?: number | null;
+  @IsOptional() @IsNumber() finalPrice?: number | null;
+  @IsOptional() @IsString() @MaxLength(40) priceUnit?: string | null;
+  @IsOptional() @IsString() @MaxLength(500) imageUrl?: string | null;
+  @IsOptional() @IsString() @MaxLength(80) ctaText?: string | null;
+  @IsOptional() @IsString() @MaxLength(500) ctaUrl?: string | null;
+  @IsOptional() @IsString() @MaxLength(40) couponCode?: string | null;
+  @IsOptional() @IsString() @MaxLength(2000) terms?: string | null;
+  @IsOptional() @IsString() @MaxLength(20) highlightColor?: string | null;
+  @IsOptional() @IsString() @MaxLength(40) startsAt?: string | null;
+  @IsOptional() @IsString() @MaxLength(40) endsAt?: string | null;
+  @IsOptional() @IsBoolean() active?: boolean;
+  @IsOptional() @IsBoolean() featured?: boolean;
+  @IsOptional() @IsInt() sortOrder?: number;
+}
+
+export class PromotionStateDto {
+  @IsOptional() @IsBoolean() active?: boolean;
+  @IsOptional() @IsBoolean() featured?: boolean;
+}
+
+export class CouponDto {
+  @IsString() @Matches(/^[A-Za-z0-9_-]{2,40}$/, { message: 'code ใช้ได้เฉพาะ A-Z, 0-9, _ และ -' })
+  code: string;
+  @IsOptional() @IsString() @MaxLength(300) description?: string | null;
+  @IsIn(['PERCENT', 'FIXED']) discountType: string;
+  @IsNumber() @Min(0) discountValue: number;
+  @IsOptional() @IsInt() @Min(1) maxRedemptions?: number | null;
+  @IsOptional() @IsInt() @Min(1) perEmailLimit?: number | null;
+  @IsOptional() @IsNumber() @Min(0) minPurchase?: number | null;
+  @IsOptional() @IsInt() promotionId?: number | null;
+  @IsOptional() @IsString() @MaxLength(40) startsAt?: string | null;
+  @IsOptional() @IsString() @MaxLength(40) endsAt?: string | null;
+  @IsOptional() @IsBoolean() active?: boolean;
+}
+
+export class CouponStateDto {
+  @IsOptional() @IsBoolean() active?: boolean;
+}
+
+export class ValidateCouponDto {
+  @IsString() @MaxLength(40) code: string;
+  @IsOptional() @IsEmail() @MaxLength(160) email?: string;
 }

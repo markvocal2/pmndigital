@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, Fragment } from 'react';
 import { mergeHome } from '@/lib/home-content';
-import { submitLeadAction } from '@/lib/cms-actions';
+import { submitLeadAction, validateCouponAction } from '@/lib/cms-actions';
 import { ArticlesCarousel } from './ArticlesCarousel';
 import { ServerStatusCard } from './ServerStatusCard';
-import type { Article, ServerStatus } from '@/lib/cms';
+import { PromotionCard } from '@/components/promo/PromotionCard';
+import type { Article, Promotion, ServerStatus } from '@/lib/cms';
 
 /* Parse an inline CSS declaration string ("a:b;c:d") into a React style object. */
 function css(s: string): CSSProperties {
@@ -160,6 +161,7 @@ html{scroll-behavior:smooth}
   [data-process]{grid-template-columns:repeat(2,1fr) !important}
   [data-bento]{grid-template-columns:1fr 1fr !important}
   [data-work-grid]{grid-template-columns:repeat(2,1fr) !important}
+  [data-promo-grid]{grid-template-columns:1fr !important;max-width:480px;margin-left:auto;margin-right:auto}
   [data-pricing-mini]{grid-template-columns:1fr !important;max-width:440px;margin-left:auto;margin-right:auto}
   [data-price-grid]{grid-template-columns:1fr !important;max-width:440px;margin-left:auto;margin-right:auto}
   [data-reg-grid]{grid-template-columns:1fr !important;gap:30px !important}
@@ -202,11 +204,13 @@ export default function AgencySite({
   settings,
   articles,
   serverStatus,
+  promotions,
 }: {
   content?: unknown;
   settings?: SettingsLite | null;
   articles?: Article[];
   serverStatus?: ServerStatus | null;
+  promotions?: Promotion[];
 }) {
   const c = mergeHome(content);
   const logoUrl = settings?.logoDarkUrl || '/assets/logo-white.png';
@@ -219,9 +223,11 @@ export default function AgencySite({
   const [discount, setDiscount] = useState(true);
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
   const [workFilter, setWorkFilter] = useState('all');
-  const [reg, setReg] = useState({ name: '', email: '', phone: '', service: SERVICE_OPTS[0], hp: '' });
+  const [reg, setReg] = useState({ name: '', email: '', phone: '', service: SERVICE_OPTS[0], coupon: '', hp: '' });
   const [regSubmitted, setRegSubmitted] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [couponCheck, setCouponCheck] = useState<{ valid: boolean; message: string } | null>(null);
+  const [couponResult, setCouponResult] = useState<{ applied: boolean; code?: string; message: string } | null>(null);
   const [contact, setContact] = useState({ name: '', email: '', company: '', service: SERVICE_OPTS[0], msg: '', hp: '' });
   const [cSubmitted, setCSubmitted] = useState(false);
   const [stats, setStats] = useState<number[]>(c.stats.map(() => 0));
@@ -312,9 +318,16 @@ export default function AgencySite({
     setTimeout(() => setCopied(false), 1900);
   };
 
-  function submitReg(e: React.FormEvent) {
+  const checkCoupon = async () => {
+    const code = reg.coupon.trim();
+    if (!code) { setCouponCheck(null); return; }
+    const r = await validateCouponAction(code, reg.email || undefined);
+    setCouponCheck({ valid: r.valid, message: r.message });
+  };
+  async function submitReg(e: React.FormEvent) {
     e.preventDefault();
-    void submitLeadAction({ type: 'REGISTER', name: reg.name, email: reg.email, phone: reg.phone, service: reg.service, source: 'home-register', hp: reg.hp });
+    const res = await submitLeadAction({ type: 'REGISTER', name: reg.name, email: reg.email, phone: reg.phone, service: reg.service, source: 'home-register', couponCode: reg.coupon.trim() || undefined, hp: reg.hp });
+    if (res.ok) setCouponResult(res.data?.coupon ?? null);
     setRegSubmitted(true);
     setCopied(false);
   }
@@ -499,6 +512,15 @@ export default function AgencySite({
         </div>
       </section>
 
+      {promotions && promotions.length > 0 && (
+        <section data-reveal style={css('padding:30px 24px 100px')}>
+          {sectionHead('06', 'Promotions', 'โปรเด็ดประจำเดือน & แคมเปญพิเศษ', <a href="/promotions" className="agP" style={css('align-self:flex-end;color:#7FD7FF;font-size:14px;font-weight:500;text-decoration:none;white-space:nowrap')}>ดูโปรทั้งหมด →</a>)}
+          <div style={css('max-width:1240px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:22px;align-items:stretch')} data-promo-grid>
+            {promotions.slice(0, 3).map((p) => <PromotionCard key={p.id} p={p} />)}
+          </div>
+        </section>
+      )}
+
       <section id="register" data-reveal style={css('padding:30px 24px 100px;scroll-margin-top:90px')}>
         <div style={css('max-width:1240px;margin:0 auto;position:relative;border:1px solid rgba(255,255,255,.1);border-radius:26px;overflow:hidden;background:linear-gradient(135deg,rgba(37,99,235,.16),rgba(7,10,20,.4))')}>
           <div style={css('position:absolute;top:-120px;left:-80px;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(56,189,248,.28),transparent 65%);filter:blur(40px);pointer-events:none')} />
@@ -522,12 +544,17 @@ export default function AgencySite({
                   <div style={css('width:56px;height:56px;border-radius:50%;background:rgba(74,222,128,.14);border:1px solid rgba(74,222,128,.5);display:flex;align-items:center;justify-content:center;margin-bottom:20px;font-size:26px;color:#4ade80')}>✓</div>
                   <h3 style={css('margin:0 0 8px;font-size:22px;font-weight:600')}>ยินดีต้อนรับสู่ PMN</h3>
                   <p style={css('margin:0 0 22px;color:#A7B0C4;font-size:14.5px;line-height:1.6')}>คูปองของคุณพร้อมใช้งานแล้ว ทีมงานจะติดต่อกลับภายใน 24 ชม.</p>
+                  {couponResult && (
+                    <div style={css(`margin:0 0 18px;padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.5;background:${couponResult.applied ? 'rgba(74,222,128,.12)' : 'rgba(248,113,113,.1)'};border:1px solid ${couponResult.applied ? 'rgba(74,222,128,.4)' : 'rgba(248,113,113,.35)'};color:${couponResult.applied ? '#86efac' : '#fca5a5'}`)}>
+                      {couponResult.applied ? `✓ ใช้โค้ด ${couponResult.code} สำเร็จ — บันทึกส่วนลดให้แล้ว` : `โค้ดส่วนลด: ${couponResult.message}`}
+                    </div>
+                  )}
                   <div style={css(`${MONO};font-size:11px;letter-spacing:.14em;color:#7B86A1;text-transform:uppercase;margin-bottom:8px`)}>คูปองส่วนลดของคุณ</div>
                   <div style={css('display:flex;align-items:center;gap:10px;background:rgba(37,99,235,.12);border:1px dashed rgba(96,165,250,.6);border-radius:12px;padding:14px 16px;margin-bottom:14px')}>
                     <span style={css(`${MONO};font-size:22px;font-weight:600;letter-spacing:.06em;color:#9FC0FF;flex:1`)}>{c.register.couponCode}</span>
                     <button className="agP" onClick={copyCoupon} style={css('background:#2563EB;color:#fff;border:none;border-radius:9px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap')}>{copied ? 'Copied ✓' : 'Copy'}</button>
                   </div>
-                  <button className="agG" onClick={() => { setRegSubmitted(false); setReg({ name: '', email: '', phone: '', service: SERVICE_OPTS[0], hp: '' }); setCopied(false); }} style={css('background:none;border:1px solid rgba(255,255,255,.16);color:#A7B0C4;border-radius:10px;padding:11px;font-size:13.5px;cursor:pointer')}>ลงทะเบียนอีกครั้ง</button>
+                  <button className="agG" onClick={() => { setRegSubmitted(false); setReg({ name: '', email: '', phone: '', service: SERVICE_OPTS[0], coupon: '', hp: '' }); setCopied(false); setCouponResult(null); setCouponCheck(null); }} style={css('background:none;border:1px solid rgba(255,255,255,.16);color:#A7B0C4;border-radius:10px;padding:11px;font-size:13.5px;cursor:pointer')}>ลงทะเบียนอีกครั้ง</button>
                 </div>
               ) : (
                 <form onSubmit={submitReg} style={css('background:rgba(8,12,22,.6);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:30px;display:flex;flex-direction:column;gap:14px')}>
@@ -553,6 +580,13 @@ export default function AgencySite({
                       {SERVICE_OPTS.map((o) => <option key={o} style={css('background:#0b101d')}>{o}</option>)}
                     </select>
                   </div>
+                  <div>
+                    <label style={css('display:block;font-size:13px;color:#A7B0C4;margin-bottom:7px')}>โค้ดส่วนลด (ถ้ามี)</label>
+                    <input className="agInp" value={reg.coupon} onChange={(e) => { setReg({ ...reg, coupon: e.target.value.toUpperCase() }); setCouponCheck(null); }} onBlur={checkCoupon} placeholder="เช่น MONTH20" style={css(INP + ';text-transform:uppercase;letter-spacing:.04em')} />
+                    {couponCheck && (
+                      <p style={css(`margin:6px 0 0;font-size:12px;color:${couponCheck.valid ? '#4ade80' : '#f87171'}`)}>{couponCheck.valid ? '✓ ' : '✕ '}{couponCheck.message}</p>
+                    )}
+                  </div>
                   <button className="agP" type="submit" style={css('margin-top:6px;background:#2563EB;color:#fff;border:none;border-radius:11px;padding:15px;font-size:15.5px;font-weight:600;cursor:pointer;box-shadow:0 12px 30px -10px rgba(37,99,235,.8)')}>{c.hero.ctaPrimary} →</button>
                   <p style={css('margin:2px 0 0;font-size:11.5px;color:#5C6680;text-align:center')}>เราเคารพความเป็นส่วนตัวของคุณ · ไม่มีค่าใช้จ่าย</p>
                 </form>
@@ -564,7 +598,7 @@ export default function AgencySite({
 
       <section data-reveal style={css('padding:30px 24px 110px')}>
         <div style={css('max-width:1240px;margin:0 auto')}>
-          {sectionHead('06', 'Testimonials', 'ลูกค้าพูดถึงเรา', <div style={css(`${MONO};font-size:12px;color:#5C6680;letter-spacing:.04em;align-self:flex-end`)}>จากลูกค้าจริงของเรา</div>)}
+          {sectionHead('07', 'Testimonials', 'ลูกค้าพูดถึงเรา', <div style={css(`${MONO};font-size:12px;color:#5C6680;letter-spacing:.04em;align-self:flex-end`)}>จากลูกค้าจริงของเรา</div>)}
           <div style={css('display:grid;grid-template-columns:repeat(3,1fr);gap:18px')} data-quotes>
             {c.testimonials.map((q, i) => (
               <div key={i} style={css('background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:32px 28px;display:flex;flex-direction:column;gap:18px')}>
@@ -584,7 +618,7 @@ export default function AgencySite({
         <section data-reveal style={css('padding:30px 24px 100px')}>
           <div style={css('max-width:1240px;margin:0 auto')}>
             {sectionHead(
-              '07',
+              '08',
               'Articles',
               'บทความล่าสุด',
               <a

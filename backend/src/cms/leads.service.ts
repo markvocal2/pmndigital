@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Lead, LeadStatus, LeadType } from './entities';
 import { CreateLeadDto } from './dto';
 import { CmsService } from './cms.service';
+import { CouponsService } from './coupons.service';
 import { MailService } from '../mail/mail.service';
 
 @Injectable()
@@ -13,13 +14,14 @@ export class LeadsService {
   constructor(
     @InjectRepository(Lead) private readonly leads: Repository<Lead>,
     private readonly cms: CmsService,
+    private readonly coupons: CouponsService,
     private readonly mail: MailService,
   ) {}
 
   async create(
     dto: CreateLeadDto,
     meta: { ip?: string; userAgent?: string },
-  ): Promise<{ ok: true }> {
+  ): Promise<{ ok: true; coupon?: { applied: boolean; code?: string; message: string } }> {
     // honeypot: bots fill the hidden field → silently drop, pretend success
     if (dto.hp && dto.hp.trim()) return { ok: true };
     const lead = this.leads.create({
@@ -31,13 +33,26 @@ export class LeadsService {
       service: dto.service ?? null,
       message: dto.message ?? null,
       source: dto.source ?? null,
+      couponCode: null,
+      couponId: null,
       ip: meta.ip ?? null,
       userAgent: meta.userAgent ?? null,
     });
     await this.leads.save(lead);
+    // coupon redemption — best-effort, NEVER blocks/fails the lead submission
+    let coupon: { applied: boolean; code?: string; message: string } | undefined;
+    if (dto.couponCode && dto.couponCode.trim()) {
+      const r = await this.coupons.redeem(dto.couponCode, dto.email, lead.id);
+      coupon = { applied: r.applied, code: r.code, message: r.message };
+      if (r.applied) {
+        lead.couponCode = r.code ?? null;
+        lead.couponId = r.couponId ?? null;
+        await this.leads.save(lead);
+      }
+    }
     // fire-and-forget notification — never block / fail the public submission
     void this.notify(lead);
-    return { ok: true };
+    return { ok: true, coupon };
   }
 
   private async notify(lead: Lead): Promise<void> {

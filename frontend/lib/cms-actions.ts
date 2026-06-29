@@ -136,6 +136,8 @@ export async function deleteLeadAction(id: number): Promise<ActionResult> {
 }
 
 /* ---------------- public lead submit (no auth) ---------------- */
+export type CouponOutcome = { applied: boolean; code?: string; message: string };
+
 export async function submitLeadAction(input: {
   type: 'REGISTER' | 'CONTACT';
   name: string;
@@ -145,13 +147,31 @@ export async function submitLeadAction(input: {
   service?: string;
   message?: string;
   source?: string;
+  couponCode?: string;
   hp?: string;
-}): Promise<ActionResult> {
+}): Promise<ActionResult<{ coupon?: CouponOutcome }>> {
   try {
-    await publicBackendFetch('/public/leads', { method: 'POST', body: input });
-    return { ok: true, data: undefined };
+    const res = await publicBackendFetch<{ ok: boolean; coupon?: CouponOutcome }>('/public/leads', {
+      method: 'POST',
+      body: input,
+    });
+    return { ok: true, data: { coupon: res?.coupon } };
   } catch (e) {
     return { ok: false, error: explain(e) };
+  }
+}
+
+export async function validateCouponAction(
+  code: string,
+  email?: string,
+): Promise<{ valid: boolean; message: string; discountType?: string; discountValue?: number; remaining?: number | null }> {
+  try {
+    return await publicBackendFetch('/public/coupons/validate', {
+      method: 'POST',
+      body: { code, email },
+    });
+  } catch {
+    return { valid: false, message: 'ตรวจสอบคูปองไม่สำเร็จ' };
   }
 }
 
@@ -227,6 +247,105 @@ export async function listMediaAction(): Promise<ActionResult<MediaItem[]>> {
 export async function deleteMediaAction(filename: string): Promise<ActionResult> {
   try {
     await backendFetch('/admin/media/' + encodeURIComponent(filename), { method: 'DELETE' });
+    return { ok: true, data: undefined };
+  } catch (e) {
+    return { ok: false, error: explain(e) };
+  }
+}
+
+/* ---------------- promotions & coupons (admin) ---------------- */
+import type { Coupon, Promotion } from './cms';
+
+export type PromotionInput = Partial<
+  Omit<Promotion, 'id' | 'createdAt' | 'updatedAt' | 'live'>
+> & { title: string };
+
+function revalidatePromos() {
+  revalidatePath('/admin/promotions');
+  revalidatePath('/promotions');
+  revalidatePath('/');
+}
+
+export async function savePromotionAction(
+  id: number | null,
+  input: PromotionInput,
+): Promise<ActionResult<Promotion>> {
+  try {
+    const d = id
+      ? await backendFetch<{ promotion: Promotion }>('/admin/promotions/' + id, { method: 'PATCH', body: input })
+      : await backendFetch<{ promotion: Promotion }>('/admin/promotions', { method: 'POST', body: input });
+    revalidatePromos();
+    return { ok: true, data: d.promotion };
+  } catch (e) {
+    return { ok: false, error: explain(e) };
+  }
+}
+
+export async function setPromotionStateAction(
+  id: number,
+  state: { active?: boolean; featured?: boolean },
+): Promise<ActionResult<Promotion>> {
+  try {
+    const d = await backendFetch<{ promotion: Promotion }>('/admin/promotions/' + id + '/state', {
+      method: 'PATCH',
+      body: state,
+    });
+    revalidatePromos();
+    return { ok: true, data: d.promotion };
+  } catch (e) {
+    return { ok: false, error: explain(e) };
+  }
+}
+
+export async function deletePromotionAction(id: number): Promise<ActionResult> {
+  try {
+    await backendFetch('/admin/promotions/' + id, { method: 'DELETE' });
+    revalidatePromos();
+    return { ok: true, data: undefined };
+  } catch (e) {
+    return { ok: false, error: explain(e) };
+  }
+}
+
+export type CouponInput = Partial<
+  Omit<Coupon, 'id' | 'createdAt' | 'updatedAt' | 'redeemedCount' | 'remaining'>
+> & { code: string; discountType: 'PERCENT' | 'FIXED'; discountValue: number };
+
+export async function saveCouponAction(
+  id: number | null,
+  input: CouponInput,
+): Promise<ActionResult<Coupon>> {
+  try {
+    const d = id
+      ? await backendFetch<{ coupon: Coupon }>('/admin/coupons/' + id, { method: 'PATCH', body: input })
+      : await backendFetch<{ coupon: Coupon }>('/admin/coupons', { method: 'POST', body: input });
+    revalidatePath('/admin/coupons');
+    return { ok: true, data: d.coupon };
+  } catch (e) {
+    return { ok: false, error: explain(e) };
+  }
+}
+
+export async function setCouponStateAction(
+  id: number,
+  state: { active?: boolean },
+): Promise<ActionResult<Coupon>> {
+  try {
+    const d = await backendFetch<{ coupon: Coupon }>('/admin/coupons/' + id + '/state', {
+      method: 'PATCH',
+      body: state,
+    });
+    revalidatePath('/admin/coupons');
+    return { ok: true, data: d.coupon };
+  } catch (e) {
+    return { ok: false, error: explain(e) };
+  }
+}
+
+export async function deleteCouponAction(id: number): Promise<ActionResult> {
+  try {
+    await backendFetch('/admin/coupons/' + id, { method: 'DELETE' });
+    revalidatePath('/admin/coupons');
     return { ok: true, data: undefined };
   } catch (e) {
     return { ok: false, error: explain(e) };

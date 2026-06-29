@@ -90,6 +90,8 @@ export interface Lead {
   message: string | null;
   status: 'NEW' | 'CONTACTED' | 'CLOSED';
   source: string | null;
+  couponCode: string | null;
+  couponId: number | null;
   ip: string | null;
   userAgent: string | null;
   createdAt: string;
@@ -228,6 +230,87 @@ export async function getServerStatus(): Promise<ServerStatus | null> {
   } catch {
     return null;
   }
+}
+
+/* ---------------- promotions & coupons ---------------- */
+export type DiscountType = 'PERCENT' | 'FIXED' | 'BUNDLE' | 'FREE' | 'OTHER';
+
+export interface Promotion {
+  id: number;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  badge: string | null;
+  discountType: DiscountType;
+  discountValue: number | null;
+  originalPrice: number | null;
+  finalPrice: number | null;
+  priceUnit: string | null;
+  imageUrl: string | null;
+  ctaText: string | null;
+  ctaUrl: string | null;
+  couponCode: string | null;
+  terms: string | null;
+  highlightColor: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  active: boolean;
+  featured: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  live?: boolean; // computed in admin list
+}
+
+export interface Coupon {
+  id: number;
+  code: string;
+  description: string | null;
+  discountType: 'PERCENT' | 'FIXED';
+  discountValue: number;
+  maxRedemptions: number | null;
+  redeemedCount: number;
+  perEmailLimit: number | null;
+  minPurchase: number | null;
+  promotionId: number | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  remaining?: number | null; // computed in admin list
+}
+
+export interface CouponRedemption {
+  id: number;
+  couponId: number;
+  code: string;
+  leadId: number | null;
+  email: string | null;
+  createdAt: string;
+}
+
+export async function getPublicPromotions(): Promise<Promotion[]> {
+  try {
+    return (await publicBackendFetch<{ items: Promotion[] }>('/public/promotions', { revalidate: 30 })).items;
+  } catch {
+    return [];
+  }
+}
+export async function adminListPromotions(): Promise<Promotion[]> {
+  return (await backendFetch<{ items: Promotion[] }>('/admin/promotions')).items;
+}
+export async function adminGetPromotion(id: number): Promise<Promotion> {
+  return (await backendFetch<{ promotion: Promotion }>('/admin/promotions/' + id)).promotion;
+}
+export async function adminListCoupons(): Promise<Coupon[]> {
+  return (await backendFetch<{ items: Coupon[] }>('/admin/coupons')).items;
+}
+export async function adminGetCoupon(id: number): Promise<Coupon> {
+  return (await backendFetch<{ coupon: Coupon }>('/admin/coupons/' + id)).coupon;
+}
+export async function adminListRedemptions(id: number): Promise<CouponRedemption[]> {
+  return (await backendFetch<{ items: CouponRedemption[] }>('/admin/coupons/' + id + '/redemptions')).items;
 }
 
 /** True if a cover/media URL points to a video file. */
