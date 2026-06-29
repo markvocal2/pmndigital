@@ -17,16 +17,33 @@ export class ArticlesService {
   ) {}
 
   /* -------- public -------- */
-  async listPublic(opts: { page?: number; limit?: number; category?: string; tag?: string }) {
+  async listPublic(opts: {
+    page?: number;
+    limit?: number;
+    category?: string;
+    tag?: string;
+    sort?: string;
+  }) {
     const page = Math.max(1, opts.page || 1);
     const limit = Math.min(50, Math.max(1, opts.limit || 12));
     const qb = this.articles
       .createQueryBuilder('a')
       .where('a.status = :st', { st: ArticleStatus.PUBLISHED })
-      .orderBy('a.publishedAt', 'DESC')
-      .addOrderBy('a.id', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
+    switch (opts.sort) {
+      case 'views':
+        qb.orderBy('a.viewCount', 'DESC').addOrderBy('a.id', 'DESC');
+        break;
+      case 'views_asc':
+        qb.orderBy('a.viewCount', 'ASC').addOrderBy('a.id', 'DESC');
+        break;
+      case 'oldest':
+        qb.orderBy('a.publishedAt', 'ASC').addOrderBy('a.id', 'ASC');
+        break;
+      default:
+        qb.orderBy('a.publishedAt', 'DESC').addOrderBy('a.id', 'DESC');
+    }
     if (opts.category) {
       const cat = await this.categories.findOne({ where: { slug: opts.category } });
       qb.andWhere('a.categoryId = :cid', { cid: cat ? cat.id : -1 });
@@ -40,6 +57,37 @@ export class ArticlesService {
     const a = await this.articles.findOne({ where: { slug, status: ArticleStatus.PUBLISHED } });
     if (!a) throw new NotFoundException('Article not found');
     return a;
+  }
+
+  async incrementView(slug: string): Promise<{ viewCount: number }> {
+    await this.articles.increment({ slug, status: ArticleStatus.PUBLISHED }, 'viewCount', 1);
+    const a = await this.articles.findOne({ where: { slug }, select: { viewCount: true } });
+    return { viewCount: a?.viewCount ?? 0 };
+  }
+
+  /** Related by same category OR overlapping tags; falls back to latest others. */
+  async related(slug: string, limit = 4): Promise<Article[]> {
+    const a = await this.articles.findOne({ where: { slug } });
+    if (!a) return [];
+    const qb = this.articles
+      .createQueryBuilder('a')
+      .where('a.status = :st', { st: ArticleStatus.PUBLISHED })
+      .andWhere('a.id != :id', { id: a.id })
+      .orderBy('a.publishedAt', 'DESC')
+      .addOrderBy('a.id', 'DESC')
+      .take(Math.min(12, Math.max(1, limit)));
+    const conds: string[] = [];
+    const params: Record<string, unknown> = {};
+    if (a.categoryId) {
+      conds.push('a.categoryId = :cid');
+      params.cid = a.categoryId;
+    }
+    if (a.tags && a.tags.length) {
+      conds.push('a.tags && :tags');
+      params.tags = a.tags;
+    }
+    if (conds.length) qb.andWhere('(' + conds.join(' OR ') + ')', params);
+    return qb.getMany();
   }
 
   /* -------- admin -------- */

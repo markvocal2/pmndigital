@@ -21,10 +21,12 @@ import { AdminGuard } from './admin.guard';
 import { CmsService } from './cms.service';
 import { ArticlesService } from './articles.service';
 import { LeadsService } from './leads.service';
+import { CommentsService } from './comments.service';
 import { MailService } from '../mail/mail.service';
 import {
   ArticleDto,
   CategoryDto,
+  CommentStatusDto,
   LeadStatusDto,
   TestMailDto,
   UpdateHomeDto,
@@ -44,6 +46,7 @@ export class CmsAdminController {
     private readonly cms: CmsService,
     private readonly articles: ArticlesService,
     private readonly leads: LeadsService,
+    private readonly comments: CommentsService,
     private readonly mail: MailService,
   ) {}
 
@@ -107,6 +110,32 @@ export class CmsAdminController {
   @Post('categories')
   async createCategory(@Body() dto: CategoryDto) {
     return { category: await this.articles.createCategory(dto) };
+  }
+
+  /* comments (moderation) */
+  @Get('comments')
+  listComments(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.comments.listAdmin({
+      page: page ? parseInt(page, 10) : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      status,
+    });
+  }
+  @Get('comments/pending-count')
+  pendingComments() {
+    return this.comments.pendingCount();
+  }
+  @Patch('comments/:id')
+  async setCommentStatus(@Param('id', ParseIntPipe) id: number, @Body() dto: CommentStatusDto) {
+    return { comment: await this.comments.setStatus(id, dto.status) };
+  }
+  @Delete('comments/:id')
+  deleteComment(@Param('id', ParseIntPipe) id: number) {
+    return this.comments.remove(id);
   }
 
   /* leads */

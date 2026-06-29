@@ -91,3 +91,14 @@ export class LeadStatusDto {
 export class TestMailDto {
   @IsEmail() @MaxLength(160) to: string;
 }
+
+export class CreateCommentDto {
+  @IsString() @MinLength(1) @MaxLength(80) authorName: string;
+  @IsOptional() @IsEmail() @MaxLength(160) authorEmail?: string;
+  @IsString() @MinLength(1) @MaxLength(2000) body: string;
+  @IsOptional() @IsString() @MaxLength(200) hp?: string; // honeypot
+}
+
+export class CommentStatusDto {
+  @IsIn(['PENDING', 'APPROVED', 'REJECTED']) status: string;
+}

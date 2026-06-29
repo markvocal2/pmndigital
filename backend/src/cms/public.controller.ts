@@ -13,7 +13,8 @@ import type { Request } from 'express';
 import { CmsService } from './cms.service';
 import { ArticlesService } from './articles.service';
 import { LeadsService } from './leads.service';
-import { CreateLeadDto } from './dto';
+import { CommentsService } from './comments.service';
+import { CreateCommentDto, CreateLeadDto } from './dto';
 
 function clientMeta(req: Request) {
   const xff = req.headers['x-forwarded-for'];
@@ -31,6 +32,7 @@ export class CmsPublicController {
     private readonly cms: CmsService,
     private readonly articles: ArticlesService,
     private readonly leads: LeadsService,
+    private readonly comments: CommentsService,
   ) {}
 
   @Get('settings')
@@ -49,18 +51,46 @@ export class CmsPublicController {
     @Query('limit') limit?: string,
     @Query('category') category?: string,
     @Query('tag') tag?: string,
+    @Query('sort') sort?: string,
   ) {
     return this.articles.listPublic({
       page: page ? parseInt(page, 10) : undefined,
       limit: limit ? parseInt(limit, 10) : undefined,
       category,
       tag,
+      sort,
     });
   }
 
   @Get('articles/:slug')
   async article(@Param('slug') slug: string) {
     return { article: await this.articles.getPublicBySlug(slug) };
+  }
+
+  @Get('articles/:slug/related')
+  async related(@Param('slug') slug: string, @Query('limit') limit?: string) {
+    return { items: await this.articles.related(slug, limit ? parseInt(limit, 10) : 4) };
+  }
+
+  @Post('articles/:slug/view')
+  @HttpCode(HttpStatus.OK)
+  view(@Param('slug') slug: string) {
+    return this.articles.incrementView(slug);
+  }
+
+  @Get('articles/:slug/comments')
+  comments_list(@Param('slug') slug: string) {
+    return this.comments.listPublic(slug);
+  }
+
+  @Post('articles/:slug/comments')
+  @HttpCode(HttpStatus.CREATED)
+  createComment(
+    @Param('slug') slug: string,
+    @Body() dto: CreateCommentDto,
+    @Req() req: Request,
+  ) {
+    return this.comments.createPublic(slug, dto, clientMeta(req));
   }
 
   @Get('categories')

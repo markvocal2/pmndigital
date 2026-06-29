@@ -21,6 +21,11 @@ export enum LeadStatus {
   CONTACTED = 'CONTACTED',
   CLOSED = 'CLOSED',
 }
+export enum CommentStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
 
 /* ---------------- SiteSetting (singleton key="default") ---------------- */
 @Entity({ name: 'SiteSetting' })
@@ -92,6 +97,7 @@ export class Article {
   @Column({ type: 'integer', nullable: true }) categoryId: number | null;
   @Column({ type: 'text', array: true, default: () => "'{}'" }) tags: string[];
   @Column({ type: 'integer', default: 1 }) readingMins: number;
+  @Column({ type: 'integer', default: 0 }) viewCount: number;
   @Column({ type: 'text', nullable: true }) metaTitle: string | null;
   @Column({ type: 'text', nullable: true }) metaDesc: string | null;
   @Column({ type: 'text', nullable: true }) canonicalUrl: string | null;
@@ -121,6 +127,23 @@ export class Lead {
   @Column({ type: 'enum', enum: LeadStatus, enumName: 'LeadStatus', default: LeadStatus.NEW })
   status: LeadStatus;
   @Column({ type: 'text', nullable: true }) source: string | null;
+  @Column({ type: 'text', nullable: true }) ip: string | null;
+  @Column({ type: 'text', nullable: true }) userAgent: string | null;
+  @CreateDateColumn() createdAt: Date;
+}
+
+/* ---------------- Comment (admin-moderated) ---------------- */
+@Entity({ name: 'Comment' })
+@Index(['articleId', 'status'])
+@Index(['status', 'createdAt'])
+export class Comment {
+  @PrimaryGeneratedColumn() id: number;
+  @Column({ type: 'integer' }) articleId: number;
+  @Column({ type: 'text' }) authorName: string;
+  @Column({ type: 'text', nullable: true }) authorEmail: string | null;
+  @Column({ type: 'text' }) body: string;
+  @Column({ type: 'enum', enum: CommentStatus, enumName: 'CommentStatus', default: CommentStatus.PENDING })
+  status: CommentStatus;
   @Column({ type: 'text', nullable: true }) ip: string | null;
   @Column({ type: 'text', nullable: true }) userAgent: string | null;
   @CreateDateColumn() createdAt: Date;
