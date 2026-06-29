@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Noto_Sans_Thai } from "next/font/google";
 import { Providers } from "./providers";
+import { getPublicSettings } from "@/lib/cms";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -22,10 +23,20 @@ const notoSansThai = Noto_Sans_Thai({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "PMN Digital",
-  description: "PMN Digital",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const s = await getPublicSettings();
+  const name = s?.siteName || "PMN Digital";
+  return {
+    title: { default: s?.defaultMetaTitle || name, template: `%s · ${name}` },
+    description: s?.defaultMetaDesc || "PMN Digital",
+    keywords: s?.defaultKeywords ? s.defaultKeywords.split(",").map((k) => k.trim()) : undefined,
+    icons: s?.faviconUrl ? { icon: s.faviconUrl } : undefined,
+    openGraph: {
+      siteName: name,
+      images: s?.ogDefaultUrl ? [s.ogDefaultUrl] : undefined,
+    },
+  };
+}
 
 export default function RootLayout({
   children,

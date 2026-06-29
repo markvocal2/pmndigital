@@ -45,12 +45,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           }
           if (!res.ok) return null;
           const data = (await res.json()) as {
-            user: { id: number; email: string; name: string | null };
+            user: { id: number; email: string; name: string | null; role?: string };
           };
           return {
             id: String(data.user.id),
             email: data.user.email,
             name: data.user.name ?? null,
+            role: data.user.role ?? 'USER',
           };
         } catch (e) {
           if (e instanceof TwoFactorRequiredError) throw e;
@@ -65,12 +66,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.role = (user as { role?: string }).role ?? 'USER';
       }
       return token;
     },
     session({ session, token }) {
-      if (session.user && typeof token.id === 'string') {
-        session.user.id = token.id;
+      if (session.user) {
+        if (typeof token.id === 'string') session.user.id = token.id;
+        if (typeof token.role === 'string') session.user.role = token.role;
       }
       return session;
     },
@@ -78,9 +81,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 });
 
 declare module 'next-auth' {
+  interface User {
+    role?: string;
+  }
   interface Session {
     user: {
       id: string;
+      role?: string;
       email?: string | null;
       name?: string | null;
       image?: string | null;

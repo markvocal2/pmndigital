@@ -45,6 +45,32 @@ export async function backendFetch<T = unknown>(
         : undefined,
     cache: 'no-store',
   });
+  return unwrap<T>(res);
+}
+
+/**
+ * Public (unauthenticated) backend call — for server components rendering
+ * public pages (home, blog). No session/X-User-Id required.
+ */
+export async function publicBackendFetch<T = unknown>(
+  pathname: string,
+  init: { method?: 'GET' | 'POST'; body?: unknown; revalidate?: number } = {},
+): Promise<T> {
+  const method = init.method ?? 'GET';
+  const cacheOpt =
+    method === 'GET' && init.revalidate !== undefined
+      ? { next: { revalidate: init.revalidate } }
+      : { cache: 'no-store' as const };
+  const res = await fetch(`${BACKEND_URL}/api${pathname}`, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+    ...cacheOpt,
+  });
+  return unwrap<T>(res);
+}
+
+async function unwrap<T>(res: Response): Promise<T> {
   const text = await res.text();
   let parsed: unknown = null;
   try {
@@ -69,6 +95,7 @@ export async function backendFetch<T = unknown>(
 export interface MeUser {
   id: number;
   email: string;
+  role: string;
   firstName: string | null;
   lastName: string | null;
   displayName: string | null;
