@@ -5,6 +5,7 @@ import { getPublicArticle, getPublicCategories, getRelatedArticles, getPublicSet
 import { renderMarkdown, plainText } from '@/lib/md';
 import { Comments } from '@/components/blog/Comments';
 import { MediaImg } from '@/components/ui/Skeleton';
+import { CoverStage } from '@/components/blog/CoverStage';
 
 export const revalidate = 60;
 const SITE = 'https://pmndigital.co';
@@ -114,25 +115,19 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         </div>
       </header>
 
-      {/* HERO */}
-      {art.coverImageUrl ? (
-        <div className="relative h-[46vh] min-h-[340px] w-full overflow-hidden">
-          <MediaImg src={art.coverImageUrl} alt={art.title} autoPlay className="absolute inset-0 h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#05070E] via-[#05070E]/75 to-[#05070E]/25" />
-          <div className="absolute inset-x-0 bottom-0">
-            <div className="mx-auto max-w-[820px] px-6 pb-9">
-              {catName && <div className="mb-3 inline-block rounded-full bg-blue-500/25 px-3 py-1 font-mono text-[11px] uppercase tracking-wider text-blue-100 ring-1 ring-blue-400/30">{catName}</div>}
-              <h1 className="text-3xl font-bold leading-[1.12] tracking-tight sm:text-[44px]">{art.title}</h1>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="relative overflow-hidden border-b border-white/[0.06] py-16">
-          <div className="pointer-events-none absolute -top-32 left-1/2 h-[460px] w-[760px] -translate-x-1/2 rounded-full" style={{ background: 'radial-gradient(circle,rgba(37,99,235,.28),transparent 65%)', filter: 'blur(40px)' }} />
-          <div className="relative mx-auto max-w-[820px] px-6">
-            {catName && <div className="mb-3 inline-block rounded-full bg-blue-500/20 px-3 py-1 font-mono text-[11px] uppercase tracking-wider text-blue-100 ring-1 ring-blue-400/30">{catName}</div>}
-            <h1 className="text-3xl font-bold leading-[1.12] tracking-tight sm:text-[46px]">{art.title}</h1>
-          </div>
+      {/* TITLE (text-first — renders instantly, never waits on the image) */}
+      <div className="relative mx-auto max-w-[820px] px-6 pt-10 text-center md:pt-14">
+        {!art.coverImageUrl && (
+          <div className="pointer-events-none absolute -top-24 left-1/2 h-[420px] w-[720px] -translate-x-1/2 rounded-full" style={{ background: 'radial-gradient(circle,rgba(37,99,235,.24),transparent 65%)', filter: 'blur(40px)' }} />
+        )}
+        {catName && <div className="relative mb-4 inline-block rounded-full bg-blue-500/90 px-3 py-1 font-mono text-[11px] uppercase tracking-wider text-white">{catName}</div>}
+        <h1 className="relative text-3xl font-bold leading-[1.12] tracking-tight sm:text-[44px]">{art.title}</h1>
+      </div>
+
+      {/* FULL COVER — shown uncropped (object-contain) in a height-capped full-bleed stage */}
+      {art.coverImageUrl && (
+        <div className="mt-8 md:mt-10">
+          <CoverStage src={art.coverImageUrl} alt={art.title} />
         </div>
       )}
 
