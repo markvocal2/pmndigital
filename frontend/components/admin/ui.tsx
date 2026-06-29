@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import { uploadMediaAction } from '@/lib/cms-actions';
+import { MediaPicker } from './MediaPicker';
 
 export function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
   return (
@@ -120,6 +121,7 @@ export function ImageUpload({
 }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [pick, setPick] = useState(false);
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -155,19 +157,25 @@ export function ImageUpload({
             <span className="text-[10px] text-slate-500">ไม่มีรูป</span>
           )}
         </div>
-        <div className="space-y-1">
-          <label className="inline-block cursor-pointer rounded-md border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-200 transition hover:border-blue-400/40">
-            {busy ? 'กำลังอัปโหลด…' : 'อัปโหลดรูป'}
-            <input type="file" accept="image/*" className="hidden" onChange={onFile} disabled={busy} />
-          </label>
-          {value && (
-            <button type="button" onClick={() => onChange('')} className="ml-2 text-xs text-rose-300/80 hover:text-rose-200">
-              ลบ
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="inline-block cursor-pointer rounded-md border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-200 transition hover:border-blue-400/40">
+              {busy ? 'กำลังอัปโหลด…' : 'อัปโหลดรูป'}
+              <input type="file" accept="image/*" className="hidden" onChange={onFile} disabled={busy} />
+            </label>
+            <button type="button" onClick={() => setPick(true)} className="rounded-md border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-blue-200 transition hover:border-blue-400/40">
+              เลือกจากคลัง
             </button>
-          )}
+            {value && (
+              <button type="button" onClick={() => onChange('')} className="text-xs text-rose-300/80 hover:text-rose-200">
+                ลบ
+              </button>
+            )}
+          </div>
           {err && <p className="text-[11px] text-rose-300">{err}</p>}
         </div>
       </div>
+      <MediaPicker open={pick} onClose={() => setPick(false)} onPick={(url) => onChange(url)} />
     </div>
   );
 }

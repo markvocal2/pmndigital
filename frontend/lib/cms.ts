@@ -204,3 +204,11 @@ export async function adminPendingCommentCount(): Promise<number> {
     return 0;
   }
 }
+
+/* ---------------- media ---------------- */
+export interface MediaItem {
+  url: string;
+  filename: string;
+  size: number;
+  mtime: number;
+}

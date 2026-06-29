@@ -72,4 +72,37 @@ export class CmsService {
     await fs.writeFile(path.join(dir, filename), file.buffer);
     return { url: '/uploads/cms/' + filename };
   }
+
+  async listMedia(): Promise<{
+    items: { url: string; filename: string; size: number; mtime: number }[];
+  }> {
+    const dir = path.join(UPLOADS_DIR, 'cms');
+    try {
+      const names = await fs.readdir(dir);
+      const items = await Promise.all(
+        names
+          .filter((n) => !n.startsWith('.'))
+          .map(async (n) => {
+            const st = await fs.stat(path.join(dir, n));
+            return { url: '/uploads/cms/' + n, filename: n, size: st.size, mtime: st.mtimeMs };
+          }),
+      );
+      items.sort((a, b) => b.mtime - a.mtime);
+      return { items };
+    } catch {
+      return { items: [] };
+    }
+  }
+
+  async deleteMedia(filename: string): Promise<{ ok: true }> {
+    if (!/^[A-Za-z0-9._-]+$/.test(filename) || filename.includes('..')) {
+      throw new BadRequestException('invalid filename');
+    }
+    try {
+      await fs.unlink(path.join(UPLOADS_DIR, 'cms', filename));
+    } catch {
+      /* already gone */
+    }
+    return { ok: true };
+  }
 }

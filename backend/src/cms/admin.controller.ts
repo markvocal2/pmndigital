@@ -172,7 +172,7 @@ export class CmsAdminController {
     return this.mail.sendTest(dto.to);
   }
 
-  /* media upload */
+  /* media library */
   @Post('media')
   @UseInterceptors(FileInterceptor('file'))
   uploadMedia(@UploadedFile() file: Express.Multer.File | undefined) {
@@ -182,5 +182,13 @@ export class CmsAdminController {
       mimetype: file.mimetype,
       size: file.size,
     });
+  }
+  @Get('media/list')
+  listMedia() {
+    return this.cms.listMedia();
+  }
+  @Delete('media/:filename')
+  deleteMedia(@Param('filename') filename: string) {
+    return this.cms.deleteMedia(filename);
   }
 }

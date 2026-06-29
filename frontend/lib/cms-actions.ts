@@ -211,3 +211,24 @@ export async function deleteCommentAction(id: number): Promise<ActionResult> {
     return { ok: false, error: explain(e) };
   }
 }
+
+/* ---------------- media library ---------------- */
+import type { MediaItem } from './cms';
+
+export async function listMediaAction(): Promise<ActionResult<MediaItem[]>> {
+  try {
+    const d = await backendFetch<{ items: MediaItem[] }>('/admin/media/list');
+    return { ok: true, data: d.items };
+  } catch (e) {
+    return { ok: false, error: explain(e) };
+  }
+}
+
+export async function deleteMediaAction(filename: string): Promise<ActionResult> {
+  try {
+    await backendFetch('/admin/media/' + encodeURIComponent(filename), { method: 'DELETE' });
+    return { ok: true, data: undefined };
+  } catch (e) {
+    return { ok: false, error: explain(e) };
+  }
+}
