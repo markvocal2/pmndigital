@@ -21,10 +21,12 @@ import { AdminGuard } from './admin.guard';
 import { CmsService } from './cms.service';
 import { ArticlesService } from './articles.service';
 import { LeadsService } from './leads.service';
+import { MailService } from '../mail/mail.service';
 import {
   ArticleDto,
   CategoryDto,
   LeadStatusDto,
+  TestMailDto,
   UpdateHomeDto,
   UpdateSettingsDto,
 } from './dto';
@@ -42,6 +44,7 @@ export class CmsAdminController {
     private readonly cms: CmsService,
     private readonly articles: ArticlesService,
     private readonly leads: LeadsService,
+    private readonly mail: MailService,
   ) {}
 
   /* settings */
@@ -128,6 +131,16 @@ export class CmsAdminController {
   @Delete('leads/:id')
   deleteLead(@Param('id', ParseIntPipe) id: number) {
     return this.leads.remove(id);
+  }
+
+  /* mail / notifications */
+  @Get('mail/status')
+  mailStatus() {
+    return this.mail.status();
+  }
+  @Post('mail/test')
+  sendTestMail(@Body() dto: TestMailDto) {
+    return this.mail.sendTest(dto.to);
   }
 
   /* media upload */

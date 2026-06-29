@@ -9,6 +9,7 @@ import { ErpModule } from './erp/erp.module';
 import { PaymentsModule } from './payments/payments.module';
 import { AuditModule } from './audit/audit.module';
 import { CmsModule } from './cms/cms.module';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { CmsModule } from './cms/cms.module';
       synchronize: false,
       migrationsRun: false,
     }),
+    MailModule,
     AuditModule,
     ErpModule,
     AuthModule,

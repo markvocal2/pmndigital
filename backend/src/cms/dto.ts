@@ -87,3 +87,7 @@ export class CreateLeadDto {
 export class LeadStatusDto {
   @IsIn(['NEW', 'CONTACTED', 'CLOSED']) status: string;
 }
+
+export class TestMailDto {
+  @IsEmail() @MaxLength(160) to: string;
+}

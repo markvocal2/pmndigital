@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { SiteSettings } from '@/lib/cms';
-import { updateSettingsAction } from '@/lib/cms-actions';
+import { updateSettingsAction, getMailStatusAction, sendTestEmailAction } from '@/lib/cms-actions';
 import { Button } from '@/components/ui/Button';
 import { Section, Field, TextArea, Toggle, ImageUpload, StatusMsg } from '@/components/admin/ui';
 
@@ -18,6 +18,84 @@ const TIMEZONES = [
 ];
 
 const SOCIAL_KEYS = ['facebook', 'x', 'instagram', 'linkedin', 'youtube', 'line', 'tiktok'] as const;
+
+type MailStatus = {
+  configured: boolean;
+  host: string | null;
+  port: number | null;
+  secure: boolean;
+  user: string | null;
+  from: string | null;
+};
+
+function MailSection({ defaultTo }: { defaultTo: string }) {
+  const [status, setStatus] = useState<MailStatus | null>(null);
+  const [to, setTo] = useState(defaultTo);
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  useEffect(() => {
+    getMailStatusAction().then((r) => {
+      if (r.ok) setStatus(r.data);
+    });
+  }, []);
+
+  async function handleTest() {
+    setResult(null);
+    if (!to.trim()) {
+      setResult({ ok: false, msg: 'กรุณากรอกอีเมลผู้รับ' });
+      return;
+    }
+    setSending(true);
+    const r = await sendTestEmailAction(to.trim());
+    setSending(false);
+    if (!r.ok) {
+      setResult({ ok: false, msg: r.error });
+    } else if (r.data.sent) {
+      setResult({ ok: true, msg: `ส่งสำเร็จ → ${to.trim()}` });
+    } else {
+      setResult({ ok: false, msg: r.data.error || 'ส่งไม่สำเร็จ' });
+    }
+  }
+
+  return (
+    <Section title="อีเมล (SMTP) & การแจ้งเตือน" hint="ส่งอีเมลผ่านเมลเซิร์ฟเวอร์ + แจ้งเตือนเมื่อมี Lead ใหม่">
+      {status === null ? (
+        <p className="text-sm text-slate-500">กำลังตรวจสอบสถานะ…</p>
+      ) : status.configured ? (
+        <div className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.06] px-4 py-3 text-sm">
+          <span className="font-semibold text-emerald-300">● เชื่อมต่อ SMTP แล้ว</span>
+          <div className="mt-1 text-slate-300">
+            เซิร์ฟเวอร์: <code className="text-slate-100">{status.host}:{status.port}</code>
+            {status.secure ? ' (SSL)' : ' (STARTTLS)'} · ส่งจาก: <code className="text-slate-100">{status.from}</code>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-lg border border-amber-400/25 bg-amber-400/[0.06] px-4 py-3 text-sm text-amber-200">
+          ● ยังไม่ได้ตั้งค่า SMTP — ตั้งค่า <code>SMTP_HOST / SMTP_USER / SMTP_PASS</code> ใน environment ของระบบก่อน
+        </div>
+      )}
+
+      <p className="mt-4 text-xs leading-relaxed text-slate-400">
+        เมื่อมีลูกค้ากรอกฟอร์ม (ลงทะเบียน/ติดต่อ) ระบบจะส่งอีเมลแจ้งเตือนไปยัง{' '}
+        <code className="text-slate-200">LEAD_NOTIFY_TO</code> (ถ้าตั้งไว้) หรือ{' '}
+        <b className="text-slate-200">อีเมลในช่อง “ช่องทางติดต่อ” ด้านบน</b> โดยอัตโนมัติ
+      </p>
+
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+        <div className="flex-1">
+          <Field label="ส่งอีเมลทดสอบไปที่" value={to} onChange={setTo} placeholder="you@example.com" />
+        </div>
+        <Button type="button" onClick={handleTest} loading={sending} className="!w-auto px-6">
+          ส่งเมลทดสอบ
+        </Button>
+      </div>
+      {result && (
+        <p className={`mt-2 text-sm ${result.ok ? 'text-emerald-400' : 'text-rose-400'}`}>{result.msg}</p>
+      )}
+    </Section>
+  );
+}
 
 export function SettingsForm({ settings }: { settings: SiteSettings }) {
   const [s, setS] = useState({
@@ -159,6 +237,8 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
           <Field label="ลิงก์แผนที่ (Google Maps)" value={s.mapUrl} onChange={set('mapUrl') as (v: string) => void} />
         </div>
       </Section>
+
+      <MailSection defaultTo={s.contactEmail} />
 
       <Section title="โซเชียล" hint="ใส่ URL เต็ม (ปล่อยว่างได้)">
         <div className="grid gap-4 sm:grid-cols-2">

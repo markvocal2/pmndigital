@@ -1,12 +1,20 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Lead, LeadStatus, LeadType } from './entities';
 import { CreateLeadDto } from './dto';
+import { CmsService } from './cms.service';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class LeadsService {
-  constructor(@InjectRepository(Lead) private readonly leads: Repository<Lead>) {}
+  private readonly logger = new Logger('LeadsService');
+
+  constructor(
+    @InjectRepository(Lead) private readonly leads: Repository<Lead>,
+    private readonly cms: CmsService,
+    private readonly mail: MailService,
+  ) {}
 
   async create(
     dto: CreateLeadDto,
@@ -27,7 +35,36 @@ export class LeadsService {
       userAgent: meta.userAgent ?? null,
     });
     await this.leads.save(lead);
+    // fire-and-forget notification — never block / fail the public submission
+    void this.notify(lead);
     return { ok: true };
+  }
+
+  private async notify(lead: Lead): Promise<void> {
+    try {
+      if (!this.mail.isConfigured()) return;
+      const recipients = await this.notifyRecipients();
+      if (!recipients.length) {
+        this.logger.warn('lead notify skipped — no recipient configured');
+        return;
+      }
+      await this.mail.sendLeadNotification(lead, recipients);
+    } catch (e) {
+      this.logger.error(
+        `lead notify failed: ${e instanceof Error ? e.message : e}`,
+      );
+    }
+  }
+
+  /** LEAD_NOTIFY_TO env (comma-separated) takes priority, else SiteSetting.contactEmail. */
+  private async notifyRecipients(): Promise<string[]> {
+    const env = (process.env.LEAD_NOTIFY_TO || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (env.length) return env;
+    const settings = await this.cms.getSettings();
+    return settings.contactEmail ? [settings.contactEmail] : [];
   }
 
   async list(opts: { page?: number; limit?: number; type?: string; status?: string }) {

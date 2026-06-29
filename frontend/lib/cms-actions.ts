@@ -154,3 +154,36 @@ export async function submitLeadAction(input: {
     return { ok: false, error: explain(e) };
   }
 }
+
+/* ---------------- mail / notifications ---------------- */
+type MailStatusShape = {
+  configured: boolean;
+  host: string | null;
+  port: number | null;
+  secure: boolean;
+  user: string | null;
+  from: string | null;
+};
+
+export async function getMailStatusAction(): Promise<ActionResult<MailStatusShape>> {
+  try {
+    const data = await backendFetch<MailStatusShape>('/admin/mail/status');
+    return { ok: true, data };
+  } catch (e) {
+    return { ok: false, error: explain(e) };
+  }
+}
+
+export async function sendTestEmailAction(
+  to: string,
+): Promise<ActionResult<{ sent: boolean; error?: string; messageId?: string }>> {
+  try {
+    const data = await backendFetch<{ sent: boolean; error?: string; messageId?: string }>(
+      '/admin/mail/test',
+      { method: 'POST', body: { to } },
+    );
+    return { ok: true, data };
+  } catch (e) {
+    return { ok: false, error: explain(e) };
+  }
+}

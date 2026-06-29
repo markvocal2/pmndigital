@@ -5,7 +5,7 @@ import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { Repository } from 'typeorm';
 import { AuthService, TwoFactorRequiredException } from './auth.service';
-import { User } from '../users/user.entity';
+import { User, UserRole } from '../users/user.entity';
 import { TwoFAService } from './twofa.service';
 import { AuditService } from '../audit/audit.service';
 
@@ -17,6 +17,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     id: 1,
     email: 'a@b.c',
     passwordHash: '',
+    role: UserRole.USER,
     firstName: null,
     lastName: null,
     displayName: null,
