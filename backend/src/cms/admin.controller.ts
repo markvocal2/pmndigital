@@ -181,6 +181,7 @@ export class CmsAdminController {
       buffer: file.buffer,
       mimetype: file.mimetype,
       size: file.size,
+      originalname: file.originalname,
     });
   }
   @Get('media/list')

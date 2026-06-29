@@ -1,34 +1,34 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
 import { createHash } from 'node:crypto';
-import { SiteSetting, HomeContent } from './entities';
+import { SiteSetting, HomeContent, Media } from './entities';
 import { UpdateSettingsDto, UpdateHomeDto } from './dto';
+import { DriveService } from './drive.service';
 
-const UPLOADS_DIR = process.env.UPLOADS_DIR ?? '/app/uploads';
-const IMG_MIME: Record<string, string> = {
+const MAX_BYTES = 50 * 1024 * 1024;
+// fallback ext when the uploaded filename has none
+const EXT_BY_MIME: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
   'image/webp': 'webp',
   'image/svg+xml': 'svg',
-  'image/x-icon': 'ico',
-  'image/vnd.microsoft.icon': 'ico',
   'image/gif': 'gif',
   'image/avif': 'avif',
-  // video (e.g. article cover videos)
   'video/mp4': 'mp4',
   'video/webm': 'webm',
   'video/quicktime': 'mov',
+  'application/pdf': 'pdf',
+  'application/zip': 'zip',
 };
-const IMG_MAX_BYTES = 50 * 1024 * 1024;
 
 @Injectable()
 export class CmsService {
   constructor(
     @InjectRepository(SiteSetting) private readonly settings: Repository<SiteSetting>,
     @InjectRepository(HomeContent) private readonly home: Repository<HomeContent>,
+    @InjectRepository(Media) private readonly media: Repository<Media>,
+    private readonly drive: DriveService,
   ) {}
 
   async getSettings(): Promise<SiteSetting> {
@@ -56,58 +56,63 @@ export class CmsService {
     return this.home.save(h);
   }
 
+  /** Upload any file to PMN Drive and record metadata; returns the public CDN url. */
   async saveImage(file: {
     buffer: Buffer;
     mimetype: string;
     size: number;
+    originalname?: string;
   }): Promise<{ url: string }> {
-    const ext = IMG_MIME[file.mimetype];
-    if (!ext) {
-      throw new BadRequestException(
-        'Unsupported file type. Allowed: ' + Object.keys(IMG_MIME).join(', '),
-      );
-    }
-    if (file.size > IMG_MAX_BYTES) {
+    if (file.size > MAX_BYTES) {
       throw new BadRequestException('File too large (max 50 MB)');
     }
+    const fromName = (file.originalname || '').split('.').pop()?.toLowerCase() || '';
+    const ext =
+      (/^[a-z0-9]{1,8}$/.test(fromName) ? fromName : '') ||
+      EXT_BY_MIME[file.mimetype] ||
+      'bin';
     const hash = createHash('sha256').update(file.buffer).digest('hex').slice(0, 12);
-    const filename = hash + '.' + ext;
-    const dir = path.join(UPLOADS_DIR, 'cms');
-    await fs.mkdir(dir, { recursive: true });
-    await fs.writeFile(path.join(dir, filename), file.buffer);
-    return { url: '/uploads/cms/' + filename };
+    const driveName = `cms/${hash}.${ext}`;
+    await this.drive.upload(driveName, file.buffer);
+    const url = await this.drive.publicLink(driveName);
+    await this.media.save(
+      this.media.create({
+        driveName,
+        url,
+        origName: file.originalname ?? null,
+        mime: file.mimetype ?? null,
+        size: file.size,
+      }),
+    );
+    return { url };
   }
 
   async listMedia(): Promise<{
     items: { url: string; filename: string; size: number; mtime: number }[];
   }> {
-    const dir = path.join(UPLOADS_DIR, 'cms');
-    try {
-      const names = await fs.readdir(dir);
-      const items = await Promise.all(
-        names
-          .filter((n) => !n.startsWith('.'))
-          .map(async (n) => {
-            const st = await fs.stat(path.join(dir, n));
-            return { url: '/uploads/cms/' + n, filename: n, size: st.size, mtime: st.mtimeMs };
-          }),
-      );
-      items.sort((a, b) => b.mtime - a.mtime);
-      return { items };
-    } catch {
-      return { items: [] };
-    }
+    const rows = await this.media.find({ order: { createdAt: 'DESC' }, take: 500 });
+    return {
+      items: rows.map((m) => ({
+        url: m.url,
+        filename: m.driveName.split('/').pop() || m.driveName,
+        size: m.size,
+        mtime: m.createdAt.getTime(),
+      })),
+    };
   }
 
   async deleteMedia(filename: string): Promise<{ ok: true }> {
     if (!/^[A-Za-z0-9._-]+$/.test(filename) || filename.includes('..')) {
       throw new BadRequestException('invalid filename');
     }
+    const driveName = `cms/${filename}`;
+    const row = await this.media.findOne({ where: { driveName } });
     try {
-      await fs.unlink(path.join(UPLOADS_DIR, 'cms', filename));
+      await this.drive.remove(driveName);
     } catch {
-      /* already gone */
+      /* file may already be gone on Drive */
     }
+    if (row) await this.media.remove(row);
     return { ok: true };
   }
 }

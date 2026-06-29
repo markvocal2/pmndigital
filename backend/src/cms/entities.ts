@@ -149,3 +149,16 @@ export class Comment {
   @Column({ type: 'text', nullable: true }) userAgent: string | null;
   @CreateDateColumn() createdAt: Date;
 }
+
+/* ---------------- Media (PMN Drive — files live on Drive, this row is metadata only) ---------------- */
+@Entity({ name: 'Media' })
+@Index(['createdAt'])
+export class Media {
+  @PrimaryGeneratedColumn() id: number;
+  @Column({ type: 'text' }) driveName: string; // path under PMN-Drive/uploads, e.g. cms/<hash>.png
+  @Column({ type: 'text' }) url: string; // public CDN url
+  @Column({ type: 'text', nullable: true }) origName: string | null;
+  @Column({ type: 'text', nullable: true }) mime: string | null;
+  @Column({ type: 'integer', default: 0 }) size: number;
+  @CreateDateColumn() createdAt: Date;
+}

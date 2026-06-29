@@ -205,3 +205,16 @@ model Lead {
   @@index([type, createdAt])
   @@index([status, createdAt])
 }
+
+// Uploaded media metadata — files live on PMN Drive (drive.pmndigital.co), served via cdn.pmndigital.co
+model Media {
+  id        Int      @id @default(autoincrement())
+  driveName String
+  url       String
+  origName  String?
+  mime      String?
+  size      Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
