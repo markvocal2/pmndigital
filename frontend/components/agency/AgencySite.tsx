@@ -306,7 +306,7 @@ export default function AgencySite() {
   const Logo = ({ size = 19 }: { size?: number }) => (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9 }}>
       <span style={css('width:28px;height:28px;border-radius:8px;background:linear-gradient(150deg,#2563EB,#38BDF8);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;box-shadow:0 6px 18px -6px rgba(37,99,235,.8)')}>P</span>
-      <span style={{ fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: 700, fontSize: size, letterSpacing: '-.01em', color: '#EAEEF6' }}>
+      <span style={{ fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: 700, fontSize: size, letterSpacing: '-.01em', color: '#EAEEF6', whiteSpace: 'nowrap' }}>
         PMN <span style={{ color: '#60A5FA' }}>Digital</span>
       </span>
     </span>
