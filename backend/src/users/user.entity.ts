@@ -7,6 +7,11 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+export enum UserRole {
+  USER = 'USER',
+  ADMIN = 'ADMIN',
+}
+
 @Entity({ name: 'User' })
 @Index(['erpCustomerId'])
 export class User {
@@ -18,6 +23,9 @@ export class User {
 
   @Column()
   passwordHash: string;
+
+  @Column({ type: 'enum', enum: UserRole, enumName: 'UserRole', default: UserRole.USER })
+  role: UserRole;
 
   @Column({ type: 'text', nullable: true })
   firstName: string | null;

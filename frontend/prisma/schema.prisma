@@ -6,10 +6,33 @@ datasource db {
   provider = "postgresql"
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum LeadType {
+  REGISTER
+  CONTACT
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  CLOSED
+}
+
 model User {
   id           Int      @id @default(autoincrement())
   email        String   @unique
   passwordHash String
+
+  role UserRole @default(USER)
 
   // Profile
   firstName   String?
@@ -31,6 +54,7 @@ model User {
   updatedAt DateTime @updatedAt @default(now())
 
   auditLogs AuthAuditLog[]
+  articles  Article[]
 
   @@index([erpCustomerId])
 }
@@ -49,4 +73,109 @@ model AuthAuditLog {
 
   @@index([userId, createdAt])
   @@index([event, createdAt])
+}
+
+// Sitewide settings (singleton row, key="default")
+model SiteSetting {
+  id               Int      @id @default(autoincrement())
+  key              String   @unique @default("default")
+  siteName         String   @default("PMN Digital")
+  siteNameEn       String?
+  tagline          String?
+  logoLightUrl     String?
+  logoDarkUrl      String?
+  faviconUrl       String?
+  ogDefaultUrl     String?
+  timezone         String   @default("Asia/Bangkok")
+  defaultLocale    String   @default("th")
+  themeDefault     String   @default("dark")
+  contactEmail     String?
+  contactPhone     String?
+  contactAddress   String?
+  geoLat           Float?
+  geoLng           Float?
+  mapUrl           String?
+  socials          Json?
+  defaultMetaTitle String?
+  defaultMetaDesc  String?
+  defaultKeywords  String?
+  gaId             String?
+  gtmId            String?
+  maintenanceMode  Boolean  @default(false)
+  extra            Json?
+  updatedAt        DateTime @updatedAt @default(now())
+}
+
+// Homepage content (singleton row, key="home"); `data` holds the full section tree.
+model HomeContent {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique @default("home")
+  data      Json
+  seo       Json?
+  updatedAt DateTime @updatedAt @default(now())
+}
+
+model ArticleCategory {
+  id        Int       @id @default(autoincrement())
+  slug      String    @unique
+  name      String
+  nameEn    String?
+  createdAt DateTime  @default(now())
+  articles  Article[]
+}
+
+model Article {
+  id            Int           @id @default(autoincrement())
+  slug          String        @unique
+  title         String
+  excerpt       String?
+  bodyMarkdown  String        @default("")
+  coverImageUrl String?
+  status        ArticleStatus @default(DRAFT)
+  publishedAt   DateTime?
+  authorId      Int?
+  author        User?         @relation(fields: [authorId], references: [id])
+  categoryId    Int?
+  category      ArticleCategory? @relation(fields: [categoryId], references: [id])
+  tags          String[]
+  readingMins   Int           @default(1)
+
+  // SEO
+  metaTitle    String?
+  metaDesc     String?
+  canonicalUrl String?
+  ogImageUrl   String?
+  noindex      Boolean @default(false)
+
+  // GEO (Generative Engine Optimization)
+  keyphrase  String?
+  faq        Json?      // [{q, a}]
+  takeaways  String[]
+  schemaType String     @default("Article")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+
+  @@index([status, publishedAt])
+  @@index([categoryId])
+}
+
+// Homepage form submissions (register / contact)
+model Lead {
+  id        Int        @id @default(autoincrement())
+  type      LeadType
+  name      String
+  email     String
+  phone     String?
+  company   String?
+  service   String?
+  message   String?
+  status    LeadStatus @default(NEW)
+  source    String?
+  ip        String?
+  userAgent String?
+  createdAt DateTime   @default(now())
+
+  @@index([type, createdAt])
+  @@index([status, createdAt])
 }

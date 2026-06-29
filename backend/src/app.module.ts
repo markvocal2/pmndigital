@@ -8,6 +8,7 @@ import { UsersModule } from './users/users.module';
 import { ErpModule } from './erp/erp.module';
 import { PaymentsModule } from './payments/payments.module';
 import { AuditModule } from './audit/audit.module';
+import { CmsModule } from './cms/cms.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { AuditModule } from './audit/audit.module';
     AuthModule,
     UsersModule,
     PaymentsModule,
+    CmsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
