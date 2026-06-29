@@ -18,6 +18,16 @@ function slugify(s: string): string {
   return s.trim().toLowerCase().replace(/[^฀-๿a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').slice(0, 120);
 }
 
+// Auto slug = random 6-char code (a-z, 0-9) — keeps URLs short & ASCII-safe
+function genSlug(): string {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  const arr = new Uint32Array(6);
+  crypto.getRandomValues(arr);
+  let out = '';
+  for (let i = 0; i < 6; i++) out += chars[arr[i] % chars.length];
+  return out;
+}
+
 export function ArticleEditor({
   article,
   categories,
@@ -27,9 +37,9 @@ export function ArticleEditor({
 }) {
   const router = useRouter();
   const [cats, setCats] = useState<ArticleCategory[]>(categories);
-  const [a, setA] = useState({
+  const [a, setA] = useState(() => ({
     title: article?.title ?? '',
-    slug: article?.slug ?? '',
+    slug: article?.slug ?? genSlug(),
     excerpt: article?.excerpt ?? '',
     bodyMarkdown: article?.bodyMarkdown ?? '',
     coverImageUrl: article?.coverImageUrl ?? '',
@@ -45,8 +55,7 @@ export function ArticleEditor({
     faq: (article?.faq ?? []) as ArticleFaq[],
     takeaways: article?.takeaways ?? [],
     schemaType: article?.schemaType ?? 'Article',
-  });
-  const [slugTouched, setSlugTouched] = useState(!!article);
+  }));
   const [preview, setPreview] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +70,7 @@ export function ArticleEditor({
     setLoading(true);
     const payload: Record<string, unknown> = {
       title: a.title,
-      slug: a.slug || slugify(a.title),
+      slug: a.slug || genSlug(),
       excerpt: a.excerpt,
       bodyMarkdown: a.bodyMarkdown,
       coverImageUrl: a.coverImageUrl,
@@ -109,8 +118,13 @@ export function ArticleEditor({
   return (
     <form onSubmit={(e) => { e.preventDefault(); void save(); }}>
       <Section title="เนื้อหาบทความ" hint="หัวข้อ · slug · เนื้อหา (Markdown)">
-        <Field label="หัวข้อ" value={a.title} onChange={(v) => { set('title', v); if (!slugTouched) set('slug', slugify(v)); }} />
-        <Field label="Slug (URL)" value={a.slug} onChange={(v) => { setSlugTouched(true); set('slug', slugify(v)); }} placeholder="my-article" />
+        <Field label="หัวข้อ" value={a.title} onChange={(v) => set('title', v)} />
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <Field label="Slug (URL) — รหัสอัตโนมัติ 6 หลัก" value={a.slug} onChange={(v) => set('slug', slugify(v))} placeholder="a1b2c3" />
+          </div>
+          <button type="button" onClick={() => set('slug', genSlug())} className="mb-1 shrink-0 rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-slate-300 transition hover:bg-white/[0.08]" title="สุ่มรหัสใหม่">🎲 สุ่มใหม่</button>
+        </div>
         <TextArea label="เกริ่นนำ (excerpt)" value={a.excerpt} onChange={(v) => set('excerpt', v)} rows={2} />
         <div>
           <div className="mb-1.5 flex items-center justify-between">
