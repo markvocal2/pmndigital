@@ -47,7 +47,7 @@ export class UpdateHomeDto {
 
 export class ArticleDto {
   @IsString() @MinLength(1) @MaxLength(200) title: string;
-  @IsString() @Matches(/^[a-z0-9-]+$/, { message: 'slug ใช้ได้เฉพาะ a-z, 0-9 และ -' }) @MaxLength(160)
+  @IsString() @Matches(/^[a-z0-9฀-๿-]+$/, { message: 'slug ใช้ได้เฉพาะ a-z, 0-9, อักษรไทย และ -' }) @MaxLength(160)
   slug: string;
   @IsOptional() @IsString() @MaxLength(400) excerpt?: string;
   @IsOptional() @IsString() bodyMarkdown?: string;
@@ -67,7 +67,7 @@ export class ArticleDto {
 }
 
 export class CategoryDto {
-  @IsString() @Matches(/^[a-z0-9-]+$/) @MaxLength(60) slug: string;
+  @IsString() @Matches(/^[a-z0-9฀-๿-]+$/) @MaxLength(60) slug: string;
   @IsString() @MinLength(1) @MaxLength(120) name: string;
   @IsOptional() @IsString() @MaxLength(120) nameEn?: string;
 }

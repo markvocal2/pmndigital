@@ -26,7 +26,7 @@ export default async function BlogIndex() {
     name: `บทความ · ${name}`,
     url: `${SITE}/blog`,
     publisher: { '@type': 'Organization', name },
-    blogPost: items.slice(0, 12).map((a) => ({ '@type': 'BlogPosting', headline: a.title, url: `${SITE}/blog/${a.slug}`, datePublished: a.publishedAt || undefined })),
+    blogPost: items.slice(0, 12).map((a) => ({ '@type': 'BlogPosting', headline: a.title, url: `${SITE}/blog/${encodeURIComponent(a.slug)}`, datePublished: a.publishedAt || undefined })),
   };
   return (
     <div style={{ minHeight: '100vh', background: '#05070E', color: '#EAEEF6', fontFamily: "'IBM Plex Sans','IBM Plex Sans Thai',sans-serif" }}>

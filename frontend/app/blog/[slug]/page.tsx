@@ -19,13 +19,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     title,
     description,
     keywords: art.keyphrase ? [art.keyphrase, ...art.tags] : art.tags,
-    alternates: { canonical: art.canonicalUrl || `${SITE}/blog/${art.slug}` },
+    alternates: { canonical: art.canonicalUrl || `${SITE}/blog/${encodeURIComponent(art.slug)}` },
     robots: art.noindex ? { index: false, follow: false } : undefined,
     openGraph: {
       type: 'article',
       title,
       description,
-      url: `${SITE}/blog/${art.slug}`,
+      url: `${SITE}/blog/${encodeURIComponent(art.slug)}`,
       images: img ? [img] : undefined,
       publishedTime: art.publishedAt || undefined,
       modifiedTime: art.updatedAt,
@@ -41,7 +41,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   if (!art) notFound();
   const name = settings?.siteName || 'PMN Digital';
   const logo = settings?.logoDarkUrl || '/assets/logo-white.png';
-  const url = `${SITE}/blog/${art.slug}`;
+  const url = `${SITE}/blog/${encodeURIComponent(art.slug)}`;
   const html = renderMarkdown(art.bodyMarkdown);
 
   const ld: Record<string, unknown>[] = [
