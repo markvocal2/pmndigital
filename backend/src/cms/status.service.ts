@@ -141,7 +141,8 @@ export class ServerStatusService {
       servicesHealthy: healthy != null ? Math.round(healthy) : 0,
       servicesTotal: total != null ? Math.round(total) : 0,
       continuousDays: uptimeDays != null ? Math.floor(uptimeDays) : 0,
-      backupOk: backupFailed != null ? backupFailed === 0 : backupAgeHours != null && backupAgeHours < 48,
+      // "ok" requires BOTH no failures AND a recent successful run (stale metric must not show green)
+      backupOk: (backupFailed ?? 0) === 0 && backupAgeHours != null && backupAgeHours < 36,
       backupAgeHours: backupAgeHours != null ? Math.round(backupAgeHours * 10) / 10 : null,
       backupStacks: backupStacks != null ? Math.round(backupStacks) : 0,
       threatsBlocked: threats != null ? Math.round(threats) : 0,

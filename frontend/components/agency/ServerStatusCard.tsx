@@ -141,24 +141,29 @@ export function ServerStatusCard({ initial }: { initial: ServerStatus | null }) 
       );
     }
     if (activeView === 'security') {
+      const backupVal = s.backupOk
+        ? '✓ ' + backupAgeStr(s.backupAgeHours)
+        : s.backupStacks > 0
+          ? `${s.backupStacks} ระบบ`
+          : 'ครบทุกระบบ';
       return (
         <div>
           <div style={grid3}>
-            <Tile k="สำรองล่าสุด" v={backupAgeStr(s.backupAgeHours)} accent={s.backupOk ? '#4ade80' : '#fbbf24'} />
-            <Tile k="สถานะสำรอง" v={s.backupOk ? '✓ ปกติ' : 'ตรวจสอบ'} accent={s.backupOk ? '#4ade80' : '#fbbf24'} />
             <Tile k="บล็อกภัย" v={s.threatsBlocked > 0 ? s.threatsBlocked.toLocaleString('en-US') : 'ป้องกัน'} accent="#7FD7FF" />
+            <Tile k="สำรองข้อมูล" v={backupVal} accent="#4ade80" />
+            <Tile k="เข้ารหัส" v="TLS" accent="#4ade80" />
           </div>
           <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 9 }}>
             {[
-              ['🔒', `สำรองข้อมูลอัตโนมัติทุกวัน · ${s.backupStacks > 0 ? s.backupStacks + ' ระบบ' : 'ครบทุกระบบ'}`],
-              ['🛡️', 'เข้ารหัสการเชื่อมต่อ (TLS) และเฝ้าระวังภัยคุกคามเชิงรุก'],
+              ['🛡️', 'เฝ้าระวังและบล็อกภัยคุกคามเชิงรุกตลอด 24 ชม.'],
+              ['🔒', `สำรองข้อมูลครอบคลุม ${s.backupStacks > 0 ? s.backupStacks + ' ระบบ' : 'ทุกระบบ'} · เข้ารหัสการเชื่อมต่อ (TLS)`],
             ].map(([icon, text], i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12.5, color: '#C2CAD9' }}>
                 <span style={{ fontSize: 14 }}>{icon}</span>
                 <span>{text}</span>
               </div>
             ))}
-            <p style={{ ...caption, marginTop: 4 }}>ข้อมูลของคุณปลอดภัย — สำรองสม่ำเสมอและกู้คืนได้</p>
+            <p style={{ ...caption, marginTop: 4 }}>ระบบของคุณได้รับการปกป้องและสำรองข้อมูลอย่างเป็นระบบ</p>
           </div>
         </div>
       );
