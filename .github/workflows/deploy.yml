@@ -64,3 +64,27 @@ jobs:
             -H "X-Hub-Signature-256: sha256=$SIG" \
             -d "$PAYLOAD" \
             "$KOMODO_WEBHOOK_URL"
+
+  purge-cdn:
+    needs: trigger-komodo
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for rollout, then purge Cloudflare cache
+        # Prevents stale/404 _next/static chunks (cached during container rollover)
+        # from breaking hydration on the live site. Skips if CF secrets are unset.
+        env:
+          CF_ZONE_ID: ${{ secrets.CF_ZONE_ID }}
+          CF_PURGE_TOKEN: ${{ secrets.CF_PURGE_TOKEN }}
+        run: |
+          if [ -z "$CF_PURGE_TOKEN" ] || [ -z "$CF_ZONE_ID" ]; then
+            echo "CF purge secrets not set — skipping. Add repo secrets CF_ZONE_ID + CF_PURGE_TOKEN (scoped Cache-Purge token) to enable auto-purge."
+            exit 0
+          fi
+          echo "Waiting ~150s for Komodo to pull images and recreate containers..."
+          sleep 150
+          curl -fsSL -X POST "https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/purge_cache" \
+            -H "Authorization: Bearer $CF_PURGE_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data '{"purge_everything":true}'
+          echo
+          echo "Cloudflare cache purged."
