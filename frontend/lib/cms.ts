@@ -223,6 +223,15 @@ export interface ServerStatus {
   responseMs: number;
   days: number[];
   updatedAt: string;
+  cpuHeadroomPct: number;
+  memHeadroomPct: number;
+  servicesHealthy: number;
+  servicesTotal: number;
+  continuousDays: number;
+  backupOk: boolean;
+  backupAgeHours: number | null;
+  backupStacks: number;
+  threatsBlocked: number;
 }
 export async function getServerStatus(): Promise<ServerStatus | null> {
   try {
