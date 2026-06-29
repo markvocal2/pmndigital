@@ -25,6 +25,7 @@ export interface HomeData {
   };
   trustedLabel: string;
   clients: string[];
+  trustedLogos: { name: string; logoUrl: string; url?: string }[];
   services: Svc[];
   stats: Stat[];
   why: { eyebrow: string; title: string; subtitle: string; techTitle: string; techDesc: string; bento: BentoItem[] };
@@ -68,6 +69,7 @@ export const defaultHomeContent: HomeData = {
   },
   trustedLabel: 'หน่วยงานที่ไว้วางใจ — Trusted by teams',
   clients: ['NIMBUS', 'SIAM LOGISTICS', 'METROBANK', 'VOLT RETAIL', 'AETHER HEALTH', 'ORBIT FINANCE', 'THANA GROUP', 'KASET CO-OP'],
+  trustedLogos: [],
   services: [
     { t: 'Database Systems', th: 'ออกแบบ & วิศวกรรมฐานข้อมูล', d: 'ออกแบบโครงสร้างข้อมูล จัดการ migration และปรับจูนประสิทธิภาพให้เร็วและปลอดภัย', icon: 'db' },
     { t: 'ERP', th: 'บริหารทรัพยากรองค์กร', d: 'บัญชี การเงิน คลังสินค้า จัดซื้อ ผลิต และ HR รวมไว้ในระบบเดียวที่เชื่อมกัน', icon: 'erp' },

@@ -27,6 +27,7 @@ const WORK_FIELDS: FieldDef[] = [{ key: 'tag', label: 'แท็ก' }, { key: '
 const PRIV_FIELDS: FieldDef[] = [{ key: 't', label: 'สิทธิ์' }, { key: 'd', label: 'รายละเอียด' }];
 const QUOTE_FIELDS: FieldDef[] = [{ key: 'q', label: 'คำพูด', type: 'textarea' }, { key: 'n', label: 'ชื่อ' }, { key: 'r', label: 'ตำแหน่ง/บริษัท' }];
 const FAQ_FIELDS: FieldDef[] = [{ key: 'q', label: 'คำถาม' }, { key: 'a', label: 'คำตอบ', type: 'textarea' }];
+const LOGO_FIELDS: FieldDef[] = [{ key: 'logoUrl', label: 'โลโก้ (PNG/SVG พื้นโปร่งใส แนะนำ)', type: 'image' }, { key: 'name', label: 'ชื่อหน่วยงาน' }, { key: 'url', label: 'ลิงก์เว็บไซต์ (ไม่บังคับ)' }];
 const TIER_FIELDS: FieldDef[] = [
   { key: 'name', label: 'ชื่อแพ็กเกจ' }, { key: 'th', label: 'กลุ่มเป้าหมาย' },
   { key: 'base', label: 'ราคาปกติ', type: 'number' }, { key: 'disc', label: 'ราคาลด', type: 'number' },
@@ -78,7 +79,14 @@ export function HomeEditor({ content }: { content: HomeData }) {
 
       <Group title="ลูกค้าที่ไว้วางใจ (Trusted by)">
         <Field label="หัวข้อแถบ" value={d.trustedLabel} onChange={(v) => setTop('trustedLabel', v)} />
-        <StringListEditor label="รายชื่อองค์กร" items={d.clients} onChange={(v) => setTop('clients', v)} placeholder="ชื่อองค์กร" />
+        <ObjectListEditor
+          label="โลโก้หน่วยงาน (ถ้ามีโลโก้ จะแสดงแทนรายชื่อ · เทาสว่าง → สีจริงเมื่อชี้เมาส์)"
+          items={d.trustedLogos}
+          fields={LOGO_FIELDS}
+          onChange={(v) => setTop('trustedLogos', v)}
+          newItem={() => ({ name: '', logoUrl: '', url: '' })}
+        />
+        <StringListEditor label="รายชื่อองค์กร (ใช้เมื่อยังไม่มีโลโก้)" items={d.clients} onChange={(v) => setTop('clients', v)} placeholder="ชื่อองค์กร" />
       </Group>
 
       <Group title="บริการ (Services — 4 การ์ดหน้าแรก)">

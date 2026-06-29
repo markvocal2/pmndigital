@@ -75,6 +75,9 @@ html{scroll-behavior:smooth}
 @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
 @keyframes floaty2{0%,100%{transform:translateY(0)}50%{transform:translateY(13px)}}
 @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.trustmarquee:hover{animation-play-state:paused}
+.trustlogo{height:38px;width:auto;max-width:170px;object-fit:contain;filter:brightness(0) invert(.72);opacity:.72;transition:filter .35s ease,opacity .35s ease}
+.trustlogo:hover{filter:none;opacity:1}
 @keyframes pulseDot{0%,100%{opacity:.4;transform:scale(1)}50%{opacity:1;transform:scale(1.35)}}
 @keyframes sweep{0%{left:-60%}100%{left:150%}}
 @keyframes growBar{from{transform:scaleY(.12)}to{transform:scaleY(1)}}
@@ -351,11 +354,25 @@ export default function AgencySite({
         <div style={css('max-width:1240px;margin:0 auto')}>
           <p style={css(`text-align:center;${MONO};font-size:11px;letter-spacing:.22em;color:#5C6680;text-transform:uppercase;margin:0 0 22px`)}>{c.trustedLabel}</p>
           <div style={css('overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)')}>
-            <div style={css('display:flex;gap:64px;width:max-content;animation:marquee 32s linear infinite;align-items:center;opacity:.62')}>
-              {[...c.clients, ...c.clients].map((cl, i) => (
-                <span key={i} style={css("font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:20px;letter-spacing:.04em;color:#C7D0E0;white-space:nowrap")}>{cl}</span>
-              ))}
-            </div>
+            {c.trustedLogos && c.trustedLogos.length > 0 ? (
+              <div className="trustmarquee" style={css('display:flex;gap:56px;width:max-content;animation:marquee 34s linear infinite;align-items:center')}>
+                {[...c.trustedLogos, ...c.trustedLogos].map((lg, i) => {
+                  // eslint-disable-next-line @next/next/no-img-element
+                  const img = <img className="trustlogo" src={lg.logoUrl} alt={lg.name} title={lg.name} />;
+                  return lg.url ? (
+                    <a key={i} href={lg.url} target="_blank" rel="noopener noreferrer" style={css('display:flex;align-items:center')}>{img}</a>
+                  ) : (
+                    <span key={i} style={css('display:flex;align-items:center')}>{img}</span>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="trustmarquee" style={css('display:flex;gap:64px;width:max-content;animation:marquee 32s linear infinite;align-items:center;opacity:.62')}>
+                {[...c.clients, ...c.clients].map((cl, i) => (
+                  <span key={i} style={css("font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:20px;letter-spacing:.04em;color:#C7D0E0;white-space:nowrap")}>{cl}</span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>

@@ -1,11 +1,12 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { ImageUpload } from './ui';
 
 export interface FieldDef {
   key: string;
   label: string;
-  type?: 'text' | 'textarea' | 'number';
+  type?: 'text' | 'textarea' | 'number' | 'image';
   full?: boolean;
 }
 
@@ -62,6 +63,17 @@ export function ObjectListEditor<T extends object>({
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
               {fields.map((f) => {
+                if (f.type === 'image') {
+                  return (
+                    <div key={f.key} className="sm:col-span-2">
+                      <ImageUpload
+                        label={f.label}
+                        value={String(get(item, f.key) ?? '')}
+                        onChange={(url) => update(i, f.key, url)}
+                      />
+                    </div>
+                  );
+                }
                 const node: ReactNode =
                   f.type === 'textarea' ? (
                     <textarea
