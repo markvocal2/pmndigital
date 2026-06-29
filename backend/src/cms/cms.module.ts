@@ -13,6 +13,7 @@ import { CmsService } from './cms.service';
 import { ArticlesService } from './articles.service';
 import { LeadsService } from './leads.service';
 import { CommentsService } from './comments.service';
+import { ServerStatusService } from './status.service';
 import { AdminGuard } from './admin.guard';
 import { CmsPublicController } from './public.controller';
 import { CmsAdminController } from './admin.controller';
@@ -30,6 +31,6 @@ import { CmsAdminController } from './admin.controller';
     ]),
   ],
   controllers: [CmsPublicController, CmsAdminController],
-  providers: [CmsService, ArticlesService, LeadsService, CommentsService, AdminGuard],
+  providers: [CmsService, ArticlesService, LeadsService, CommentsService, ServerStatusService, AdminGuard],
 })
 export class CmsModule {}

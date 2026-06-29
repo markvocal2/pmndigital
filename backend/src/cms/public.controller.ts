@@ -14,6 +14,7 @@ import { CmsService } from './cms.service';
 import { ArticlesService } from './articles.service';
 import { LeadsService } from './leads.service';
 import { CommentsService } from './comments.service';
+import { ServerStatusService } from './status.service';
 import { CreateCommentDto, CreateLeadDto } from './dto';
 
 function clientMeta(req: Request) {
@@ -33,11 +34,17 @@ export class CmsPublicController {
     private readonly articles: ArticlesService,
     private readonly leads: LeadsService,
     private readonly comments: CommentsService,
+    private readonly status: ServerStatusService,
   ) {}
 
   @Get('settings')
   async settings() {
     return { settings: await this.cms.getSettings() };
+  }
+
+  @Get('server-status')
+  serverStatus() {
+    return this.status.getStatus();
   }
 
   @Get('home')

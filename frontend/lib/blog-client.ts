@@ -1,6 +1,16 @@
 'use client';
 
-import type { Article, ArticleComment, Paged } from './cms';
+import type { Article, ArticleComment, Paged, ServerStatus } from './cms';
+
+export async function fetchServerStatus(): Promise<ServerStatus | null> {
+  try {
+    const r = await fetch('/api/public/server-status', { cache: 'no-store' });
+    if (!r.ok) return null;
+    return (await r.json()) as ServerStatus;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Client-side public API helpers. These hit the same-origin `/api/public/*`

@@ -128,16 +128,25 @@ export function ImageUpload({
     e.target.value = '';
     if (!file) return;
     setErr(null);
-    setBusy(true);
-    const fd = new FormData();
-    fd.set('file', file);
-    const res = await uploadMediaAction(fd);
-    setBusy(false);
-    if (!res.ok) {
-      setErr(res.error);
+    if (file.size > 10 * 1024 * 1024) {
+      setErr(`ไฟล์ใหญ่เกินไป (${(file.size / 1048576).toFixed(1)}MB) — สูงสุด 10MB`);
       return;
     }
-    onChange(res.data.url);
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.set('file', file);
+      const res = await uploadMediaAction(fd);
+      if (!res.ok) {
+        setErr(res.error);
+        return;
+      }
+      onChange(res.data.url);
+    } catch {
+      setErr('อัปโหลดไม่สำเร็จ — ไฟล์อาจใหญ่เกินไปหรือการเชื่อมต่อมีปัญหา');
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (

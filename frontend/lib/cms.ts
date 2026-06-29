@@ -212,3 +212,19 @@ export interface MediaItem {
   size: number;
   mtime: number;
 }
+
+/* ---------------- server status ---------------- */
+export interface ServerStatus {
+  operational: boolean;
+  uptimePct: number;
+  responseMs: number;
+  days: number[];
+  updatedAt: string;
+}
+export async function getServerStatus(): Promise<ServerStatus | null> {
+  try {
+    return await publicBackendFetch<ServerStatus>('/public/server-status');
+  } catch {
+    return null;
+  }
+}

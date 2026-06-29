@@ -31,17 +31,26 @@ export function MediaBrowser({ onPick }: { onPick?: (url: string) => void }) {
     e.target.value = '';
     if (!f) return;
     setMsg(null);
-    setBusy(true);
-    const fd = new FormData();
-    fd.set('file', f);
-    const r = await uploadMediaAction(fd);
-    setBusy(false);
-    if (!r.ok) {
-      setMsg(r.error);
+    if (f.size > 10 * 1024 * 1024) {
+      setMsg(`ไฟล์ใหญ่เกินไป (${(f.size / 1048576).toFixed(1)}MB) — สูงสุด 10MB`);
       return;
     }
-    await load();
-    if (onPick) onPick(r.data.url);
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.set('file', f);
+      const r = await uploadMediaAction(fd);
+      if (!r.ok) {
+        setMsg(r.error);
+        return;
+      }
+      await load();
+      if (onPick) onPick(r.data.url);
+    } catch {
+      setMsg('อัปโหลดไม่สำเร็จ — ไฟล์อาจใหญ่เกินไปหรือการเชื่อมต่อมีปัญหา');
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function del(name: string) {

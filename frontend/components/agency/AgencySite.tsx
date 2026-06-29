@@ -4,7 +4,8 @@ import { useEffect, useRef, useState, type CSSProperties, type MouseEvent as Rea
 import { mergeHome } from '@/lib/home-content';
 import { submitLeadAction } from '@/lib/cms-actions';
 import { ArticlesCarousel } from './ArticlesCarousel';
-import type { Article } from '@/lib/cms';
+import { ServerStatusCard } from './ServerStatusCard';
+import type { Article, ServerStatus } from '@/lib/cms';
 
 /* Parse an inline CSS declaration string ("a:b;c:d") into a React style object. */
 function css(s: string): CSSProperties {
@@ -199,10 +200,12 @@ export default function AgencySite({
   content,
   settings,
   articles,
+  serverStatus,
 }: {
   content?: unknown;
   settings?: SettingsLite | null;
   articles?: Article[];
+  serverStatus?: ServerStatus | null;
 }) {
   const c = mergeHome(content);
   const logoUrl = settings?.logoDarkUrl || '/assets/logo-white.png';
@@ -363,37 +366,7 @@ export default function AgencySite({
           </div>
           <div style={css('perspective:1400px;animation:fadeUp .7s .2s both')}>
             <div ref={heroVisualRef} style={css('position:relative;transform-style:preserve-3d;transition:transform .35s cubic-bezier(.2,.7,.2,1)')}>
-              <div style={css('position:relative;border-radius:20px;background:linear-gradient(160deg,rgba(20,28,48,.95),rgba(9,13,24,.95));border:1px solid rgba(255,255,255,.1);box-shadow:0 40px 90px -30px rgba(0,0,0,.8),0 0 0 1px rgba(37,99,235,.08) inset;padding:18px;overflow:hidden')}>
-                <div style={css('position:absolute;top:0;left:-60%;width:50%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent);animation:sweep 6s ease-in-out infinite;pointer-events:none')} />
-                <div style={css('display:flex;align-items:center;justify-content:space-between;padding:4px 6px 14px;border-bottom:1px solid rgba(255,255,255,.07)')}>
-                  <div style={css('display:flex;gap:7px;align-items:center')}>
-                    <span style={css('width:11px;height:11px;border-radius:50%;background:#2a3550')} />
-                    <span style={css('width:11px;height:11px;border-radius:50%;background:#2a3550')} />
-                    <span style={css('width:11px;height:11px;border-radius:50%;background:#2a3550')} />
-                    <span style={css(`${MONO};font-size:11px;color:#7B86A1;margin-left:8px`)}>pmn-console</span>
-                  </div>
-                  <span style={css(`display:inline-flex;align-items:center;gap:6px;${MONO};font-size:10.5px;color:#4ade80`)}><span style={css('width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 8px #4ade80;animation:pulseDot 1.6s infinite')} />LIVE</span>
-                </div>
-                <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:16px 6px 14px')}>
-                  {[['UPTIME', '99.9%'], ['QUERIES', '1.2M'], ['LATENCY', '42ms']].map(([k, v]) => (
-                    <div key={k} style={css('background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:11px 12px')}>
-                      <div style={css(`${MONO};font-size:10px;color:#7B86A1;letter-spacing:.08em`)}>{k}</div>
-                      <div style={css('font-size:19px;font-weight:600;margin-top:5px')}>{v}</div>
-                    </div>
-                  ))}
-                </div>
-                <div style={css('padding:8px 8px 6px')}>
-                  <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:12px')}>
-                    <span style={css('font-size:12.5px;color:#A7B0C4')}>Throughput · 7 วัน</span>
-                    <span style={css(`${MONO};font-size:11px;color:#4ade80`)}>▲ 18.4%</span>
-                  </div>
-                  <div style={css('display:flex;align-items:flex-end;gap:9px;height:84px')}>
-                    {[[42, '#2563EB,#1d4ed8', .1], [60, '#2563EB,#1d4ed8', .18], [48, '#2563EB,#1d4ed8', .26], [74, '#38BDF8,#0ea5e9', .34], [64, '#2563EB,#1d4ed8', .42], [88, '#38BDF8,#0ea5e9', .5], [100, '#60A5FA,#38BDF8', .58]].map((b, i) => (
-                      <div key={i} style={css(`flex:1;height:${b[0]}%;background:linear-gradient(180deg,${b[1]});border-radius:5px 5px 0 0;transform-origin:bottom;animation:growBar .8s ${b[2]}s both`)} />
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <ServerStatusCard initial={serverStatus ?? null} />
               {[['top:-22px;right:-16px;animation:floaty 6s ease-in-out infinite', 'ERP'], ['top:38%;left:-26px;animation:floaty2 7s ease-in-out infinite', 'CRM'], ['bottom:-18px;left:30px;animation:floaty 8s ease-in-out infinite', 'Database'], ['bottom:30px;right:-30px;animation:floaty2 6.5s ease-in-out infinite', 'API']].map(([pos, label]) => (
                 <div key={label} style={css(`position:absolute;${pos};background:rgba(13,19,35,.95);border:1px solid rgba(255,255,255,.12);border-radius:11px;padding:9px 13px;${MONO};font-size:12px;color:#9FC0FF;box-shadow:0 14px 30px -12px rgba(0,0,0,.7)`)}>{label}</div>
               ))}

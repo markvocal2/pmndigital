@@ -17,7 +17,7 @@ const IMG_MIME: Record<string, string> = {
   'image/vnd.microsoft.icon': 'ico',
   'image/gif': 'gif',
 };
-const IMG_MAX_BYTES = 5 * 1024 * 1024;
+const IMG_MAX_BYTES = 10 * 1024 * 1024;
 
 @Injectable()
 export class CmsService {
@@ -63,7 +63,7 @@ export class CmsService {
       );
     }
     if (file.size > IMG_MAX_BYTES) {
-      throw new BadRequestException('Image too large (max 5 MB)');
+      throw new BadRequestException('Image too large (max 10 MB)');
     }
     const hash = createHash('sha256').update(file.buffer).digest('hex').slice(0, 12);
     const filename = hash + '.' + ext;
