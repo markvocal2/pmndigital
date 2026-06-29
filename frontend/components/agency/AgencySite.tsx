@@ -64,6 +64,54 @@ const SOCIAL_GLYPHS: { key: string; label: string; d: string }[] = [
   { key: 'instagram', label: 'Instagram', d: 'M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z' },
 ];
 
+/* Tech name → Simple Icons slug (real brand logos via cdn.simpleicons.org). Unknown → text-only chip. */
+const TECH_SLUGS: Record<string, string> = {
+  postgresql: 'postgresql', postgres: 'postgresql', mysql: 'mysql', mariadb: 'mariadb',
+  mongodb: 'mongodb', mongo: 'mongodb', redis: 'redis', sqlite: 'sqlite',
+  'node.js': 'nodedotjs', nodejs: 'nodedotjs', node: 'nodedotjs',
+  '.net': 'dotnet', dotnet: 'dotnet', python: 'python', php: 'php', laravel: 'laravel',
+  react: 'react', 'next.js': 'nextdotjs', nextjs: 'nextdotjs', 'vue.js': 'vuedotjs', vue: 'vuedotjs',
+  angular: 'angular', svelte: 'svelte', 'nest.js': 'nestjs', nestjs: 'nestjs', express: 'express',
+  typescript: 'typescript', javascript: 'javascript',
+  tailwindcss: 'tailwindcss', 'tailwind css': 'tailwindcss', tailwind: 'tailwindcss',
+  aws: 'amazonwebservices', 'amazon web services': 'amazonwebservices',
+  'google cloud': 'googlecloud', gcp: 'googlecloud', azure: 'microsoftazure',
+  docker: 'docker', kubernetes: 'kubernetes', k8s: 'kubernetes', nginx: 'nginx',
+  graphql: 'graphql', prisma: 'prisma', firebase: 'firebase', supabase: 'supabase',
+  go: 'go', golang: 'go', rust: 'rust', flutter: 'flutter', kafka: 'apachekafka',
+  rabbitmq: 'rabbitmq', elasticsearch: 'elasticsearch', flask: 'flask', django: 'django',
+};
+function techSlug(name: string): string | null {
+  const k = name.trim().toLowerCase();
+  if (TECH_SLUGS[k]) return TECH_SLUGS[k];
+  const norm = k.replace(/[^a-z0-9]/g, '');
+  return norm.length ? norm : null;
+}
+function TechChip({ name }: { name: string }) {
+  const [err, setErr] = useState(false);
+  const slug = techSlug(name);
+  return (
+    <span
+      className="techchip"
+      style={css(`${MONO};display:inline-flex;align-items:center;gap:7px;font-size:12px;color:#C7D0E0;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 11px`)}
+    >
+      {slug && !err && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          className="techlogo"
+          src={`https://cdn.simpleicons.org/${slug}`}
+          alt=""
+          width={15}
+          height={15}
+          style={css('height:15px;width:auto;display:block')}
+          onError={() => setErr(true)}
+        />
+      )}
+      {name}
+    </span>
+  );
+}
+
 const STYLE = `
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -78,6 +126,10 @@ html{scroll-behavior:smooth}
 .trustmarquee:hover{animation-play-state:paused}
 .trustlogo{height:38px;width:auto;max-width:170px;object-fit:contain;filter:brightness(0) invert(.72);opacity:.72;transition:filter .35s ease,opacity .35s ease}
 .trustlogo:hover{filter:none;opacity:1}
+.techlogo{filter:brightness(0) invert(.78);opacity:.9;transition:filter .3s ease,opacity .3s ease}
+.techchip{transition:border-color .3s ease,background .3s ease}
+.techchip:hover{border-color:rgba(96,165,250,.4)}
+.techchip:hover .techlogo{filter:none;opacity:1}
 @keyframes pulseDot{0%,100%{opacity:.4;transform:scale(1)}50%{opacity:1;transform:scale(1.35)}}
 @keyframes sweep{0%{left:-60%}100%{left:150%}}
 @keyframes growBar{from{transform:scaleY(.12)}to{transform:scaleY(1)}}
@@ -423,7 +475,7 @@ export default function AgencySite({
                 <div style={css(`${MONO};font-size:11px;letter-spacing:.16em;color:#9FC0FF;text-transform:uppercase;margin-bottom:14px`)}>Tech Stack</div>
                 <h3 style={css('margin:0 0 10px;font-size:22px;font-weight:600;letter-spacing:-.01em')}>{c.why.techTitle}</h3>
                 <p style={css('margin:0 0 22px;color:#A7B0C4;font-size:14.5px;line-height:1.65')}>{c.why.techDesc}</p>
-                <div style={css('display:flex;flex-wrap:wrap;gap:8px')}>{c.techs.map((t) => <span key={t} style={css(`${MONO};font-size:12px;color:#C7D0E0;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 11px`)}>{t}</span>)}</div>
+                <div style={css('display:flex;flex-wrap:wrap;gap:8px')}>{c.techs.map((t) => <TechChip key={t} name={t} />)}</div>
               </div>
             </div>
             {c.why.bento.map((b, i) => (
@@ -703,7 +755,7 @@ export default function AgencySite({
               <h2 style={css('margin:0 0 14px;font-size:clamp(24px,2.6vw,34px);line-height:1.18;letter-spacing:-.02em;font-weight:700')}>{c.servicesPage.expertiseTitle}</h2>
               <p style={css('margin:0;color:#A7B0C4;font-size:15px;line-height:1.7')}>{c.servicesPage.expertiseDesc}</p>
             </div>
-            <div style={css('display:flex;flex-wrap:wrap;gap:8px')}>{c.techs.map((t) => <span key={t} style={css(`${MONO};font-size:12px;color:#C7D0E0;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 11px`)}>{t}</span>)}</div>
+            <div style={css('display:flex;flex-wrap:wrap;gap:8px')}>{c.techs.map((t) => <TechChip key={t} name={t} />)}</div>
           </div>
         </div>
       </section>
