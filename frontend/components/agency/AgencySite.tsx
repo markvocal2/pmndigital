@@ -303,13 +303,9 @@ export default function AgencySite() {
     { p: 'pricing', label: 'Pricing' }, { p: 'contact', label: 'Contact' },
   ];
 
-  const Logo = ({ size = 19 }: { size?: number }) => (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9 }}>
-      <span style={css('width:28px;height:28px;border-radius:8px;background:linear-gradient(150deg,#2563EB,#38BDF8);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;box-shadow:0 6px 18px -6px rgba(37,99,235,.8)')}>P</span>
-      <span style={{ fontFamily: "'IBM Plex Sans',sans-serif", fontWeight: 700, fontSize: size, letterSpacing: '-.01em', color: '#EAEEF6', whiteSpace: 'nowrap' }}>
-        PMN <span style={{ color: '#60A5FA' }}>Digital</span>
-      </span>
-    </span>
+  const Logo = ({ h = 30 }: { h?: number }) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src="/assets/logo-white.png" alt="PMN Digital" style={{ height: h, width: 'auto', display: 'block' }} />
   );
 
   /* ---------------- HOME ---------------- */
@@ -1050,7 +1046,7 @@ export default function AgencySite() {
         <div style={css('max-width:1240px;margin:0 auto')}>
           <div style={css('display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:36px;margin-bottom:48px')} data-footer-grid>
             <div>
-              <div style={css('margin-bottom:18px')}><Logo size={22} /></div>
+              <div style={css('margin-bottom:18px')}><Logo h={34} /></div>
               <p style={css('margin:0 0 18px;color:#8B95AC;font-size:14px;line-height:1.7;max-width:320px;font-weight:300')}>เอเจนซีออกแบบและพัฒนาระบบฐานข้อมูล ERP, CRM และซอฟต์แวร์เฉพาะทางแบบครบวงจร โดยทีมยุคใหม่ที่เข้าใจธุรกิจ</p>
               <div style={css('display:flex;gap:10px')}>
                 {SOCIALS.map((s) => (
