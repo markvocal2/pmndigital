@@ -57,6 +57,7 @@ export interface Article {
   categoryId: number | null;
   tags: string[];
   readingMins: number;
+  viewCount: number;
   metaTitle: string | null;
   metaDesc: string | null;
   canonicalUrl: string | null;
@@ -159,4 +160,47 @@ export async function adminListCategories(): Promise<ArticleCategory[]> {
 }
 export async function adminListLeads(qs = ''): Promise<Paged<Lead>> {
   return backendFetch<Paged<Lead>>('/admin/leads' + (qs ? '?' + qs : ''));
+}
+
+/* ---------------- comments ---------------- */
+export interface ArticleComment {
+  id: number;
+  authorName: string;
+  body: string;
+  createdAt: string;
+}
+export interface AdminComment {
+  id: number;
+  articleId: number;
+  article: { title: string; slug: string } | null;
+  authorName: string;
+  authorEmail: string | null;
+  body: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  createdAt: string;
+}
+
+/* related (server) */
+export async function getRelatedArticles(slug: string, limit = 4): Promise<Article[]> {
+  try {
+    const d = await publicBackendFetch<{ items: Article[] }>(
+      '/public/articles/' + encodeURIComponent(slug) + '/related?limit=' + limit,
+      { revalidate: 120 },
+    );
+    return d.items;
+  } catch {
+    return [];
+  }
+}
+
+/* admin comments */
+export async function adminListComments(qs = ''): Promise<Paged<AdminComment>> {
+  return backendFetch<Paged<AdminComment>>('/admin/comments' + (qs ? '?' + qs : ''));
+}
+export async function adminPendingCommentCount(): Promise<number> {
+  try {
+    return (await backendFetch<{ count: number }>('/admin/comments/pending-count')).count;
+  } catch {
+    return 0;
+  }
 }

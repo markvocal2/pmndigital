@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, Fragment } from 'react';
 import { mergeHome } from '@/lib/home-content';
 import { submitLeadAction } from '@/lib/cms-actions';
+import { ArticlesCarousel } from './ArticlesCarousel';
+import type { Article } from '@/lib/cms';
 
 /* Parse an inline CSS declaration string ("a:b;c:d") into a React style object. */
 function css(s: string): CSSProperties {
@@ -141,9 +143,11 @@ interface SettingsLite {
 export default function AgencySite({
   content,
   settings,
+  articles,
 }: {
   content?: unknown;
   settings?: SettingsLite | null;
+  articles?: Article[];
 }) {
   const c = mergeHome(content);
   const logoUrl = settings?.logoDarkUrl || '/assets/logo-white.png';
@@ -531,6 +535,26 @@ export default function AgencySite({
           </div>
         </div>
       </section>
+
+      {articles && articles.length > 0 && (
+        <section data-reveal style={css('padding:30px 24px 100px')}>
+          <div style={css('max-width:1240px;margin:0 auto')}>
+            {sectionHead(
+              '07',
+              'Articles',
+              'บทความล่าสุด',
+              <a
+                href="/blog"
+                className="agG"
+                style={css('display:inline-flex;align-items:center;gap:8px;align-self:flex-end;background:rgba(255,255,255,.04);color:#EAEEF6;border:1px solid rgba(255,255,255,.16);border-radius:11px;padding:11px 20px;font-size:14px;font-weight:500;text-decoration:none')}
+              >
+                อ่านบทความทั้งหมด <span>→</span>
+              </a>,
+            )}
+            <ArticlesCarousel articles={articles} />
+          </div>
+        </section>
+      )}
 
       <section data-reveal style={css('padding:20px 24px 110px')}>
         <div style={css('max-width:1080px;margin:0 auto;position:relative;border:1px solid rgba(255,255,255,.1);border-radius:26px;padding:64px 40px;text-align:center;overflow:hidden;background:radial-gradient(ellipse 80% 120% at 50% 0%,rgba(37,99,235,.22),rgba(7,10,20,.2))')}>
