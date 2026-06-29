@@ -37,6 +37,15 @@ export default function RootLayout({
       lang="th"
       className={`${geistSans.variable} ${geistMono.variable} ${notoSansThai.variable} h-full antialiased`}
     >
+      <head>
+        {/* IBM Plex family — used by the agency landing page (loaded by literal family name) */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body
         className={`${notoSansThai.className} min-h-full flex flex-col`}
       >
