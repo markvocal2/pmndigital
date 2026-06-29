@@ -187,3 +187,27 @@ export async function sendTestEmailAction(
     return { ok: false, error: explain(e) };
   }
 }
+
+/* ---------------- admin comment moderation ---------------- */
+export async function setCommentStatusAction(
+  id: number,
+  status: 'PENDING' | 'APPROVED' | 'REJECTED',
+): Promise<ActionResult> {
+  try {
+    await backendFetch('/admin/comments/' + id, { method: 'PATCH', body: { status } });
+    revalidatePath('/admin/comments');
+    return { ok: true, data: undefined };
+  } catch (e) {
+    return { ok: false, error: explain(e) };
+  }
+}
+
+export async function deleteCommentAction(id: number): Promise<ActionResult> {
+  try {
+    await backendFetch('/admin/comments/' + id, { method: 'DELETE' });
+    revalidatePath('/admin/comments');
+    return { ok: true, data: undefined };
+  } catch (e) {
+    return { ok: false, error: explain(e) };
+  }
+}
