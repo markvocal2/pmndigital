@@ -3,7 +3,9 @@ import Link from 'next/link';
 import { getPublicArticles, getPublicCategories, getPublicSettings } from '@/lib/cms';
 import { BlogList } from '@/components/blog/BlogList';
 
-export const revalidate = 60;
+// force-dynamic so the article list is fetched at request time (backend is up) — avoids the
+// build-time SSG fetch (backend unreachable during CI) producing an empty initial page.
+export const dynamic = 'force-dynamic';
 const SITE = 'https://pmndigital.co';
 
 export async function generateMetadata(): Promise<Metadata> {
