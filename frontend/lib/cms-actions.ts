@@ -351,3 +351,47 @@ export async function deleteCouponAction(id: number): Promise<ActionResult> {
     return { ok: false, error: explain(e) };
   }
 }
+
+/* ---------------- AI integrations (admin) ---------------- */
+import type { IntegrationStatus } from './cms';
+
+export async function saveIntegrationAction(
+  provider: string,
+  input: { mode?: string; apiKey?: string; enabled?: boolean; meta?: Record<string, unknown> },
+): Promise<ActionResult<IntegrationStatus>> {
+  try {
+    const d = await backendFetch<{ integration: IntegrationStatus }>('/admin/integrations/' + provider, {
+      method: 'PUT',
+      body: input,
+    });
+    revalidatePath('/admin/integrations');
+    return { ok: true, data: d.integration };
+  } catch (e) {
+    return { ok: false, error: explain(e) };
+  }
+}
+
+export async function testIntegrationAction(
+  provider: string,
+): Promise<ActionResult<{ ok: boolean; detail: string }>> {
+  try {
+    const d = await backendFetch<{ ok: boolean; detail: string }>(
+      '/admin/integrations/' + provider + '/test',
+      { method: 'POST' },
+    );
+    revalidatePath('/admin/integrations');
+    return { ok: true, data: d };
+  } catch (e) {
+    return { ok: false, error: explain(e) };
+  }
+}
+
+export async function disconnectIntegrationAction(provider: string): Promise<ActionResult> {
+  try {
+    await backendFetch('/admin/integrations/' + provider, { method: 'DELETE' });
+    revalidatePath('/admin/integrations');
+    return { ok: true, data: undefined };
+  } catch (e) {
+    return { ok: false, error: explain(e) };
+  }
+}

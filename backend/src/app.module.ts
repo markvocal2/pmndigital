@@ -10,6 +10,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { AuditModule } from './audit/audit.module';
 import { CmsModule } from './cms/cms.module';
 import { MailModule } from './mail/mail.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { MailModule } from './mail/mail.module';
     UsersModule,
     PaymentsModule,
     CmsModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -290,3 +290,29 @@ model CouponRedemption {
 
   @@index([couponId, createdAt])
 }
+
+enum IntegrationProvider {
+  ANTHROPIC
+  GEMINI
+  OPENAI
+}
+
+enum IntegrationMode {
+  API_KEY
+  OAUTH
+}
+
+// AI provider credentials (encrypted) configured via /admin/integrations — not .env
+model Integration {
+  id           Int                 @id @default(autoincrement())
+  provider     IntegrationProvider @unique
+  mode         IntegrationMode     @default(API_KEY)
+  enabled      Boolean             @default(false)
+  secretEnc    String?
+  meta         Json?
+  status       String?
+  statusMsg    String?
+  lastTestedAt DateTime?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+}

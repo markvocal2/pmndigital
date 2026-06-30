@@ -357,6 +357,21 @@ export async function adminListRedemptions(id: number): Promise<CouponRedemption
   return (await backendFetch<{ items: CouponRedemption[] }>('/admin/coupons/' + id + '/redemptions')).items;
 }
 
+/* ---------------- AI integrations ---------------- */
+export interface IntegrationStatus {
+  provider: 'ANTHROPIC' | 'GEMINI' | 'OPENAI';
+  mode: 'API_KEY' | 'OAUTH';
+  enabled: boolean;
+  configured: boolean;
+  status: string | null;
+  statusMsg: string | null;
+  lastTestedAt: string | null;
+  meta: Record<string, unknown> | null;
+}
+export async function adminListIntegrations(): Promise<IntegrationStatus[]> {
+  return (await backendFetch<{ items: IntegrationStatus[] }>('/admin/integrations')).items;
+}
+
 /** True if a cover/media URL points to a video file. */
 export function isVideoUrl(u?: string | null): boolean {
   return !!u && /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(u);
