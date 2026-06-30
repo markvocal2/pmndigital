@@ -57,10 +57,16 @@ const STEPS: { n: number; title: string; body: React.ReactNode }[] = [
 ];
 
 const TOOLS: { name: string; desc: string; tag: string }[] = [
-  { name: 'list_ai_providers', desc: 'ดูผู้ให้บริการ AI ที่ตั้งค่าไว้ + สถานะ', tag: 'อ่าน' },
-  { name: 'ai_health', desc: 'ตรวจว่า Claude/Gemini พร้อมใช้งานฝั่งเซิร์ฟเวอร์', tag: 'อ่าน' },
-  { name: 'draft_article', desc: 'ร่างบทความภาษาไทยจากหัวข้อ (Claude) — คืน Markdown', tag: 'Claude' },
-  { name: 'generate_image', desc: 'สร้างภาพจากคำอธิบาย (Gemini) → อัปขึ้น PMN Drive คืน URL', tag: 'Gemini' },
+  { name: 'write_and_publish_article', desc: 'เขียนบทความเต็ม (Claude) + ภาพปก (Gemini) → บันทึกเป็นฉบับร่าง', tag: 'เนื้อหา' },
+  { name: 'draft_article', desc: 'ร่างบทความภาษาไทยจากหัวข้อ (Claude) — คืน Markdown', tag: 'เนื้อหา' },
+  { name: 'list_articles / set_article_status', desc: 'ดูบทความ / เผยแพร่หรือถอนกลับเป็นร่าง', tag: 'เนื้อหา' },
+  { name: 'generate_image', desc: 'สร้างภาพ (Gemini Imagen) → อัปขึ้น PMN Drive คืน URL', tag: 'ภาพ' },
+  { name: 'list/create_promotion · set_promotion_state', desc: 'ดู/สร้าง/เปิด-ปิดโปรโมชั่น', tag: 'การตลาด' },
+  { name: 'list/create_coupon · coupon_redemptions', desc: 'ดู/สร้างคูปอง + ประวัติการใช้', tag: 'การตลาด' },
+  { name: 'list_leads · update_lead_status · lead_insights', desc: 'ดู/อัปเดตสถานะ leads + วิเคราะห์ด้วย Claude', tag: 'ลูกค้า' },
+  { name: 'list_pending_comments · moderate_comment', desc: 'ดู/อนุมัติ/ปฏิเสธ/ลบ ความคิดเห็น', tag: 'คอมเมนต์' },
+  { name: 'get_site_settings · get_home_content · get_server_status', desc: 'อ่านการตั้งค่า/หน้าหลัก/สถานะเซิร์ฟเวอร์', tag: 'ระบบ' },
+  { name: 'list_ai_providers · ai_health', desc: 'สถานะผู้ให้บริการ AI', tag: 'ระบบ' },
 ];
 
 export default function AdminMcpPage() {
@@ -89,7 +95,7 @@ export default function AdminMcpPage() {
         ))}
       </ol>
 
-      <h2 className="mt-8 mb-3 text-lg font-semibold text-white">เครื่องมือที่ใช้ได้ตอนนี้</h2>
+      <h2 className="mt-8 mb-3 text-lg font-semibold text-white">เครื่องมือที่ใช้ได้ (Full Option)</h2>
       <div className="overflow-hidden rounded-xl border border-white/10">
         <table className="w-full text-sm">
           <tbody>
@@ -106,7 +112,7 @@ export default function AdminMcpPage() {
         </table>
       </div>
       <p className="mt-2 text-xs text-slate-500">
-        เร็ว ๆ นี้: เขียน+เผยแพร่บทความ (บันทึกเป็นฉบับร่างก่อนเสมอ), จัดการโปรโมชั่น/คูปอง, ดูแล leads และคอมเมนต์, ตั้งค่าเว็บ
+        เนื้อหาและโปรโมชั่นที่ AI สร้างจะถูกบันทึกเป็น “ฉบับร่าง/ปิดอยู่” ก่อนเสมอ ให้ตรวจทานแล้วค่อยเผยแพร่เอง
       </p>
 
       <h2 className="mt-8 mb-3 text-lg font-semibold text-white">ความปลอดภัย</h2>

@@ -5,6 +5,13 @@ import { AppModule } from './app.module';
 import { McpOAuthProvider } from './mcp/mcp-oauth.provider';
 import { AiService } from './ai/ai.service';
 import { IntegrationsService } from './ai/integrations.service';
+import { ArticlesService } from './cms/articles.service';
+import { PromotionsService } from './cms/promotions.service';
+import { CouponsService } from './cms/coupons.service';
+import { LeadsService } from './cms/leads.service';
+import { CommentsService } from './cms/comments.service';
+import { CmsService } from './cms/cms.service';
+import { ServerStatusService } from './cms/status.service';
 import { mountMcp } from './mcp/mcp.http';
 
 async function bootstrap() {
@@ -27,6 +34,13 @@ async function bootstrap() {
     deps: {
       ai: app.get(AiService),
       integrations: app.get(IntegrationsService),
+      articles: app.get(ArticlesService, { strict: false }),
+      promotions: app.get(PromotionsService, { strict: false }),
+      coupons: app.get(CouponsService, { strict: false }),
+      leads: app.get(LeadsService, { strict: false }),
+      comments: app.get(CommentsService, { strict: false }),
+      cms: app.get(CmsService, { strict: false }),
+      status: app.get(ServerStatusService, { strict: false }),
     },
     publicUrl: process.env.MCP_PUBLIC_URL || 'https://pmndigital.co',
   });
