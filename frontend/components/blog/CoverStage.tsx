@@ -28,7 +28,7 @@ export function CoverStage({ src, alt }: { src: string; alt: string }) {
   }, [zoom]);
 
   const fgClass =
-    'relative z-10 mx-auto h-full w-auto max-w-full object-contain shadow-[0_24px_70px_-24px_rgba(0,0,0,0.85)] ring-1 ring-white/10';
+    'relative z-10 mx-auto max-h-full max-w-full object-contain rounded-2xl shadow-[0_28px_80px_-26px_rgba(0,0,0,0.9)] ring-1 ring-white/12';
 
   return (
     <div className="relative w-full overflow-hidden h-[clamp(220px,38vh,360px)] sm:h-[clamp(300px,42vh,520px)]">
@@ -39,15 +39,15 @@ export function CoverStage({ src, alt }: { src: string; alt: string }) {
           src={src}
           alt=""
           aria-hidden
-          className="absolute inset-0 h-full w-full scale-110 object-cover"
-          style={{ filter: 'blur(32px) brightness(0.42) saturate(0.85)' }}
+          className="absolute inset-0 h-full w-full scale-125 object-cover"
+          style={{ filter: 'blur(52px) brightness(0.28) saturate(0.7)' }}
         />
       )}
-      <div className="absolute inset-0 bg-[#05070E]/60" />
+      <div className="absolute inset-0 bg-[#05070E]/74" />
 
       {/* foreground = the full image, never cropped */}
       {isVid ? (
-        <div className="relative z-10 flex h-full w-full items-center justify-center">
+        <div className="relative z-10 flex h-full w-full items-center justify-center px-4 py-5 sm:px-8 sm:py-7">
           <MediaImg src={src} alt={alt} autoPlay className={fgClass} />
         </div>
       ) : (
@@ -55,7 +55,7 @@ export function CoverStage({ src, alt }: { src: string; alt: string }) {
           type="button"
           onClick={() => setZoom(true)}
           aria-label="ดูภาพเต็ม"
-          className="group relative z-10 flex h-full w-full cursor-zoom-in items-center justify-center"
+          className="group relative z-10 flex h-full w-full cursor-zoom-in items-center justify-center px-4 py-5 sm:px-8 sm:py-7"
         >
           <MediaImg src={src} alt={alt} className={fgClass} />
           <span className="absolute bottom-4 right-4 z-20 rounded-full bg-black/55 px-3 py-1.5 text-[11px] text-white/85 opacity-0 backdrop-blur transition group-hover:opacity-100">
@@ -89,7 +89,7 @@ export function CoverStage({ src, alt }: { src: string; alt: string }) {
             src={src}
             alt={alt}
             onClick={(e) => e.stopPropagation()}
-            className="max-h-[92vh] max-w-[92vw] rounded-md object-contain shadow-2xl"
+            className="max-h-[92vh] max-w-[92vw] rounded-xl object-contain shadow-2xl"
           />
         </div>
       )}
