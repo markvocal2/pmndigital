@@ -376,3 +376,20 @@ export async function adminListIntegrations(): Promise<IntegrationStatus[]> {
 export function isVideoUrl(u?: string | null): boolean {
   return !!u && /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(u);
 }
+
+/* ---------------- automation (cron) ---------------- */
+export interface AutomationJobStatus {
+  key: string;
+  title: string;
+  schedule: string;
+  description: string;
+  needs: string;
+  enabled: boolean;
+  config: Record<string, unknown>;
+  lastRunAt: string | null;
+  lastStatus: string | null;
+  lastMessage: string | null;
+}
+export async function adminListAutomation(): Promise<AutomationJobStatus[]> {
+  return (await backendFetch<{ items: AutomationJobStatus[] }>('/admin/automation')).items;
+}

@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { randomBytes } from 'node:crypto';
+import { generateArticleDraft } from '../ai/article-draft';
 import type { AiService } from '../ai/ai.service';
 import type { IntegrationsService } from '../ai/integrations.service';
 import type { ArticlesService } from '../cms/articles.service';
@@ -33,31 +33,6 @@ function uid(extra: unknown): number | null {
 
 const text = (s: string) => ({ content: [{ type: 'text' as const, text: s }] });
 const json = (v: unknown) => text(JSON.stringify(v, null, 2));
-
-/** Best-effort slug from a title (allows a-z 0-9 Thai + hyphen) with a uniqueness suffix. */
-function slugify(title: string): string {
-  const base = title
-    .toLowerCase()
-    .replace(/[^a-z0-9฀-๿]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 140);
-  return `${base || 'article'}-${randomBytes(3).toString('hex')}`;
-}
-
-function parseJsonLoose(raw: string): Record<string, unknown> | null {
-  const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const body = fence ? fence[1] : raw;
-  const a = body.indexOf('{');
-  const b = body.lastIndexOf('}');
-  if (a >= 0 && b > a) {
-    try {
-      return JSON.parse(body.slice(a, b + 1)) as Record<string, unknown>;
-    } catch {
-      /* fall through */
-    }
-  }
-  return null;
-}
 
 /** Build a fresh MCP server exposing the PMN Digital tool catalog (Full Option). */
 export function buildMcpServer(deps: McpDeps): McpServer {
@@ -116,21 +91,12 @@ export function buildMcpServer(deps: McpDeps): McpServer {
       },
     },
     async ({ topic, withCover, categoryId, tone, words }, extra) => {
-      const raw = await deps.ai.generateText({
-        system: 'คุณเป็นบรรณาธิการคอนเทนต์ของ PMN Digital ตอบกลับเป็น JSON เท่านั้น ไม่ต้องมีคำอธิบายนอก JSON',
-        prompt:
-          `เขียนบทความภาษาไทยเรื่อง "${topic}"${tone ? ` โทน ${tone}` : ''} ประมาณ ${words ?? 700} คำ ` +
-          `ตอบเป็น JSON object ที่มี key: title (พาดหัว), excerpt (สรุปสั้น ≤300 ตัวอักษร), bodyMarkdown (เนื้อหา Markdown เต็ม), ` +
-          `tags (อาเรย์ของคำ ≤6 คำ), metaTitle (≤60 ตัวอักษร), metaDesc (≤155 ตัวอักษร), keyphrase (คีย์เวิร์ดหลัก)`,
-        maxTokens: 6000,
-      });
-      const j = parseJsonLoose(raw) ?? {};
-      const title = (typeof j.title === 'string' && j.title.trim()) || topic;
+      const d = await generateArticleDraft(deps.ai, { topic, tone, words });
       let coverImageUrl: string | undefined;
       if (withCover && (await deps.ai.geminiReady())) {
         try {
           const img = await deps.ai.generateImageToDrive(
-            `Professional blog cover illustration for an article titled "${title}", modern, clean, corporate, no text`,
+            `Professional blog cover illustration for an article titled "${d.title}", modern, clean, corporate, no text`,
           );
           coverImageUrl = img.url;
         } catch {
@@ -139,16 +105,16 @@ export function buildMcpServer(deps: McpDeps): McpServer {
       }
       const article = await deps.articles.create(
         {
-          title: String(title).slice(0, 200),
-          slug: slugify(String(title)),
-          excerpt: typeof j.excerpt === 'string' ? j.excerpt.slice(0, 400) : undefined,
-          bodyMarkdown: typeof j.bodyMarkdown === 'string' ? j.bodyMarkdown : raw,
+          title: d.title,
+          slug: d.slug,
+          excerpt: d.excerpt,
+          bodyMarkdown: d.bodyMarkdown,
           coverImageUrl,
           status: 'DRAFT',
           categoryId: categoryId ?? undefined,
-          tags: Array.isArray(j.tags) ? (j.tags as unknown[]).map(String).slice(0, 8) : undefined,
-          metaTitle: typeof j.metaTitle === 'string' ? j.metaTitle.slice(0, 200) : undefined,
-          metaDesc: typeof j.metaDesc === 'string' ? j.metaDesc.slice(0, 400) : undefined,
+          tags: d.tags,
+          metaTitle: d.metaTitle,
+          metaDesc: d.metaDesc,
         },
         uid(extra),
       );

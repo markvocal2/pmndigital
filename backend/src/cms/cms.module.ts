@@ -60,5 +60,6 @@ import { PromotionsAdminController } from './promotions.admin.controller';
     CouponsService,
     AdminGuard,
   ],
+  exports: [ArticlesService, LeadsService],
 })
 export class CmsModule {}

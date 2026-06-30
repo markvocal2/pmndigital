@@ -356,3 +356,16 @@ model OAuthToken {
   revoked      Boolean  @default(false)
   createdAt    DateTime @default(now())
 }
+
+// Autonomous scheduled jobs (cron) — toggleable from /admin/automation
+model AutomationJob {
+  id          Int       @id @default(autoincrement())
+  jobKey      String    @unique
+  enabled     Boolean   @default(false)
+  config      Json?
+  lastRunAt   DateTime?
+  lastStatus  String?
+  lastMessage String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}

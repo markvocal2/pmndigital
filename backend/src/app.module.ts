@@ -12,6 +12,7 @@ import { CmsModule } from './cms/cms.module';
 import { MailModule } from './mail/mail.module';
 import { AiModule } from './ai/ai.module';
 import { McpModule } from './mcp/mcp.module';
+import { AutomationModule } from './automation/automation.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { McpModule } from './mcp/mcp.module';
     CmsModule,
     AiModule,
     McpModule,
+    AutomationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

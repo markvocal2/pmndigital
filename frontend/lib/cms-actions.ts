@@ -395,3 +395,37 @@ export async function disconnectIntegrationAction(provider: string): Promise<Act
     return { ok: false, error: explain(e) };
   }
 }
+
+/* ---------------- automation (cron) ---------------- */
+import type { AutomationJobStatus } from './cms';
+
+export async function updateAutomationAction(
+  key: string,
+  input: { enabled?: boolean; config?: Record<string, unknown> },
+): Promise<ActionResult<AutomationJobStatus>> {
+  try {
+    const d = await backendFetch<{ job: AutomationJobStatus }>('/admin/automation/' + key, {
+      method: 'PATCH',
+      body: input,
+    });
+    revalidatePath('/admin/automation');
+    return { ok: true, data: d.job };
+  } catch (e) {
+    return { ok: false, error: explain(e) };
+  }
+}
+
+export async function runAutomationAction(
+  key: string,
+): Promise<ActionResult<{ ok: boolean; status: string; detail: string }>> {
+  try {
+    const d = await backendFetch<{ ok: boolean; status: string; detail: string }>(
+      '/admin/automation/' + key + '/run',
+      { method: 'POST' },
+    );
+    revalidatePath('/admin/automation');
+    return { ok: true, data: d };
+  } catch (e) {
+    return { ok: false, error: explain(e) };
+  }
+}
