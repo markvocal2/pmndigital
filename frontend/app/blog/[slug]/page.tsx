@@ -115,19 +115,15 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         </div>
       </header>
 
-      {/* TITLE (text-first — renders instantly, never waits on the image) */}
-      <div className="relative mx-auto max-w-[820px] px-6 pt-10 text-center md:pt-14">
-        {!art.coverImageUrl && (
+      {/* HEADER: with a cover → faint blurred-cover background spanning the title + the full
+          rounded cover on top; without a cover → a plain title block */}
+      {art.coverImageUrl ? (
+        <CoverStage src={art.coverImageUrl} alt={art.title} title={art.title} category={catName} />
+      ) : (
+        <div className="relative mx-auto max-w-[820px] px-6 pt-12 text-center md:pt-16">
           <div className="pointer-events-none absolute -top-24 left-1/2 h-[420px] w-[720px] -translate-x-1/2 rounded-full" style={{ background: 'radial-gradient(circle,rgba(37,99,235,.24),transparent 65%)', filter: 'blur(40px)' }} />
-        )}
-        {catName && <div className="relative mb-4 inline-block rounded-full bg-blue-500/90 px-3 py-1 font-mono text-[11px] uppercase tracking-wider text-white">{catName}</div>}
-        <h1 className="relative text-3xl font-bold leading-[1.12] tracking-tight sm:text-[44px]">{art.title}</h1>
-      </div>
-
-      {/* FULL COVER — shown uncropped (object-contain) in a height-capped full-bleed stage */}
-      {art.coverImageUrl && (
-        <div className="mt-8 md:mt-10">
-          <CoverStage src={art.coverImageUrl} alt={art.title} />
+          {catName && <div className="relative mb-4 inline-block rounded-full bg-blue-500/90 px-3 py-1 font-mono text-[11px] uppercase tracking-wider text-white">{catName}</div>}
+          <h1 className="relative text-3xl font-bold leading-[1.12] tracking-tight sm:text-[44px]">{art.title}</h1>
         </div>
       )}
 
