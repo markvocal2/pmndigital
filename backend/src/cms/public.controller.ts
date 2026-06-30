@@ -47,6 +47,11 @@ export class CmsPublicController {
     return this.status.getStatus();
   }
 
+  @Get('status-page')
+  statusPage() {
+    return this.status.getStatusPage();
+  }
+
   @Get('home')
   async home() {
     return { home: await this.cms.getHome() };

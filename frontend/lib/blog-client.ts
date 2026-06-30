@@ -1,12 +1,22 @@
 'use client';
 
-import type { Article, ArticleComment, Paged, ServerStatus } from './cms';
+import type { Article, ArticleComment, Paged, ServerStatus, StatusPage } from './cms';
 
 export async function fetchServerStatus(): Promise<ServerStatus | null> {
   try {
     const r = await fetch('/api/public/server-status', { cache: 'no-store' });
     if (!r.ok) return null;
     return (await r.json()) as ServerStatus;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchStatusPage(): Promise<StatusPage | null> {
+  try {
+    const r = await fetch('/api/public/status-page', { cache: 'no-store' });
+    if (!r.ok) return null;
+    return (await r.json()) as StatusPage;
   } catch {
     return null;
   }

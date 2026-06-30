@@ -1071,6 +1071,7 @@ export default function AgencySite({
               <button className="agLink" onClick={() => go('pricing')} style={css('display:block;background:none;border:none;color:#A7B0C4;font-size:14px;padding:6px 0;cursor:pointer;text-align:left')}>ราคา</button>
               <button className="agLink" onClick={() => go('contact')} style={css('display:block;background:none;border:none;color:#A7B0C4;font-size:14px;padding:6px 0;cursor:pointer;text-align:left')}>ติดต่อเรา</button>
               <a className="agLink" href="/blog" style={css('display:block;color:#A7B0C4;font-size:14px;padding:6px 0;text-decoration:none')}>บทความ</a>
+              <a className="agLink" href="/status" style={css('display:flex;align-items:center;gap:7px;color:#A7B0C4;font-size:14px;padding:6px 0;text-decoration:none')}><span style={css('width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 7px #22c55e')} />สถานะระบบ</a>
             </div>
             <div>
               <div style={css(`${MONO};font-size:11px;letter-spacing:.16em;color:#5C6680;text-transform:uppercase;margin-bottom:16px`)}>Contact</div>

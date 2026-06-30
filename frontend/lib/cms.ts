@@ -241,6 +241,41 @@ export async function getServerStatus(): Promise<ServerStatus | null> {
   }
 }
 
+/* ---------------- public status page ---------------- */
+export type StatusLevel = 'operational' | 'degraded' | 'partial' | 'major' | 'maintenance';
+export interface StatusDay {
+  t: number;
+  uptime: number | null;
+}
+export interface StatusComponent {
+  key: string;
+  name: string;
+  description: string;
+  status: StatusLevel;
+  uptimePct: number | null;
+  responseMs?: number;
+  days: StatusDay[];
+}
+export interface StatusIncident {
+  date: string;
+  component: string;
+  uptime: number;
+}
+export interface StatusPage {
+  overall: StatusLevel;
+  components: StatusComponent[];
+  incidents: StatusIncident[];
+  windowDays: number;
+  updatedAt: string;
+}
+export async function getStatusPage(): Promise<StatusPage | null> {
+  try {
+    return await publicBackendFetch<StatusPage>('/public/status-page', { revalidate: 30 });
+  } catch {
+    return null;
+  }
+}
+
 /* ---------------- promotions & coupons ---------------- */
 export type DiscountType = 'PERCENT' | 'FIXED' | 'BUNDLE' | 'FREE' | 'OTHER';
 
