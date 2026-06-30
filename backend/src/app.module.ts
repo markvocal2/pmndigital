@@ -11,6 +11,7 @@ import { AuditModule } from './audit/audit.module';
 import { CmsModule } from './cms/cms.module';
 import { MailModule } from './mail/mail.module';
 import { AiModule } from './ai/ai.module';
+import { McpModule } from './mcp/mcp.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AiModule } from './ai/ai.module';
     PaymentsModule,
     CmsModule,
     AiModule,
+    McpModule,
   ],
   controllers: [AppController],
   providers: [AppService],

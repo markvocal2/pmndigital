@@ -5,7 +5,7 @@ export interface GeminiCreds {
 }
 
 const TEXT_MODEL = 'gemini-2.5-flash';
-const IMAGE_MODEL = 'imagen-3.0-generate-002';
+const IMAGE_MODEL = 'imagen-4.0-generate-001';
 
 function client(creds: GeminiCreds): GoogleGenAI {
   return new GoogleGenAI({ apiKey: creds.apiKey });

@@ -2,6 +2,7 @@ services:
   db:
     image: postgres:16-alpine
     container_name: main-pmndigital-db
+    mem_limit: 512m
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -19,6 +20,7 @@ services:
   backend:
     image: ghcr.io/markvocal2/pmndigital-backend:${BACKEND_TAG:-latest}
     container_name: main-pmndigital-backend
+    mem_limit: 1g
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -26,13 +28,23 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      UPLOADS_DIR: /app/uploads
       ERP_PMN_URL: ${ERP_PMN_URL:-http://erp-pmn-app:3000}
       ERP_PMN_API_USER: ${ERP_PMN_API_USER:-}
       ERP_PMN_API_PASSWORD: ${ERP_PMN_API_PASSWORD:-}
       PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
-    volumes:
-      - /opt/docker/main-pmndigital/uploads:/app/uploads
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_INSECURE_TLS: ${SMTP_INSECURE_TLS:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-PMN Digital}
+      LEAD_NOTIFY_TO: ${LEAD_NOTIFY_TO:-}
+      DRIVE_API_URL: ${DRIVE_API_URL:-http://drive:80}
+      DRIVE_USER: ${DRIVE_USER:-app}
+      DRIVE_PASS: ${DRIVE_PASS:-}
+      DRIVE_CDN_URL: ${DRIVE_CDN_URL:-https://cdn.pmndigital.co}
     depends_on:
       db:
         condition: service_healthy
@@ -41,6 +53,7 @@ services:
   frontend:
     image: ghcr.io/markvocal2/pmndigital-frontend:${FRONTEND_TAG:-latest}
     container_name: main-pmndigital-app
+    mem_limit: 1g
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -50,10 +63,6 @@ services:
       BACKEND_URL: http://backend:3001
       NEXTAUTH_URL: ${NEXTAUTH_URL}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-    volumes:
-      # Read-only mount: frontend serves /uploads via Next.js public assets fallback,
-      # but actual writes happen on backend container.
-      - /opt/docker/main-pmndigital/uploads:/app/public/uploads:ro
     depends_on: [backend]
     networks: [app-net, proxy-net]
     labels:
@@ -62,15 +71,15 @@ services:
       caddy.@nextauth.path: /api/auth/*
       caddy.0_reverse_proxy: "@nextauth {{upstreams 3000}}"
       caddy.0_reverse_proxy.import: upstream-tuned
-      caddy.@uploads.path: /uploads/*
-      caddy.1_reverse_proxy: "@uploads backend:3001"
-      caddy.1_reverse_proxy.import: upstream-tuned
-      caddy.@api.path: /api/*
+      caddy.@mcp.path: /mcp /mcp/* /authorize /token /register /revoke /mcpauth/* /.well-known/oauth-authorization-server /.well-known/oauth-protected-resource /.well-known/oauth-protected-resource/*
+      caddy.1_reverse_proxy: "@mcp backend:3001"
+      caddy.1_reverse_proxy.import: upstream-websocket
+      caddy.@api.path: /api/public/*
       caddy.2_reverse_proxy: "@api backend:3001"
       caddy.2_reverse_proxy.import: upstream-tuned
       caddy.3_reverse_proxy: "{{upstreams 3000}}"
       caddy.3_reverse_proxy.import: upstream-tuned
-      caddy.request_body.max_size: 20MB
+      caddy.request_body.max_size: 50MB
 
 networks:
   app-net:

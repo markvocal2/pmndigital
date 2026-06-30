@@ -16,7 +16,7 @@ type ProviderMeta = {
   keyPlaceholder: string;
   getKeyUrl: string;
   getKeyLabel: string;
-  supportsSubscription?: boolean;
+  note?: string;
 };
 
 const META: Record<IntegrationStatus['provider'], ProviderMeta> = {
@@ -27,7 +27,7 @@ const META: Record<IntegrationStatus['provider'], ProviderMeta> = {
     keyPlaceholder: 'sk-ant-...',
     getKeyUrl: 'https://console.anthropic.com/settings/keys',
     getKeyLabel: 'Anthropic Console',
-    supportsSubscription: true,
+    note: 'งานสั่งสดผ่าน Claude Connect (claude.ai) ใช้ Subscription ของคุณอยู่แล้ว — API key นี้ใช้สำหรับงานอัตโนมัติฝั่งเซิร์ฟเวอร์',
   },
   GEMINI: {
     title: 'Google Gemini',
@@ -64,7 +64,6 @@ function ProviderCard({ init }: { init: IntegrationStatus }) {
   const m = META[init.provider];
   const router = useRouter();
   const [apiKey, setApiKey] = useState('');
-  const [mode, setMode] = useState<IntegrationStatus['mode']>(init.mode);
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -80,7 +79,6 @@ function ProviderCard({ init }: { init: IntegrationStatus }) {
     run(async () => {
       const r = await saveIntegrationAction(init.provider, {
         apiKey: apiKey.trim() || undefined,
-        mode,
       });
       if (r.ok) setApiKey('');
       return { ok: r.ok, text: r.ok ? 'บันทึกเรียบร้อย' : r.error };
@@ -99,8 +97,6 @@ function ProviderCard({ init }: { init: IntegrationStatus }) {
       return { ok: r.ok, text: r.ok ? 'ยกเลิกการเชื่อมต่อแล้ว' : r.error };
     });
   };
-
-  const usingSubscription = init.provider === 'ANTHROPIC' && mode === 'OAUTH';
 
   return (
     <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
@@ -132,72 +128,31 @@ function ProviderCard({ init }: { init: IntegrationStatus }) {
         </p>
       )}
 
-      {/* Claude credential mode toggle */}
-      {m.supportsSubscription && (
-        <div className="mt-4 flex gap-2 text-sm">
-          <button
-            type="button"
-            onClick={() => setMode('API_KEY')}
-            className={`rounded-lg px-3 py-1.5 ring-1 transition ${
-              mode === 'API_KEY'
-                ? 'bg-blue-500/15 text-blue-100 ring-blue-400/30'
-                : 'text-slate-300 ring-white/10 hover:bg-white/[0.04]'
-            }`}
-          >
-            API Key
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode('OAUTH')}
-            className={`rounded-lg px-3 py-1.5 ring-1 transition ${
-              mode === 'OAUTH'
-                ? 'bg-violet-500/15 text-violet-100 ring-violet-400/30'
-                : 'text-slate-300 ring-white/10 hover:bg-white/[0.04]'
-            }`}
-          >
-            Subscription (Login with Claude)
-          </button>
-        </div>
+      {m.note && (
+        <p className="mt-3 rounded-lg bg-blue-500/[0.07] px-3 py-2 text-xs text-blue-200/90">
+          ℹ️ {m.note}
+        </p>
       )}
 
-      {usingSubscription ? (
-        <div className="mt-4 rounded-xl border border-violet-400/20 bg-violet-500/[0.06] p-4">
-          <p className="text-sm text-violet-100">
-            เชื่อมต่อด้วยบัญชี Claude (Pro/Max) แบบเดียวกับ VS Code / Claude Code
-          </p>
-          <p className="mt-1 text-xs text-amber-300/90">
-            ⚠️ โหมดนี้เป็น experimental และไม่เป็นทางการ — อาจขัด Usage Policy ของ Anthropic
-            หรือหยุดทำงานเมื่อมีการเปลี่ยนแปลง สำหรับงานเซิร์ฟเวอร์ที่เสถียรแนะนำใช้ API Key
-          </p>
-          <button
-            type="button"
-            disabled
-            className="mt-3 cursor-not-allowed rounded-lg bg-violet-500/30 px-4 py-2 text-sm font-medium text-white/70"
-          >
-            🔗 Login with Claude — เร็ว ๆ นี้
-          </button>
-        </div>
-      ) : (
-        <div className="mt-4">
-          <label className="block text-sm font-medium text-slate-300">{m.keyLabel}</label>
-          <input
-            type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder={init.configured ? '•••••••• (มีค่าเดิม — กรอกเพื่อแทนที่)' : m.keyPlaceholder}
-            autoComplete="off"
-            className="mt-1.5 w-full rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-blue-400/50 focus:outline-none"
-          />
-          <a
-            href={m.getKeyUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-1.5 inline-block text-xs text-blue-300 hover:underline"
-          >
-            ขอ API key ที่ {m.getKeyLabel} ↗
-          </a>
-        </div>
-      )}
+      <div className="mt-4">
+        <label className="block text-sm font-medium text-slate-300">{m.keyLabel}</label>
+        <input
+          type="password"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+          placeholder={init.configured ? '•••••••• (มีค่าเดิม — กรอกเพื่อแทนที่)' : m.keyPlaceholder}
+          autoComplete="off"
+          className="mt-1.5 w-full rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-blue-400/50 focus:outline-none"
+        />
+        <a
+          href={m.getKeyUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-1.5 inline-block text-xs text-blue-300 hover:underline"
+        >
+          ขอ API key ที่ {m.getKeyLabel} ↗
+        </a>
+      </div>
 
       {msg && (
         <p className={`mt-3 text-sm ${msg.ok ? 'text-emerald-300' : 'text-rose-300'}`}>
@@ -206,16 +161,14 @@ function ProviderCard({ init }: { init: IntegrationStatus }) {
       )}
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {!usingSubscription && (
-          <button
-            type="button"
-            onClick={save}
-            disabled={pending}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
-          >
-            บันทึก
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={save}
+          disabled={pending}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+        >
+          บันทึก
+        </button>
         <button
           type="button"
           onClick={test}

@@ -14,6 +14,7 @@ const NAV: { href: string; label: string; ready: boolean }[] = [
   { href: '/admin/media', label: 'คลังสื่อ (Media)', ready: true },
   { href: '/admin/leads', label: 'รายชื่อติดต่อ (Leads)', ready: true },
   { href: '/admin/integrations', label: 'การเชื่อมต่อ AI', ready: true },
+  { href: '/admin/mcp', label: 'เชื่อมต่อ Claude (MCP)', ready: true },
 ];
 
 export function AdminNav() {

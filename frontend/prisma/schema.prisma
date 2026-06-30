@@ -316,3 +316,43 @@ model Integration {
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
 }
+
+// --- MCP OAuth 2.1 authorization server (claude.ai connector) ---
+model OAuthClient {
+  id           Int      @id @default(autoincrement())
+  clientId     String   @unique
+  clientSecret String?
+  clientName   String?
+  redirectUris String[]
+  scope        String?
+  metadata     Json?
+  createdAt    DateTime @default(now())
+}
+
+model OAuthCode {
+  id            Int      @id @default(autoincrement())
+  code          String   @unique
+  clientId      String
+  userId        Int
+  codeChallenge String
+  redirectUri   String
+  resource      String?
+  scope         String?
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+model OAuthToken {
+  id           Int      @id @default(autoincrement())
+  accessToken  String   @unique
+  refreshToken String?  @unique
+  clientId     String
+  userId       Int
+  scope        String?
+  resource     String?
+  expiresAt    DateTime
+  revoked      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+}
