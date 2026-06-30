@@ -5,9 +5,9 @@ import { MediaImg } from '@/components/ui/Skeleton';
 import { isVideoUrl } from '@/lib/cms';
 
 /**
- * Article header: the cover image is used as a faint, blurred background that spans the
- * whole header (behind the title AND the image), with the FULL uncropped cover shown as a
- * rounded card floating on top. Click the cover to view it full-screen (images only).
+ * Article header: the cover image fills the whole header as a cropped (object-cover),
+ * lightly-softened, gradient-faded background — the classic hero look — and the FULL
+ * uncropped cover is layered on top as a rounded card. Click the cover for full-screen (images).
  */
 export function CoverStage({
   src,
@@ -42,19 +42,20 @@ export function CoverStage({
 
   return (
     <section className="relative overflow-hidden">
-      {/* faint blurred cover — fills the WHOLE header (title zone + image zone) */}
+      {/* OLD-hero style: cover cropped (object-cover) fills the whole header, lightly softened
+          so the full image on top stays the star but the cover is clearly recognisable behind */}
       {!isVid && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
           alt=""
           aria-hidden
-          className="absolute inset-0 h-full w-full scale-125 object-cover"
-          style={{ filter: 'blur(44px) brightness(0.36) saturate(0.8)' }}
+          className="absolute inset-0 h-full w-full scale-105 object-cover"
+          style={{ filter: 'blur(4px) brightness(0.6) saturate(0.95)' }}
         />
       )}
-      {/* darken the top (title legibility) + blend the bottom into the page */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#05070E]/90 via-[#05070E]/55 to-[#05070E]" />
+      {/* gradient fade: dark at top (title legibility) → cover visible in the middle → blend to page at the bottom */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#05070E]/92 via-[#05070E]/40 to-[#05070E]" />
       {/* soft blue glow behind the floating cover */}
       <div className="pointer-events-none absolute bottom-0 left-1/2 z-0 h-[60%] w-[70%] -translate-x-1/2 rounded-full" style={{ background: 'radial-gradient(circle,rgba(37,99,235,.14),transparent 70%)', filter: 'blur(30px)' }} />
 
