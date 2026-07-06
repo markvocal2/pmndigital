@@ -3,15 +3,23 @@
 import { Suspense, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { AuthCard } from "@/components/ui/AuthCard";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
+/** Where to land after a successful sign-in: honour an explicit callbackUrl,
+ *  otherwise default by role — admins go to the admin panel, everyone else home. */
+async function postLoginDest(callbackUrl: string | null): Promise<string> {
+  if (callbackUrl) return callbackUrl;
+  const session = await getSession();
+  return session?.user?.role === "ADMIN" ? "/admin" : "/";
+}
+
 function LoginForm() {
   const router = useRouter();
   const search = useSearchParams();
-  const callbackUrl = search.get("callbackUrl") ?? "/";
+  const callbackUrl = search.get("callbackUrl");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,7 +45,7 @@ function LoginForm() {
       if (errCode === "TWO_FACTOR_REQUIRED") {
         const url = new URL("/login/2fa", window.location.origin);
         url.searchParams.set("email", email);
-        url.searchParams.set("callbackUrl", callbackUrl);
+        if (callbackUrl) url.searchParams.set("callbackUrl", callbackUrl);
         // Stash password in sessionStorage so the 2FA page can retry signIn
         sessionStorage.setItem("pmn_login_pending_pw", password);
         router.push(url.pathname + url.search);
@@ -47,7 +55,7 @@ function LoginForm() {
       return;
     }
 
-    router.push(callbackUrl);
+    router.push(await postLoginDest(callbackUrl));
     router.refresh();
   }
 

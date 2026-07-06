@@ -2,16 +2,24 @@
 
 import { Suspense, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { AuthCard } from "@/components/ui/AuthCard";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+
+/** Where to land after a successful sign-in: honour an explicit callbackUrl,
+ *  otherwise default by role — admins go to the admin panel, everyone else home. */
+async function postLoginDest(callbackUrl: string | null): Promise<string> {
+  if (callbackUrl) return callbackUrl;
+  const session = await getSession();
+  return session?.user?.role === "ADMIN" ? "/admin" : "/";
+}
 
 function TwoFactorForm() {
   const router = useRouter();
   const search = useSearchParams();
   const email = search.get("email") ?? "";
-  const callbackUrl = search.get("callbackUrl") ?? "/";
+  const callbackUrl = search.get("callbackUrl");
 
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +51,7 @@ function TwoFactorForm() {
       return;
     }
     sessionStorage.removeItem("pmn_login_pending_pw");
-    router.push(callbackUrl);
+    router.push(await postLoginDest(callbackUrl));
     router.refresh();
   }
 
