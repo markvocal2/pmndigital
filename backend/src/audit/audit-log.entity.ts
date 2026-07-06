@@ -53,4 +53,9 @@ export type AuditEvent =
   | '2fa_disabled'
   | '2fa_backup_used'
   | 'erp_sync_success'
-  | 'erp_sync_failed';
+  | 'erp_sync_failed'
+  | 'user_created'
+  | 'user_updated'
+  | 'user_role_changed'
+  | 'user_deleted'
+  | 'user_password_reset';
