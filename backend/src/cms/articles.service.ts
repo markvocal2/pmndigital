@@ -4,9 +4,14 @@ import { Repository } from 'typeorm';
 import { Article, ArticleCategory, ArticleStatus } from './entities';
 import { ArticleDto, CategoryDto } from './dto';
 
-function readingMinutes(markdown: string): number {
-  const words = (markdown || '').trim().split(/\s+/).filter(Boolean).length;
+function readingMinutes(text: string): number {
+  const words = (text || '').trim().split(/\s+/).filter(Boolean).length;
   return Math.max(1, Math.round(words / 200));
+}
+
+/** Rough plaintext from HTML (word-count / reading time only). */
+function stripHtml(html: string): string {
+  return (html || '').replace(/<[^>]+>/g, ' ').replace(/&[a-z#0-9]+;/gi, ' ');
 }
 
 @Injectable()
@@ -120,6 +125,7 @@ export class ArticlesService {
     a.slug = dto.slug;
     a.excerpt = dto.excerpt ?? null;
     a.bodyMarkdown = dto.bodyMarkdown ?? '';
+    a.bodyHtml = dto.bodyHtml ?? '';
     a.coverImageUrl = dto.coverImageUrl ?? null;
     a.categoryId = dto.categoryId ?? null;
     a.tags = dto.tags ?? [];
@@ -132,7 +138,7 @@ export class ArticlesService {
     a.faq = dto.faq ?? null;
     a.takeaways = dto.takeaways ?? [];
     a.schemaType = dto.schemaType || 'Article';
-    a.readingMins = readingMinutes(a.bodyMarkdown);
+    a.readingMins = readingMinutes(a.bodyHtml ? stripHtml(a.bodyHtml) : a.bodyMarkdown);
     const nextStatus = (dto.status as ArticleStatus) ?? a.status ?? ArticleStatus.DRAFT;
     if (nextStatus === ArticleStatus.PUBLISHED && !a.publishedAt) a.publishedAt = new Date();
     if (nextStatus === ArticleStatus.DRAFT) a.publishedAt = null;

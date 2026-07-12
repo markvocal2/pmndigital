@@ -7,6 +7,7 @@ import { saveArticleAction, deleteArticleAction, createCategoryAction } from '@/
 import { renderMarkdown } from '@/lib/md';
 import { Button } from '@/components/ui/Button';
 import { Section, Field, TextArea, Toggle, ImageUpload, StatusMsg } from '@/components/admin/ui';
+import { RichTextEditor } from '@/components/admin/RichTextEditor';
 import { ObjectListEditor, StringListEditor, type FieldDef } from '@/components/admin/ListEditor';
 
 const FAQ_FIELDS: FieldDef[] = [
@@ -42,6 +43,9 @@ export function ArticleEditor({
     slug: article?.slug ?? genSlug(),
     excerpt: article?.excerpt ?? '',
     bodyMarkdown: article?.bodyMarkdown ?? '',
+    // WYSIWYG body (HTML). Fall back to converting an old article's Markdown so
+    // legacy posts open cleanly in the editor (they migrate to HTML on next save).
+    bodyHtml: article?.bodyHtml || (article?.bodyMarkdown ? renderMarkdown(article.bodyMarkdown) : ''),
     coverImageUrl: article?.coverImageUrl ?? '',
     status: article?.status ?? 'DRAFT',
     categoryId: article?.categoryId ?? null,
@@ -56,7 +60,6 @@ export function ArticleEditor({
     takeaways: article?.takeaways ?? [],
     schemaType: article?.schemaType ?? 'Article',
   }));
-  const [preview, setPreview] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -73,6 +76,7 @@ export function ArticleEditor({
       slug: a.slug || genSlug(),
       excerpt: a.excerpt,
       bodyMarkdown: a.bodyMarkdown,
+      bodyHtml: a.bodyHtml,
       coverImageUrl: a.coverImageUrl,
       status: status ?? a.status,
       tags: a.tags.filter(Boolean),
@@ -117,7 +121,7 @@ export function ArticleEditor({
 
   return (
     <form onSubmit={(e) => { e.preventDefault(); void save(); }}>
-      <Section title="เนื้อหาบทความ" hint="หัวข้อ · slug · เนื้อหา (Markdown)">
+      <Section title="เนื้อหาบทความ" hint="หัวข้อ · slug · เนื้อหา (จัดรูปแบบได้)">
         <Field label="หัวข้อ" value={a.title} onChange={(v) => set('title', v)} />
         <div className="flex items-end gap-2">
           <div className="flex-1">
@@ -127,17 +131,8 @@ export function ArticleEditor({
         </div>
         <TextArea label="เกริ่นนำ (excerpt)" value={a.excerpt} onChange={(v) => set('excerpt', v)} rows={2} />
         <div>
-          <div className="mb-1.5 flex items-center justify-between">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400">เนื้อหา (Markdown)</span>
-            <button type="button" onClick={() => setPreview((p) => !p)} className="text-xs text-blue-300 hover:text-blue-200">
-              {preview ? '← แก้ไข' : 'ดูตัวอย่าง →'}
-            </button>
-          </div>
-          {preview ? (
-            <div className="prose-invert min-h-[200px] rounded-md border border-white/10 bg-white/[0.03] p-4 text-sm leading-relaxed text-slate-200 [&_a]:text-blue-300 [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mt-3 [&_h3]:font-semibold [&_li]:ml-5 [&_li]:list-disc [&_p]:mb-3" dangerouslySetInnerHTML={{ __html: renderMarkdown(a.bodyMarkdown) }} />
-          ) : (
-            <textarea value={a.bodyMarkdown} onChange={(e) => set('bodyMarkdown', e.target.value)} rows={16} placeholder="# หัวข้อ&#10;&#10;เนื้อหา... รองรับ **ตัวหนา**, *เอียง*, [ลิงก์](url), - รายการ" className="w-full rounded-md border border-white/10 bg-white/[0.03] px-3 py-2 font-mono text-xs leading-relaxed text-slate-100 outline-none focus:border-blue-400/60" />
-          )}
+          <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-slate-400">เนื้อหา — จัดรูปแบบ ตัวหนา/หัวข้อ/จัดตำแหน่ง/แทรกรูป</span>
+          <RichTextEditor value={a.bodyHtml} onChange={(html) => set('bodyHtml', html)} />
         </div>
       </Section>
 

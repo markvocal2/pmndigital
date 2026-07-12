@@ -54,6 +54,7 @@ export class ArticleDto {
   slug: string;
   @IsOptional() @IsString() @MaxLength(400) excerpt?: string;
   @IsOptional() @IsString() bodyMarkdown?: string;
+  @IsOptional() @IsString() @MaxLength(300000) bodyHtml?: string;
   @IsOptional() @IsString() @MaxLength(500) coverImageUrl?: string;
   @IsOptional() @IsIn(['DRAFT', 'PUBLISHED']) status?: string;
   @IsOptional() @IsInt() categoryId?: number | null;

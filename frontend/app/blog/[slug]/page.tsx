@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getPublicArticle, getPublicCategories, getRelatedArticles, getPublicSettings, isVideoUrl } from '@/lib/cms';
 import { renderMarkdown, plainText } from '@/lib/md';
+import { sanitizeArticleHtml } from '@/lib/sanitize';
+import { ARTICLE_BODY_CLASS } from '@/lib/articleBodyClass';
 import { Comments } from '@/components/blog/Comments';
 import { MediaImg } from '@/components/ui/Skeleton';
 import { CoverStage } from '@/components/blog/CoverStage';
@@ -20,7 +22,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const art = await getPublicArticle(slug);
   if (!art) return { title: 'ไม่พบบทความ' };
   const title = art.metaTitle || art.title;
-  const description = art.metaDesc || art.excerpt || plainText(art.bodyMarkdown);
+  const description = art.metaDesc || art.excerpt || plainText(art.bodyMarkdown || art.bodyHtml.replace(/<[^>]+>/g, ' '));
   const img = abs(art.ogImageUrl || (isVideoUrl(art.coverImageUrl) ? null : art.coverImageUrl));
   return {
     title,
@@ -54,7 +56,9 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   const name = settings?.siteName || 'PMN Digital';
   const logo = settings?.logoDarkUrl || '/assets/logo-white.png';
   const url = `${SITE}/blog/${encodeURIComponent(art.slug)}`;
-  const html = renderMarkdown(art.bodyMarkdown);
+  // New articles store sanitized WYSIWYG HTML in bodyHtml; legacy articles fall
+  // back to the Markdown renderer. bodyHtml is sanitized server-side here.
+  const html = art.bodyHtml ? sanitizeArticleHtml(art.bodyHtml) : renderMarkdown(art.bodyMarkdown);
   const catName = categories.find((c) => c.id === art.categoryId)?.name;
 
   const share = {
@@ -160,7 +164,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         )}
 
         <article
-          className="text-[17px] leading-[1.92] text-[#CBD3E1] [&_a]:text-blue-300 [&_a]:underline [&_blockquote]:my-5 [&_blockquote]:border-l-2 [&_blockquote]:border-blue-400/40 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-slate-400 [&_code]:rounded [&_code]:bg-white/10 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[14px] [&_h2]:mb-3 [&_h2]:mt-10 [&_h2]:text-[26px] [&_h2]:font-bold [&_h2]:tracking-tight [&_h2]:text-white [&_h3]:mb-2 [&_h3]:mt-7 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:text-slate-100 [&_li]:ml-5 [&_ol]:my-4 [&_ol]:list-decimal [&_ol]:space-y-1.5 [&_p]:mb-5 [&_pre]:my-5 [&_pre]:overflow-auto [&_pre]:rounded-lg [&_pre]:bg-black/40 [&_pre]:p-4 [&_ul]:my-4 [&_ul]:list-disc [&_ul]:space-y-1.5"
+          className={ARTICLE_BODY_CLASS}
           dangerouslySetInnerHTML={{ __html: html }}
         />
 

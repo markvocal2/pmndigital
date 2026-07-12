@@ -51,6 +51,7 @@ export interface Article {
   title: string;
   excerpt: string | null;
   bodyMarkdown: string;
+  bodyHtml: string;
   coverImageUrl: string | null;
   status: 'DRAFT' | 'PUBLISHED';
   publishedAt: string | null;

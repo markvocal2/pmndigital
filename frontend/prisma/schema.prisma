@@ -137,6 +137,7 @@ model Article {
   title         String
   excerpt       String?
   bodyMarkdown  String        @default("")
+  bodyHtml      String        @default("")
   coverImageUrl String?
   status        ArticleStatus @default(DRAFT)
   publishedAt   DateTime?
