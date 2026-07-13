@@ -12,10 +12,11 @@ import {
 import type { Request } from 'express';
 import { CmsService } from './cms.service';
 import { ArticlesService } from './articles.service';
+import { AnalyticsService } from './analytics.service';
 import { LeadsService } from './leads.service';
 import { CommentsService } from './comments.service';
 import { ServerStatusService } from './status.service';
-import { CreateCommentDto, CreateLeadDto } from './dto';
+import { CreateCommentDto, CreateLeadDto, ViewEventDto } from './dto';
 
 function clientMeta(req: Request) {
   const xff = req.headers['x-forwarded-for'];
@@ -24,7 +25,8 @@ function clientMeta(req: Request) {
     req.socket?.remoteAddress ??
     undefined;
   const userAgent = (req.headers['user-agent'] as string) ?? undefined;
-  return { ip, userAgent };
+  const country = (req.headers['cf-ipcountry'] as string) ?? undefined;
+  return { ip, userAgent, country };
 }
 
 @Controller('public')
@@ -32,6 +34,7 @@ export class CmsPublicController {
   constructor(
     private readonly cms: CmsService,
     private readonly articles: ArticlesService,
+    private readonly analytics: AnalyticsService,
     private readonly leads: LeadsService,
     private readonly comments: CommentsService,
     private readonly status: ServerStatusService,
@@ -86,8 +89,8 @@ export class CmsPublicController {
 
   @Post('articles/:slug/view')
   @HttpCode(HttpStatus.OK)
-  view(@Param('slug') slug: string) {
-    return this.articles.incrementView(slug);
+  view(@Param('slug') slug: string, @Body() dto: ViewEventDto, @Req() req: Request) {
+    return this.analytics.recordView(slug, dto, clientMeta(req));
   }
 
   @Get('articles/:slug/comments')

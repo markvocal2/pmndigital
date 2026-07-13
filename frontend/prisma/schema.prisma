@@ -370,3 +370,20 @@ model AutomationJob {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
+
+model PageView {
+  id           Int      @id @default(autoincrement())
+  articleId    Int
+  isBot        Boolean  @default(false)
+  source       String   @default("direct")
+  referrerHost String?
+  utmSource    String?
+  country      String?
+  ipHash       String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  @@index([articleId, createdAt])
+  @@index([createdAt])
+  @@index([isBot])
+}

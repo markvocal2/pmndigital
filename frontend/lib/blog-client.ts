@@ -77,14 +77,28 @@ export async function postComment(
   }
 }
 
-/** Fire-and-forget view counter, deduped per article per browser session. */
+/**
+ * Fire-and-forget view counter, deduped per article per browser session.
+ * Sends referrer + UTM so the backend can classify traffic source (and read
+ * the User-Agent / cf-ipcountry for human-vs-bot + geo breakdown).
+ */
 export function pingView(slug: string): void {
   try {
     const key = 'pmn_viewed_' + slug;
     if (sessionStorage.getItem(key)) return;
     sessionStorage.setItem(key, '1');
+    const p = new URLSearchParams(location.search);
+    const body = JSON.stringify({
+      referrer: document.referrer || undefined,
+      path: location.pathname,
+      utmSource: p.get('utm_source') || undefined,
+      utmMedium: p.get('utm_medium') || undefined,
+      utmCampaign: p.get('utm_campaign') || undefined,
+    });
     fetch('/api/public/articles/' + encodeURIComponent(slug) + '/view', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
       keepalive: true,
     }).catch(() => {});
   } catch {

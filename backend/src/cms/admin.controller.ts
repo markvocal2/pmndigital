@@ -20,6 +20,7 @@ import type { Request } from 'express';
 import { AdminGuard } from './admin.guard';
 import { CmsService } from './cms.service';
 import { ArticlesService } from './articles.service';
+import { AnalyticsService } from './analytics.service';
 import { LeadsService } from './leads.service';
 import { CommentsService } from './comments.service';
 import { MailService } from '../mail/mail.service';
@@ -45,6 +46,7 @@ export class CmsAdminController {
   constructor(
     private readonly cms: CmsService,
     private readonly articles: ArticlesService,
+    private readonly analytics: AnalyticsService,
     private readonly leads: LeadsService,
     private readonly comments: CommentsService,
     private readonly mail: MailService,
@@ -100,6 +102,16 @@ export class CmsAdminController {
   @Delete('articles/:id')
   deleteArticle(@Param('id', ParseIntPipe) id: number) {
     return this.articles.remove(id);
+  }
+
+  /* analytics (view growth sparklines + traffic/bot breakdown) */
+  @Get('analytics/sparklines')
+  sparklines(@Query('days') days?: string) {
+    return this.analytics.sparklines(days ? parseInt(days, 10) : 30);
+  }
+  @Get('analytics/traffic')
+  traffic(@Query('days') days?: string, @Query('slug') slug?: string) {
+    return this.analytics.traffic(days ? parseInt(days, 10) : 30, slug);
   }
 
   /* categories */

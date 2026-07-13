@@ -160,3 +160,12 @@ export class ValidateCouponDto {
   @IsString() @MaxLength(40) code: string;
   @IsOptional() @IsEmail() @MaxLength(160) email?: string;
 }
+
+/* ---------------- Analytics (public view beacon body) ---------------- */
+export class ViewEventDto {
+  @IsOptional() @IsString() @MaxLength(2048) referrer?: string;
+  @IsOptional() @IsString() @MaxLength(512) path?: string;
+  @IsOptional() @IsString() @MaxLength(120) utmSource?: string;
+  @IsOptional() @IsString() @MaxLength(120) utmMedium?: string;
+  @IsOptional() @IsString() @MaxLength(120) utmCampaign?: string;
+}

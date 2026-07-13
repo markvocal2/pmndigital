@@ -237,3 +237,21 @@ export class CouponRedemption {
   @Column({ type: 'text', nullable: true }) email: string | null;
   @CreateDateColumn() createdAt: Date;
 }
+
+/* ---------------- PageView (per-view analytics event) ---------------- */
+@Entity({ name: 'PageView' })
+@Index(['articleId', 'createdAt'])
+@Index(['createdAt'])
+@Index(['isBot'])
+export class PageView {
+  @PrimaryGeneratedColumn() id: number;
+  @Column({ type: 'integer' }) articleId: number;
+  @Column({ type: 'boolean', default: false }) isBot: boolean;
+  @Column({ type: 'text', default: 'direct' }) source: string;
+  @Column({ type: 'text', nullable: true }) referrerHost: string | null;
+  @Column({ type: 'text', nullable: true }) utmSource: string | null;
+  @Column({ type: 'text', nullable: true }) country: string | null;
+  @Column({ type: 'text', nullable: true }) ipHash: string | null;
+  @Column({ type: 'text', nullable: true }) userAgent: string | null;
+  @CreateDateColumn() createdAt: Date;
+}

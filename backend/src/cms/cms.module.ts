@@ -10,11 +10,13 @@ import {
   HomeContent,
   Lead,
   Media,
+  PageView,
   Promotion,
   SiteSetting,
 } from './entities';
 import { CmsService } from './cms.service';
 import { ArticlesService } from './articles.service';
+import { AnalyticsService } from './analytics.service';
 import { LeadsService } from './leads.service';
 import { CommentsService } from './comments.service';
 import { ServerStatusService } from './status.service';
@@ -37,6 +39,7 @@ import { PromotionsAdminController } from './promotions.admin.controller';
       Comment,
       Lead,
       Media,
+      PageView,
       Promotion,
       Coupon,
       CouponRedemption,
@@ -52,6 +55,7 @@ import { PromotionsAdminController } from './promotions.admin.controller';
   providers: [
     CmsService,
     ArticlesService,
+    AnalyticsService,
     LeadsService,
     CommentsService,
     ServerStatusService,

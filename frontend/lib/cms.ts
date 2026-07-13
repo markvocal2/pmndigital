@@ -394,3 +394,31 @@ export interface AutomationJobStatus {
 export async function adminListAutomation(): Promise<AutomationJobStatus[]> {
   return (await backendFetch<{ items: AutomationJobStatus[] }>('/admin/automation')).items;
 }
+
+/* ---------------- article analytics (views growth + traffic/bot) ---------------- */
+export type ArticleSparklines = Record<number, number[]>;
+export interface TrafficBreakdown {
+  days: number;
+  total: number;
+  human: number;
+  bot: number;
+  sources: { key: string; count: number }[];
+  countries: { key: string; count: number }[];
+  referrers: { key: string; count: number }[];
+}
+export async function adminGetSparklines(days = 30): Promise<ArticleSparklines> {
+  try {
+    return await backendFetch<ArticleSparklines>('/admin/analytics/sparklines?days=' + days);
+  } catch {
+    return {};
+  }
+}
+export async function adminGetTraffic(days = 30, slug?: string): Promise<TrafficBreakdown> {
+  try {
+    return await backendFetch<TrafficBreakdown>(
+      '/admin/analytics/traffic?days=' + days + (slug ? '&slug=' + encodeURIComponent(slug) : ''),
+    );
+  } catch {
+    return { days, total: 0, human: 0, bot: 0, sources: [], countries: [], referrers: [] };
+  }
+}
