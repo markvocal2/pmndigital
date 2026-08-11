@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Article, ArticleCategory, ArticleFaq } from '@/lib/cms';
 import { saveArticleAction, deleteArticleAction, createCategoryAction } from '@/lib/cms-actions';
@@ -49,6 +49,26 @@ function slugify(s: string): string {
   return s.trim().toLowerCase().replace(/[^฀-๿a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').slice(0, 120);
 }
 
+/* ---- publish scheduling: <input type="datetime-local"> speaks local wall-clock,
+   the API speaks ISO/UTC, so convert at the boundary in both directions. ---- */
+function toLocalInput(iso: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const p = (x: number) => String(x).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function fromLocalInput(v: string): string {
+  if (!v) return '';
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? '' : d.toISOString();
+}
+function fmtFull(iso: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
 // Auto slug = random 6-char code (a-z, 0-9) — keeps URLs short & ASCII-safe
 function genSlug(): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -78,6 +98,7 @@ export function ArticleEditor({
     bodyHtml: article?.bodyHtml || (article?.bodyMarkdown ? renderMarkdown(article.bodyMarkdown) : ''),
     coverImageUrl: article?.coverImageUrl ?? '',
     status: article?.status ?? 'DRAFT',
+    publishedAt: article?.publishedAt ?? '',
     categoryId: article?.categoryId ?? null,
     tags: article?.tags ?? [],
     metaTitle: article?.metaTitle ?? '',
@@ -94,6 +115,14 @@ export function ArticleEditor({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [newCat, setNewCat] = useState('');
+  // Read the clock only after mount — comparing against Date.now() during render would
+  // differ between the server pass and hydration.
+  const [nowTs, setNowTs] = useState<number | null>(null);
+  useEffect(() => {
+    setNowTs(Date.now());
+    const t = window.setInterval(() => setNowTs(Date.now()), 30000);
+    return () => window.clearInterval(t);
+  }, []);
 
   const set = (k: keyof typeof a, v: unknown) => setA((p) => ({ ...p, [k]: v }) as typeof a);
 
@@ -133,6 +162,8 @@ export function ArticleEditor({
       takeaways: a.takeaways.filter(Boolean),
       schemaType: a.schemaType,
     };
+    // Blank = go live now; a future timestamp schedules it (backend withholds it until then).
+    payload.publishedAt = a.publishedAt || null;
     if (typeof a.categoryId === 'number') payload.categoryId = a.categoryId;
     const res = await saveArticleAction(article?.id ?? null, payload as { title: string; slug: string });
     setLoading(false);
@@ -161,6 +192,10 @@ export function ArticleEditor({
       setNewCat('');
     } else setError(res.error);
   }
+
+  const publishTs = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+  const isFuture = nowTs !== null && publishTs > nowTs;
+  const statusLabel = a.status !== 'PUBLISHED' ? 'ฉบับร่าง' : isFuture ? 'ตั้งเวลาเผยแพร่' : 'เผยแพร่';
 
   return (
     <form onSubmit={(e) => { e.preventDefault(); void save(); }}>
@@ -224,10 +259,38 @@ export function ArticleEditor({
         <ObjectListEditor label="FAQ (→ FAQPage schema)" items={a.faq} fields={FAQ_FIELDS} onChange={(v) => set('faq', v)} newItem={() => ({ q: '', a: '' })} />
       </Section>
 
+      <Section title="การเผยแพร่" hint="เว้นว่าง = ขึ้นเว็บทันทีที่กด “เผยแพร่” · ใส่เวลาในอนาคต = ตั้งเวลาให้ขึ้นเองอัตโนมัติ">
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="block">
+            <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-slate-400">วันและเวลาที่ให้ขึ้นเว็บ</span>
+            <input
+              type="datetime-local"
+              value={toLocalInput(a.publishedAt)}
+              onChange={(e) => set('publishedAt', fromLocalInput(e.target.value))}
+              className="rounded-md border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-slate-100 outline-none transition [color-scheme:dark] focus:border-blue-400/60 focus:ring-2 focus:ring-blue-400/20"
+            />
+          </label>
+          <button type="button" onClick={() => set('publishedAt', new Date().toISOString())} className="mb-1 rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-slate-300 transition hover:bg-white/[0.08]">ตอนนี้</button>
+          <button type="button" onClick={() => set('publishedAt', '')} className="mb-1 rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-slate-300 transition hover:bg-white/[0.08]">ล้าง</button>
+        </div>
+        {nowTs !== null && (
+          <p className={`text-xs ${a.status !== 'PUBLISHED' ? 'text-slate-400' : isFuture ? 'text-amber-300' : 'text-emerald-300'}`}>
+            {a.status !== 'PUBLISHED'
+              ? 'ฉบับร่าง — ยังไม่แสดงบนเว็บ' + (publishTs ? ` · เวลาที่ตั้งไว้ ${fmtFull(a.publishedAt)} จะถูกใช้เมื่อกด “เผยแพร่”` : '')
+              : isFuture
+                ? `⏳ ตั้งเวลาไว้ — จะขึ้นเว็บเองวันที่ ${fmtFull(a.publishedAt)}`
+                : `✅ เผยแพร่แล้ว${publishTs ? ' ' + fmtFull(a.publishedAt) : ''}`}
+          </p>
+        )}
+        <p className="text-[11px] text-slate-500">
+          อ้างอิงเวลาเครื่องคุณ — ตอนนี้ {nowTs !== null ? new Date(nowTs).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' }) : '…'}
+        </p>
+      </Section>
+
       <div className="sticky bottom-0 -mx-4 flex flex-wrap items-center gap-3 border-t border-white/10 bg-[#070A12]/95 px-4 py-3 backdrop-blur">
         <Button type="button" loading={loading} onClick={() => void save('PUBLISHED')} className="!w-auto px-6">เผยแพร่</Button>
         <button type="button" disabled={loading} onClick={() => void save('DRAFT')} className="rounded-md border border-white/10 px-4 py-2 text-sm text-slate-200 hover:border-blue-400/40">บันทึกฉบับร่าง</button>
-        <span className="text-xs text-slate-500">สถานะ: {a.status === 'PUBLISHED' ? 'เผยแพร่' : 'ฉบับร่าง'}</span>
+        <span className="text-xs text-slate-500">สถานะ: {statusLabel}</span>
         <div className="flex-1"><StatusMsg error={error} success={success} /></div>
         {article && <button type="button" onClick={onDelete} className="text-xs text-rose-300/80 hover:text-rose-200">ลบบทความ</button>}
       </div>

@@ -73,6 +73,14 @@ export interface Article {
   updatedAt: string;
 }
 
+/**
+ * A PUBLISHED article whose publishedAt is still in the future: saved and listed in admin,
+ * but held back from every public read until then (mirrors livePublicWhere() in the backend).
+ */
+export function isScheduled(a: Pick<Article, 'status' | 'publishedAt'>, now = Date.now()): boolean {
+  return a.status === 'PUBLISHED' && !!a.publishedAt && new Date(a.publishedAt).getTime() > now;
+}
+
 export interface ArticleCategory {
   id: number;
   slug: string;

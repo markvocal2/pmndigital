@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { createHash } from 'node:crypto';
-import { Article, ArticleStatus, PageView } from './entities';
+import { Article, PageView } from './entities';
+import { livePublicWhere } from './articles.service';
 import { ViewEventDto } from './dto';
 
 const SITE_HOST = 'pmndigital.co';
@@ -84,7 +85,7 @@ export class AnalyticsService {
     meta: { ip?: string; userAgent?: string; country?: string },
   ): Promise<{ viewCount: number }> {
     const a = await this.articles.findOne({
-      where: { slug, status: ArticleStatus.PUBLISHED },
+      where: livePublicWhere({ slug }),
       select: { id: true },
     });
     if (!a) return { viewCount: 0 };

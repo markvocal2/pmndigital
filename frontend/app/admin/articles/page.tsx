@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { adminListArticles, adminGetSparklines, adminGetTraffic, type TrafficBreakdown } from '@/lib/cms';
+import { adminListArticles, adminGetSparklines, adminGetTraffic, isScheduled, type TrafficBreakdown } from '@/lib/cms';
 import { Sparkline } from '@/components/admin/Sparkline';
 
 export const dynamic = 'force-dynamic';
@@ -136,11 +136,11 @@ export default async function AdminArticlesPage() {
                   <div className="font-mono text-xs text-slate-500">/blog/{art.slug}</div>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={art.status === 'PUBLISHED' ? 'rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs text-emerald-300' : 'rounded-full bg-white/10 px-2 py-0.5 text-xs text-slate-300'}>
-                    {art.status === 'PUBLISHED' ? 'เผยแพร่' : 'ฉบับร่าง'}
+                  <span className={isScheduled(art) ? 'rounded-full bg-amber-500/15 px-2 py-0.5 text-xs text-amber-300' : art.status === 'PUBLISHED' ? 'rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs text-emerald-300' : 'rounded-full bg-white/10 px-2 py-0.5 text-xs text-slate-300'}>
+                    {isScheduled(art) ? '⏳ ตั้งเวลา' : art.status === 'PUBLISHED' ? 'เผยแพร่' : 'ฉบับร่าง'}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-xs text-slate-400">{art.publishedAt ? new Date(art.publishedAt).toLocaleDateString('th-TH') : '—'}</td>
+                <td className="px-4 py-3 text-xs text-slate-400">{art.publishedAt ? new Date(art.publishedAt).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' }) : '—'}</td>
                 <td className="px-4 py-3">
                   <Sparkline data={sparks[art.id] ?? []} />
                   <div className="mt-0.5 text-[10px] text-slate-500">ทั้งหมด {nf(art.viewCount)}</div>

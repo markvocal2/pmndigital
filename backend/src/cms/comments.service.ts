@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
-import { Article, ArticleStatus, Comment, CommentStatus } from './entities';
+import { Article, Comment, CommentStatus } from './entities';
+import { livePublicWhere } from './articles.service';
 import { CreateCommentDto } from './dto';
 
 @Injectable()
@@ -20,7 +21,7 @@ export class CommentsService {
     // honeypot: bots fill the hidden field → silently accept, don't store
     if (dto.hp && dto.hp.trim()) return { ok: true, status: 'PENDING' };
     const art = await this.articles.findOne({
-      where: { slug, status: ArticleStatus.PUBLISHED },
+      where: livePublicWhere({ slug }),
       select: { id: true },
     });
     if (!art) throw new NotFoundException('Article not found');

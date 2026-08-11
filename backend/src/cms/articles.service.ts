@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, LessThanOrEqual, Repository } from 'typeorm';
 import { Article, ArticleCategory, ArticleStatus } from './entities';
 import { ArticleDto, CategoryDto } from './dto';
 
@@ -13,6 +13,23 @@ function readingMinutes(text: string): number {
 function stripHtml(html: string): string {
   return (html || '').replace(/<[^>]+>/g, ' ').replace(/&[a-z#0-9]+;/gi, ' ');
 }
+
+/**
+ * Scheduling rule, in one place: a PUBLISHED article is only *public* once its publishedAt
+ * has arrived. That is what lets scheduling work with no cron — the row is written straight
+ * away and simply stays out of every public read until the clock catches up. Rows with a
+ * null publishedAt (legacy) count as already live.
+ */
+export function livePublicWhere<T extends object>(base: T) {
+  const now = new Date();
+  return [
+    { ...base, status: ArticleStatus.PUBLISHED, publishedAt: LessThanOrEqual(now) },
+    { ...base, status: ArticleStatus.PUBLISHED, publishedAt: IsNull() },
+  ];
+}
+
+/** Same rule expressed for query-builder reads (alias `a`); bind `:now`. */
+const LIVE_SQL = '(a.publishedAt IS NULL OR a.publishedAt <= :now)';
 
 @Injectable()
 export class ArticlesService {
@@ -34,6 +51,7 @@ export class ArticlesService {
     const qb = this.articles
       .createQueryBuilder('a')
       .where('a.status = :st', { st: ArticleStatus.PUBLISHED })
+      .andWhere(LIVE_SQL, { now: new Date() })
       .skip((page - 1) * limit)
       .take(limit);
     switch (opts.sort) {
@@ -59,14 +77,16 @@ export class ArticlesService {
   }
 
   async getPublicBySlug(slug: string): Promise<Article> {
-    const a = await this.articles.findOne({ where: { slug, status: ArticleStatus.PUBLISHED } });
+    const a = await this.articles.findOne({ where: livePublicWhere({ slug }) });
     if (!a) throw new NotFoundException('Article not found');
     return a;
   }
 
   async incrementView(slug: string): Promise<{ viewCount: number }> {
-    await this.articles.increment({ slug, status: ArticleStatus.PUBLISHED }, 'viewCount', 1);
-    const a = await this.articles.findOne({ where: { slug }, select: { viewCount: true } });
+    const live = await this.articles.findOne({ where: livePublicWhere({ slug }), select: { id: true } });
+    if (!live) return { viewCount: 0 };
+    await this.articles.increment({ id: live.id }, 'viewCount', 1);
+    const a = await this.articles.findOne({ where: { id: live.id }, select: { viewCount: true } });
     return { viewCount: a?.viewCount ?? 0 };
   }
 
@@ -77,6 +97,7 @@ export class ArticlesService {
     const qb = this.articles
       .createQueryBuilder('a')
       .where('a.status = :st', { st: ArticleStatus.PUBLISHED })
+      .andWhere(LIVE_SQL, { now: new Date() })
       .andWhere('a.id != :id', { id: a.id })
       .orderBy('a.publishedAt', 'DESC')
       .addOrderBy('a.id', 'DESC')
@@ -140,8 +161,15 @@ export class ArticlesService {
     a.schemaType = dto.schemaType || 'Article';
     a.readingMins = readingMinutes(a.bodyHtml ? stripHtml(a.bodyHtml) : a.bodyMarkdown);
     const nextStatus = (dto.status as ArticleStatus) ?? a.status ?? ArticleStatus.DRAFT;
-    if (nextStatus === ArticleStatus.PUBLISHED && !a.publishedAt) a.publishedAt = new Date();
-    if (nextStatus === ArticleStatus.DRAFT) a.publishedAt = null;
+    if (dto.publishedAt !== undefined) {
+      // Explicit from the editor: a future timestamp schedules it, blank means "go live now".
+      // Kept even while DRAFT so a scheduled time survives a "save as draft".
+      const at = dto.publishedAt ? new Date(dto.publishedAt) : null;
+      a.publishedAt = nextStatus === ArticleStatus.PUBLISHED ? (at ?? new Date()) : at;
+    } else {
+      if (nextStatus === ArticleStatus.PUBLISHED && !a.publishedAt) a.publishedAt = new Date();
+      if (nextStatus === ArticleStatus.DRAFT) a.publishedAt = null;
+    }
     a.status = nextStatus;
   }
 

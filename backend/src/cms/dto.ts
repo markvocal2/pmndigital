@@ -3,6 +3,7 @@ import {
   IsBoolean,
   IsEmail,
   IsIn,
+  IsISO8601,
   IsInt,
   IsNumber,
   IsObject,
@@ -61,6 +62,12 @@ export class ArticleDto {
   @IsOptional() @IsString() @MaxLength(300000, { message: 'เนื้อหาบทความยาวเกิน 300,000 ตัวอักษร' }) bodyHtml?: string;
   @IsOptional() @IsString() @MaxLength(500) coverImageUrl?: string;
   @IsOptional() @IsIn(['DRAFT', 'PUBLISHED']) status?: string;
+  /**
+   * When the article goes live. A PUBLISHED row whose publishedAt is still in the future is
+   * "scheduled": saved and visible in admin, hidden from every public read until then.
+   * Omit entirely to keep the legacy behaviour (stamped on first publish).
+   */
+  @IsOptional() @IsISO8601({}, { message: 'เวลาเผยแพร่ไม่ถูกต้อง' }) publishedAt?: string | null;
   @IsOptional() @IsInt() categoryId?: number | null;
   @IsOptional() @IsArray() @IsString({ each: true }) tags?: string[];
   @IsOptional() @IsString() @MaxLength(200, { message: 'Meta Title ยาวเกิน 200 ตัวอักษร' }) metaTitle?: string;

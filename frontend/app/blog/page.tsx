@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getPublicArticles, getPublicCategories, getPublicSettings } from '@/lib/cms';
 import { BlogList } from '@/components/blog/BlogList';
+import { BlogHero } from '@/components/blog/BlogHero';
 
 // force-dynamic so the article list is fetched at request time (backend is up) — avoids the
 // build-time SSG fetch (backend unreachable during CI) producing an empty initial page.
@@ -50,7 +51,8 @@ export default async function BlogIndex() {
           <Link href="/" className="text-sm text-slate-400 hover:text-blue-200">← กลับหน้าหลัก</Link>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-6 py-12">
+      {items.length > 0 && <BlogHero items={items} categories={categories} />}
+      <main id="articles" className="mx-auto max-w-6xl px-6 py-12 md:py-14">
         <div className="mb-10">
           <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.22em] text-[#9FC0FF]">Articles</div>
           <h1 className="text-4xl font-bold tracking-tight">บทความ &amp; ความรู้</h1>
