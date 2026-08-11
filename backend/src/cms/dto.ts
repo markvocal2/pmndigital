@@ -49,22 +49,26 @@ export class UpdateHomeDto {
 }
 
 export class ArticleDto {
-  @IsString() @MinLength(1) @MaxLength(200) title: string;
-  @IsString() @Matches(/^[a-z0-9฀-๿-]+$/, { message: 'slug ใช้ได้เฉพาะ a-z, 0-9, อักษรไทย และ -' }) @MaxLength(160)
+  @IsString({ message: 'กรุณากรอกหัวข้อบทความ' })
+  @MinLength(1, { message: 'กรุณากรอกหัวข้อบทความ' })
+  @MaxLength(200, { message: 'หัวข้อยาวเกิน 200 ตัวอักษร' })
+  title: string;
+  @IsString() @Matches(/^[a-z0-9฀-๿-]+$/, { message: 'slug ใช้ได้เฉพาะ a-z, 0-9, อักษรไทย และ -' })
+  @MaxLength(160, { message: 'slug ยาวเกิน 160 ตัวอักษร' })
   slug: string;
-  @IsOptional() @IsString() @MaxLength(400) excerpt?: string;
+  @IsOptional() @IsString() @MaxLength(400, { message: 'เกริ่นนำ (excerpt) ยาวเกิน 400 ตัวอักษร' }) excerpt?: string;
   @IsOptional() @IsString() bodyMarkdown?: string;
-  @IsOptional() @IsString() @MaxLength(300000) bodyHtml?: string;
+  @IsOptional() @IsString() @MaxLength(300000, { message: 'เนื้อหาบทความยาวเกิน 300,000 ตัวอักษร' }) bodyHtml?: string;
   @IsOptional() @IsString() @MaxLength(500) coverImageUrl?: string;
   @IsOptional() @IsIn(['DRAFT', 'PUBLISHED']) status?: string;
   @IsOptional() @IsInt() categoryId?: number | null;
   @IsOptional() @IsArray() @IsString({ each: true }) tags?: string[];
-  @IsOptional() @IsString() @MaxLength(200) metaTitle?: string;
-  @IsOptional() @IsString() @MaxLength(400) metaDesc?: string;
+  @IsOptional() @IsString() @MaxLength(200, { message: 'Meta Title ยาวเกิน 200 ตัวอักษร' }) metaTitle?: string;
+  @IsOptional() @IsString() @MaxLength(400, { message: 'Meta Description ยาวเกิน 400 ตัวอักษร' }) metaDesc?: string;
   @IsOptional() @IsString() @MaxLength(500) canonicalUrl?: string;
   @IsOptional() @IsString() @MaxLength(500) ogImageUrl?: string;
   @IsOptional() @IsBoolean() noindex?: boolean;
-  @IsOptional() @IsString() @MaxLength(160) keyphrase?: string;
+  @IsOptional() @IsString() @MaxLength(160, { message: 'Focus Keyphrase ยาวเกิน 160 ตัวอักษร' }) keyphrase?: string;
   @IsOptional() @IsArray() faq?: { q: string; a: string }[];
   @IsOptional() @IsArray() @IsString({ each: true }) takeaways?: string[];
   @IsOptional() @IsString() @MaxLength(40) schemaType?: string;

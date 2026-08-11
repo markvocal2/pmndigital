@@ -17,22 +17,43 @@ export function Section({ title, hint, children }: { title: string; hint?: strin
   );
 }
 
+/**
+ * Character counter rendered beside a field label, mirroring the backend's class-validator
+ * caps so an over-limit value shows up while typing instead of returning as a 400.
+ * Deliberately paired with NO hard `maxLength` — that silently truncates pasted text;
+ * the form blocks submission instead.
+ */
+export function CharCount({ value, max }: { value: string; max: number }) {
+  const n = value.length;
+  const tone = n > max ? 'text-rose-300' : n > max * 0.9 ? 'text-amber-300' : 'text-slate-500';
+  return (
+    <span className={`shrink-0 tabular-nums normal-case tracking-normal ${tone}`}>
+      {n.toLocaleString('en-US')} / {max.toLocaleString('en-US')}
+    </span>
+  );
+}
+
 export function Field({
   label,
   value,
   onChange,
   placeholder,
   type = 'text',
+  max,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   type?: string;
+  max?: number;
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-slate-400">{label}</span>
+      <span className="mb-1.5 flex items-baseline justify-between gap-2 text-[11px] font-medium uppercase tracking-wider text-slate-400">
+        <span>{label}</span>
+        {max !== undefined && <CharCount value={value} max={max} />}
+      </span>
       <input
         type={type}
         value={value}
@@ -51,6 +72,7 @@ export function TextArea({
   rows = 3,
   placeholder,
   mono = false,
+  max,
 }: {
   label: string;
   value: string;
@@ -58,10 +80,14 @@ export function TextArea({
   rows?: number;
   placeholder?: string;
   mono?: boolean;
+  max?: number;
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-slate-400">{label}</span>
+      <span className="mb-1.5 flex items-baseline justify-between gap-2 text-[11px] font-medium uppercase tracking-wider text-slate-400">
+        <span>{label}</span>
+        {max !== undefined && <CharCount value={value} max={max} />}
+      </span>
       <textarea
         value={value}
         rows={rows}

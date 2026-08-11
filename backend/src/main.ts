@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { BadRequestException, Logger, ValidationPipe } from '@nestjs/common';
+import type { ValidationError } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { McpOAuthProvider } from './mcp/mcp-oauth.provider';
@@ -14,6 +15,19 @@ import { CmsService } from './cms/cms.service';
 import { ServerStatusService } from './cms/status.service';
 import { mountMcp } from './mcp/mcp.http';
 
+const validationLogger = new Logger('Validation');
+
+/** Flatten class-validator errors (incl. nested children) into plain messages. */
+function flattenValidationMessages(errors: ValidationError[], parent = ''): string[] {
+  const out: string[] = [];
+  for (const err of errors) {
+    const path = parent ? `${parent}.${err.property}` : err.property;
+    if (err.constraints) out.push(...Object.values(err.constraints));
+    if (err.children?.length) out.push(...flattenValidationMessages(err.children, path));
+  }
+  return out;
+}
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.setGlobalPrefix('api');
@@ -22,6 +36,13 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
+      // Same 400 body as the default factory ({ statusCode, error, message: string[] }) —
+      // but logged, so a rejected admin save leaves a trace in `docker logs`.
+      exceptionFactory: (errors: ValidationError[]) => {
+        const messages = flattenValidationMessages(errors);
+        validationLogger.warn(`400 rejected: ${messages.join(' | ') || 'unknown constraint'}`);
+        return new BadRequestException(messages);
+      },
     }),
   );
   app.enableCors();

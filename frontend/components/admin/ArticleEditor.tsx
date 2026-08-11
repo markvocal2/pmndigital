@@ -15,6 +15,36 @@ const FAQ_FIELDS: FieldDef[] = [
   { key: 'a', label: 'คำตอบ', type: 'textarea' },
 ];
 
+/**
+ * Mirrors the caps declared on ArticleDto (backend/src/cms/dto.ts). Kept in sync by hand —
+ * if a cap moves there, move it here too, or the save round-trips into a 400.
+ */
+const LIMITS = {
+  title: 200,
+  slug: 160,
+  excerpt: 400,
+  metaTitle: 200,
+  metaDesc: 400,
+  canonicalUrl: 500,
+  coverImageUrl: 500,
+  ogImageUrl: 500,
+  keyphrase: 160,
+  bodyHtml: 300000,
+} as const;
+
+const LIMIT_LABELS: Record<keyof typeof LIMITS, string> = {
+  title: 'หัวข้อ',
+  slug: 'Slug',
+  excerpt: 'เกริ่นนำ (excerpt)',
+  metaTitle: 'Meta Title',
+  metaDesc: 'Meta Description',
+  canonicalUrl: 'Canonical URL',
+  coverImageUrl: 'ภาพปก',
+  ogImageUrl: 'OG Image',
+  keyphrase: 'Focus Keyphrase',
+  bodyHtml: 'เนื้อหาบทความ',
+};
+
 function slugify(s: string): string {
   return s.trim().toLowerCase().replace(/[^฀-๿a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').slice(0, 120);
 }
@@ -67,9 +97,22 @@ export function ArticleEditor({
 
   const set = (k: keyof typeof a, v: unknown) => setA((p) => ({ ...p, [k]: v }) as typeof a);
 
+  /** Catch DTO violations before the round-trip so the user sees which field is at fault. */
+  function validate(): string | null {
+    if (!a.title.trim()) return 'กรุณากรอกหัวข้อบทความ';
+    for (const key of Object.keys(LIMITS) as (keyof typeof LIMITS)[]) {
+      const v = (a as Record<string, unknown>)[key];
+      if (typeof v !== 'string' || v.length <= LIMITS[key]) continue;
+      return `${LIMIT_LABELS[key]} ยาวเกิน ${LIMITS[key].toLocaleString('en-US')} ตัวอักษร (ตอนนี้ ${v.length.toLocaleString('en-US')})`;
+    }
+    return null;
+  }
+
   async function save(status?: 'DRAFT' | 'PUBLISHED') {
     setError(null);
     setSuccess(null);
+    const problem = validate();
+    if (problem) { setError(problem); return; }
     setLoading(true);
     const payload: Record<string, unknown> = {
       title: a.title,
@@ -122,17 +165,22 @@ export function ArticleEditor({
   return (
     <form onSubmit={(e) => { e.preventDefault(); void save(); }}>
       <Section title="เนื้อหาบทความ" hint="หัวข้อ · slug · เนื้อหา (จัดรูปแบบได้)">
-        <Field label="หัวข้อ" value={a.title} onChange={(v) => set('title', v)} />
+        <Field label="หัวข้อ" value={a.title} onChange={(v) => set('title', v)} max={LIMITS.title} />
         <div className="flex items-end gap-2">
           <div className="flex-1">
-            <Field label="Slug (URL) — รหัสอัตโนมัติ 6 หลัก" value={a.slug} onChange={(v) => set('slug', slugify(v))} placeholder="a1b2c3" />
+            <Field label="Slug (URL) — รหัสอัตโนมัติ 6 หลัก" value={a.slug} onChange={(v) => set('slug', slugify(v))} placeholder="a1b2c3" max={LIMITS.slug} />
           </div>
           <button type="button" onClick={() => set('slug', genSlug())} className="mb-1 shrink-0 rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-slate-300 transition hover:bg-white/[0.08]" title="สุ่มรหัสใหม่">🎲 สุ่มใหม่</button>
         </div>
-        <TextArea label="เกริ่นนำ (excerpt)" value={a.excerpt} onChange={(v) => set('excerpt', v)} rows={2} />
+        <TextArea label="เกริ่นนำ (excerpt)" value={a.excerpt} onChange={(v) => set('excerpt', v)} rows={2} max={LIMITS.excerpt} />
         <div>
           <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-slate-400">เนื้อหา — จัดรูปแบบ ตัวหนา/หัวข้อ/จัดตำแหน่ง/แทรกรูป</span>
           <RichTextEditor value={a.bodyHtml} onChange={(html) => set('bodyHtml', html)} />
+          {a.bodyHtml.length > LIMITS.bodyHtml * 0.8 && (
+            <p className="mt-1.5 text-xs text-amber-300">
+              เนื้อหายาว {a.bodyHtml.length.toLocaleString('en-US')} / {LIMITS.bodyHtml.toLocaleString('en-US')} ตัวอักษร — ใกล้เพดานแล้ว
+            </p>
+          )}
         </div>
       </Section>
 
@@ -155,8 +203,8 @@ export function ArticleEditor({
       </Section>
 
       <Section title="SEO" hint="meta title/description · canonical · OG · index">
-        <Field label="Meta Title" value={a.metaTitle} onChange={(v) => set('metaTitle', v)} placeholder="ปล่อยว่าง = ใช้หัวข้อบทความ" />
-        <TextArea label="Meta Description" value={a.metaDesc} onChange={(v) => set('metaDesc', v)} rows={2} placeholder="ปล่อยว่าง = ใช้เกริ่นนำ" />
+        <Field label="Meta Title" value={a.metaTitle} onChange={(v) => set('metaTitle', v)} placeholder="ปล่อยว่าง = ใช้หัวข้อบทความ" max={LIMITS.metaTitle} />
+        <TextArea label="Meta Description" value={a.metaDesc} onChange={(v) => set('metaDesc', v)} rows={2} placeholder="ปล่อยว่าง = ใช้เกริ่นนำ" max={LIMITS.metaDesc} />
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Canonical URL" value={a.canonicalUrl} onChange={(v) => set('canonicalUrl', v)} />
           <ImageUpload label="OG Image" value={a.ogImageUrl} onChange={(u) => set('ogImageUrl', u)} />
@@ -165,7 +213,7 @@ export function ArticleEditor({
       </Section>
 
       <Section title="GEO (Generative Engine Optimization)" hint="ให้ AI/Search สรุปได้ดี — keyphrase, ประเด็นสำคัญ, FAQ">
-        <Field label="Focus Keyphrase" value={a.keyphrase} onChange={(v) => set('keyphrase', v)} />
+        <Field label="Focus Keyphrase" value={a.keyphrase} onChange={(v) => set('keyphrase', v)} max={LIMITS.keyphrase} />
         <label className="block">
           <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-slate-400">ชนิด Schema</span>
           <select value={a.schemaType} onChange={(e) => set('schemaType', e.target.value)} className="rounded-md border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-400/60">

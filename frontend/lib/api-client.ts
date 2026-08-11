@@ -5,10 +5,13 @@ const BACKEND_URL = process.env.BACKEND_URL ?? 'http://backend:3001';
 export class BackendError extends Error {
   status: number;
   code?: string;
-  constructor(message: string, status: number, code?: string) {
+  /** Individual messages when the backend returned a list (NestJS ValidationPipe). */
+  details?: string[];
+  constructor(message: string, status: number, code?: string, details?: string[]) {
     super(message);
     this.status = status;
     this.code = code;
+    this.details = details;
   }
 }
 
@@ -83,11 +86,17 @@ async function unwrap<T>(res: Response): Promise<T> {
       typeof parsed === 'object' && parsed !== null
         ? (parsed as Record<string, unknown>)
         : {};
+    // NestJS's ValidationPipe reports failures as `message: string[]`. Without this branch
+    // every validation failure collapsed into an unactionable "Backend error (HTTP 400)".
+    const details = Array.isArray(obj.message)
+      ? obj.message.filter((m): m is string => typeof m === 'string')
+      : undefined;
     const message =
       (typeof obj.message === 'string' ? obj.message : null) ??
+      (details && details.length ? details.join(' · ') : null) ??
       `Backend error (HTTP ${res.status})`;
     const code = typeof obj.code === 'string' ? obj.code : undefined;
-    throw new BackendError(message, res.status, code);
+    throw new BackendError(message, res.status, code, details);
   }
   return parsed as T;
 }
