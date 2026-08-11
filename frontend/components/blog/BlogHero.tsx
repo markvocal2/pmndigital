@@ -101,22 +101,25 @@ export function BlogHero({
         ))}
       </div>
 
-      {/* the fade — vertical on phones, horizontal from the left on desktop */}
+      {/* The fade. Vertical up to tablet, horizontal from lg. The side-by-side split only
+          earns its keep once there is real width — below lg the copy column covers ~75% of
+          the viewport, so a left-to-right fade leaves text sitting on bright artwork (and
+          plenty of covers have their own words baked in). */}
       <div
-        className="absolute inset-0 md:hidden"
-        style={{ background: 'linear-gradient(to top, #05070E 5%, rgba(5,7,14,0.94) 32%, rgba(5,7,14,0.45) 66%, rgba(5,7,14,0.38) 100%)' }}
+        className="absolute inset-0 lg:hidden"
+        style={{ background: 'linear-gradient(to top, #05070E 4%, rgba(5,7,14,0.95) 34%, rgba(5,7,14,0.55) 68%, rgba(5,7,14,0.22) 100%)' }}
       />
       <div
-        className="absolute inset-0 hidden md:block"
-        style={{ background: 'linear-gradient(to right, #05070E 0%, rgba(5,7,14,0.95) 26%, rgba(5,7,14,0.70) 45%, rgba(5,7,14,0.22) 70%, rgba(5,7,14,0) 93%)' }}
+        className="absolute inset-0 hidden lg:block"
+        style={{ background: 'linear-gradient(to right, #05070E 0%, rgba(5,7,14,0.96) 30%, rgba(5,7,14,0.78) 50%, rgba(5,7,14,0.28) 72%, rgba(5,7,14,0) 94%)' }}
       />
       <div
-        className="absolute inset-x-0 bottom-0 hidden h-36 md:block"
+        className="absolute inset-x-0 bottom-0 hidden h-36 lg:block"
         style={{ background: 'linear-gradient(to top, #05070E 0%, rgba(5,7,14,0) 100%)' }}
       />
 
       {/* copy */}
-      <div className="relative mx-auto flex min-h-[clamp(430px,60vh,600px)] max-w-6xl items-end px-6 pb-8 pt-28 md:items-center md:pb-14 md:pt-24">
+      <div className="relative mx-auto flex min-h-[clamp(430px,60vh,600px)] max-w-6xl items-end px-6 pb-8 pt-28 lg:items-center lg:pb-14 lg:pt-24">
         <div className="max-w-[36rem]">
           <div className="mb-4 flex flex-wrap items-center gap-2.5">
             <span className="rounded-full bg-blue-500/90 px-3 py-1 font-mono text-[10.5px] font-semibold uppercase tracking-[0.18em] text-white">
@@ -129,12 +132,12 @@ export function BlogHero({
             )}
           </div>
 
-          <h2 className="text-[28px] font-bold leading-[1.14] tracking-tight drop-shadow-[0_2px_18px_rgba(0,0,0,0.75)] sm:text-4xl md:text-[52px]">
+          <h2 className="line-clamp-4 text-[28px] font-bold leading-[1.14] tracking-tight drop-shadow-[0_2px_18px_rgba(0,0,0,0.75)] sm:text-4xl lg:text-[52px]">
             {active.title}
           </h2>
 
           {active.excerpt && (
-            <p className="mt-4 line-clamp-3 text-[15px] leading-relaxed text-[#B9C3D6] md:text-[17px]">
+            <p className="mt-4 line-clamp-3 text-[15px] leading-relaxed text-[#B9C3D6] lg:text-[17px]">
               {active.excerpt}
             </p>
           )}
@@ -178,7 +181,7 @@ export function BlogHero({
               />
             ))}
           </div>
-          <div className="hidden items-center gap-2 md:flex">
+          <div className="hidden items-center gap-2 lg:flex">
             <button
               type="button"
               onClick={() => go(idx - 1)}
