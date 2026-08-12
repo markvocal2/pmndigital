@@ -43,6 +43,7 @@ export default async function BlogIndex() {
 
   const name = settings?.siteName || 'PMN Digital';
   const logo = settings?.logoDarkUrl || '/assets/logo-white.png';
+  const hasHero = items.length > 0;
   const ld = {
     '@context': 'https://schema.org',
     '@type': 'Blog',
@@ -59,15 +60,31 @@ export default async function BlogIndex() {
   return (
     <div style={{ minHeight: '100vh', background: '#05070E', color: '#EAEEF6', fontFamily: "'IBM Plex Sans','IBM Plex Sans Thai',sans-serif" }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
-      <header className="border-b border-white/10">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <Link href="/"><img src={logo} alt={name} style={{ height: settings?.logoHeight || 28, width: 'auto' }} /></Link>
-          <Link href="/" className="text-sm text-slate-400 hover:text-blue-200">← กลับหน้าหลัก</Link>
-        </div>
-      </header>
+      {/* The hero runs up behind the header so the two read as one panel, Netflix-style: no
+          seam, just a soft top-down scrim keeping the logo and link legible over the art.
+          With no articles there is no hero to sit on, so it falls back to the bordered bar. */}
+      <div className={hasHero ? 'relative' : undefined}>
+        <header
+          className={
+            hasHero
+              ? 'absolute inset-x-0 top-0 z-30 bg-gradient-to-b from-[#05070E]/92 via-[#05070E]/45 to-transparent'
+              : 'border-b border-white/10'
+          }
+        >
+          <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <Link href="/"><img src={logo} alt={name} style={{ height: settings?.logoHeight || 28, width: 'auto' }} /></Link>
+            <Link
+              href="/"
+              className={`text-sm hover:text-blue-200 ${hasHero ? 'text-slate-200/90 drop-shadow-[0_1px_6px_rgba(0,0,0,0.85)]' : 'text-slate-400'}`}
+            >
+              ← กลับหน้าหลัก
+            </Link>
+          </div>
+        </header>
 
-      {items.length > 0 && <BlogHero items={items} categories={categories} />}
+        {hasHero && <BlogHero items={items} categories={categories} />}
+      </div>
 
       <main id="articles" className="mx-auto max-w-6xl px-6 py-12 md:py-14">
         <div className="mb-8">
