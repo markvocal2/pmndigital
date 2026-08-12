@@ -84,3 +84,32 @@ html, body {
   animation: pmnShimmer 1.4s ease-in-out infinite;
   border-radius: 10px;
 }
+
+/* ---- Netflix-style article rows (/blog) ---- */
+
+/* The row is a native horizontal scroller so touch flicks, shift+wheel and keyboard all
+   work for free; only the scrollbar chrome is hidden. Arrows drive it on desktop. */
+.pmn-row-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.pmn-row-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Cards are art-first: the title/meta panel stays hidden until hover. Gated on an actual
+   hover-capable pointer AND a desktop width, so touch devices and phones never end up
+   with an unlabelled thumbnail they cannot reveal. Transition only — never an animation
+   with a fill-mode, which can strand the panel at opacity 0. */
+@media (hover: hover) and (min-width: 1024px) {
+  .pmn-card-info {
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.28s ease, transform 0.28s ease;
+  }
+  .pmn-card:hover .pmn-card-info,
+  .pmn-card:focus-visible .pmn-card-info {
+    opacity: 1;
+    transform: none;
+  }
+}
