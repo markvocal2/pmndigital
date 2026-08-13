@@ -83,11 +83,16 @@ export async function saveArticleAction(
   }
 }
 
-export async function deleteArticleAction(id: number): Promise<ActionResult> {
+export async function deleteArticleAction(id: number, slug?: string): Promise<ActionResult> {
   try {
     await backendFetch('/admin/articles/' + id, { method: 'DELETE' });
     revalidatePath('/admin/articles');
     revalidatePath('/blog');
+    // /blog only covers the index. Without the article's own path the deleted page keeps
+    // serving from the route cache (revalidate = 60 in app/blog/[slug]) — a re-render that
+    // ends in notFound() leaves the previously cached HTML in place, so the post stays
+    // publicly readable until the container restarts.
+    if (slug) revalidatePath('/blog/' + slug);
     return { ok: true, data: undefined };
   } catch (e) {
     return { ok: false, error: explain(e) };

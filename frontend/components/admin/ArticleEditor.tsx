@@ -182,7 +182,7 @@ export function ArticleEditor({
   async function onDelete() {
     if (!article) return;
     if (!confirm('ลบบทความนี้?')) return;
-    const res = await deleteArticleAction(article.id);
+    const res = await deleteArticleAction(article.id, article.slug);
     if (res.ok) router.push('/admin/articles');
     else setError(res.error);
   }
