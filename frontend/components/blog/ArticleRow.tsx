@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { Article, ArticleCategory } from '@/lib/cms';
+import { youtubeId } from '@/lib/cms';
 import { MediaImg } from '@/components/ui/Skeleton';
 
 function fmtDate(s: string | null) {
@@ -48,6 +49,13 @@ function ArticleCard({ a, category }: { a: Article; category?: string }) {
         {category && (
           <span className="absolute left-2.5 top-2.5 rounded-full bg-black/60 px-2.5 py-1 font-mono text-[9.5px] uppercase tracking-wider text-blue-100 backdrop-blur">
             {category}
+          </span>
+        )}
+
+        {youtubeId(a.youtubeUrl) && (
+          <span className="absolute right-2.5 top-2.5 inline-flex items-center gap-1 rounded-full bg-black/65 px-2 py-1 text-[9.5px] font-semibold text-white backdrop-blur">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z" /></svg>
+            วิดีโอ
           </span>
         )}
 

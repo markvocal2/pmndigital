@@ -99,6 +99,7 @@ export class Article {
   @Column({ type: 'text', default: '' }) bodyMarkdown: string;
   @Column({ type: 'text', default: '' }) bodyHtml: string;
   @Column({ type: 'text', nullable: true }) coverImageUrl: string | null;
+  @Column({ type: 'text', nullable: true }) youtubeUrl: string | null;
   @Column({ type: 'enum', enum: ArticleStatus, enumName: 'ArticleStatus', default: ArticleStatus.DRAFT })
   status: ArticleStatus;
   @Column({ type: 'timestamp', nullable: true }) publishedAt: Date | null;

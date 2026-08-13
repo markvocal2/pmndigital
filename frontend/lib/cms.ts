@@ -53,6 +53,7 @@ export interface Article {
   bodyMarkdown: string;
   bodyHtml: string;
   coverImageUrl: string | null;
+  youtubeUrl: string | null;
   status: 'DRAFT' | 'PUBLISHED';
   publishedAt: string | null;
   authorId: number | null;
@@ -71,6 +72,19 @@ export interface Article {
   schemaType: string;
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * Pull the 11-char video id out of whichever shape YouTube handed the author:
+ * watch?v=, youtu.be/, /embed/, /shorts/, /live/ — with or without extra params.
+ * Returns null when there is nothing usable, which is the signal to render no video.
+ */
+export function youtubeId(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const m = url.match(
+    /(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/)([\w-]{11})/i,
+  );
+  return m ? m[1] : null;
 }
 
 /**

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Article, ArticleCategory, ArticleFaq } from '@/lib/cms';
+import { youtubeId } from '@/lib/cms';
 import { saveArticleAction, deleteArticleAction, createCategoryAction } from '@/lib/cms-actions';
 import { renderMarkdown } from '@/lib/md';
 import { Button } from '@/components/ui/Button';
@@ -28,6 +29,7 @@ const LIMITS = {
   canonicalUrl: 500,
   coverImageUrl: 500,
   ogImageUrl: 500,
+  youtubeUrl: 500,
   keyphrase: 160,
   bodyHtml: 300000,
 } as const;
@@ -41,6 +43,7 @@ const LIMIT_LABELS: Record<keyof typeof LIMITS, string> = {
   canonicalUrl: 'Canonical URL',
   coverImageUrl: 'ภาพปก',
   ogImageUrl: 'OG Image',
+  youtubeUrl: 'ลิงก์ YouTube',
   keyphrase: 'Focus Keyphrase',
   bodyHtml: 'เนื้อหาบทความ',
 };
@@ -97,6 +100,7 @@ export function ArticleEditor({
     // legacy posts open cleanly in the editor (they migrate to HTML on next save).
     bodyHtml: article?.bodyHtml || (article?.bodyMarkdown ? renderMarkdown(article.bodyMarkdown) : ''),
     coverImageUrl: article?.coverImageUrl ?? '',
+    youtubeUrl: article?.youtubeUrl ?? '',
     status: article?.status ?? 'DRAFT',
     publishedAt: article?.publishedAt ?? '',
     categoryId: article?.categoryId ?? null,
@@ -150,6 +154,7 @@ export function ArticleEditor({
       bodyMarkdown: a.bodyMarkdown,
       bodyHtml: a.bodyHtml,
       coverImageUrl: a.coverImageUrl,
+      youtubeUrl: a.youtubeUrl.trim(),
       status: status ?? a.status,
       tags: a.tags.filter(Boolean),
       metaTitle: a.metaTitle,
@@ -193,6 +198,7 @@ export function ArticleEditor({
     } else setError(res.error);
   }
 
+  const ytPreview = youtubeId(a.youtubeUrl);
   const publishTs = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
   const isFuture = nowTs !== null && publishTs > nowTs;
   const statusLabel = a.status !== 'PUBLISHED' ? 'ฉบับร่าง' : isFuture ? 'ตั้งเวลาเผยแพร่' : 'เผยแพร่';
@@ -235,6 +241,34 @@ export function ArticleEditor({
         </div>
         <StringListEditor label="แท็ก (Tags)" items={a.tags} onChange={(v) => set('tags', v)} placeholder="เช่น erp" />
         <ImageUpload label="ภาพ/วิดีโอปก (Cover · รองรับ mp4/webm)" value={a.coverImageUrl} onChange={(u) => set('coverImageUrl', u)} allowVideo />
+
+        <div>
+          <Field
+            label="ลิงก์ YouTube (ไม่บังคับ)"
+            value={a.youtubeUrl}
+            onChange={(v) => set('youtubeUrl', v)}
+            placeholder="https://www.youtube.com/watch?v=..."
+            max={LIMITS.youtubeUrl}
+          />
+          {a.youtubeUrl.trim() !== '' &&
+            (ytPreview ? (
+              <div className="mt-2 flex items-center gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`https://i.ytimg.com/vi/${ytPreview}/mqdefault.jpg`}
+                  alt=""
+                  className="h-12 w-[84px] shrink-0 rounded object-cover ring-1 ring-white/10"
+                />
+                <p className="text-xs text-emerald-300">
+                  พบวิดีโอ (รหัส {ytPreview}) — จะแสดงเป็นตัวเล่นวิดีโอในหน้าบทความ
+                </p>
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-amber-300">
+                อ่านรหัสวิดีโอจากลิงก์นี้ไม่ได้ — รองรับ youtube.com/watch, youtu.be, /embed, /shorts, /live
+              </p>
+            ))}
+        </div>
       </Section>
 
       <Section title="SEO" hint="meta title/description · canonical · OG · index">

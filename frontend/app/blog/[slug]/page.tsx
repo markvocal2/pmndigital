@@ -8,6 +8,8 @@ import { ARTICLE_BODY_CLASS } from '@/lib/articleBodyClass';
 import { Comments } from '@/components/blog/Comments';
 import { MediaImg } from '@/components/ui/Skeleton';
 import { CoverStage } from '@/components/blog/CoverStage';
+import { YouTubeEmbed } from '@/components/blog/YouTubeEmbed';
+import { youtubeId } from '@/lib/cms';
 
 export const revalidate = 60;
 const SITE = 'https://pmndigital.co';
@@ -59,6 +61,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   // New articles store sanitized WYSIWYG HTML in bodyHtml; legacy articles fall
   // back to the Markdown renderer. bodyHtml is sanitized server-side here.
   const html = art.bodyHtml ? sanitizeArticleHtml(art.bodyHtml) : renderMarkdown(art.bodyMarkdown);
+  const ytId = youtubeId(art.youtubeUrl);
   const catName = categories.find((c) => c.id === art.categoryId)?.name;
 
   const share = {
@@ -162,6 +165,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             </ul>
           </aside>
         )}
+
+        {ytId && <YouTubeEmbed id={ytId} title={art.title} />}
 
         <article
           className={ARTICLE_BODY_CLASS}

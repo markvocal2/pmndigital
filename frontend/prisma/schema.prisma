@@ -139,6 +139,7 @@ model Article {
   bodyMarkdown  String        @default("")
   bodyHtml      String        @default("")
   coverImageUrl String?
+  youtubeUrl    String?
   status        ArticleStatus @default(DRAFT)
   publishedAt   DateTime?
   authorId      Int?

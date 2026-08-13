@@ -61,6 +61,18 @@ export class ArticleDto {
   @IsOptional() @IsString() bodyMarkdown?: string;
   @IsOptional() @IsString() @MaxLength(300000, { message: 'เนื้อหาบทความยาวเกิน 300,000 ตัวอักษร' }) bodyHtml?: string;
   @IsOptional() @IsString() @MaxLength(500) coverImageUrl?: string;
+  /**
+   * Optional YouTube link shown on the article page. Only the host is enforced here —
+   * the 11-char id is pulled out at render time by youtubeId(), so an unusual-but-valid
+   * YouTube URL shape never blocks a save. Empty string clears it.
+   */
+  @IsOptional()
+  @IsString()
+  @MaxLength(500, { message: 'ลิงก์ YouTube ยาวเกิน 500 ตัวอักษร' })
+  @Matches(/^$|^https?:\/\/([\w-]+\.)?(youtube\.com|youtube-nocookie\.com|youtu\.be)\/.+/i, {
+    message: 'ลิงก์ YouTube ไม่ถูกต้อง (ต้องเป็น youtube.com หรือ youtu.be)',
+  })
+  youtubeUrl?: string;
   @IsOptional() @IsIn(['DRAFT', 'PUBLISHED']) status?: string;
   /**
    * When the article goes live. A PUBLISHED row whose publishedAt is still in the future is

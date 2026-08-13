@@ -148,6 +148,7 @@ export class ArticlesService {
     a.bodyMarkdown = dto.bodyMarkdown ?? '';
     a.bodyHtml = dto.bodyHtml ?? '';
     a.coverImageUrl = dto.coverImageUrl ?? null;
+    a.youtubeUrl = dto.youtubeUrl?.trim() || null;
     a.categoryId = dto.categoryId ?? null;
     a.tags = dto.tags ?? [];
     a.metaTitle = dto.metaTitle ?? null;
