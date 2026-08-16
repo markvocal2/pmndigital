@@ -44,6 +44,9 @@ export class DriveService {
     const r = await fetch(`${this.base}/api/resources/${this.p(path)}?override=true`, {
       method: 'POST',
       headers: { 'X-Auth': await this.token() },
+      // Copies the buffer, so a 200 MB upload peaks at ~2x its size here. A zero-copy
+      // view (3-arg Uint8Array) widens to ArrayBufferLike and no longer satisfies BodyInit,
+      // and a cast to force it through is not worth the memory saved.
       body: new Uint8Array(data),
     });
     if (!r.ok) throw new Error(`drive upload failed: ${r.status}`);

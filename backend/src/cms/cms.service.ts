@@ -6,7 +6,7 @@ import { SiteSetting, HomeContent, Media } from './entities';
 import { UpdateSettingsDto, UpdateHomeDto } from './dto';
 import { DriveService } from './drive.service';
 
-const MAX_BYTES = 50 * 1024 * 1024;
+const MAX_BYTES = 200 * 1024 * 1024;
 // fallback ext when the uploaded filename has none
 const EXT_BY_MIME: Record<string, string> = {
   'image/jpeg': 'jpg',
@@ -64,7 +64,7 @@ export class CmsService {
     originalname?: string;
   }): Promise<{ url: string }> {
     if (file.size > MAX_BYTES) {
-      throw new BadRequestException('File too large (max 50 MB)');
+      throw new BadRequestException('ไฟล์ใหญ่เกินไป — สูงสุด 200 MB');
     }
     const fromName = (file.originalname || '').split('.').pop()?.toLowerCase() || '';
     const ext =

@@ -4,7 +4,9 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       // Allow larger image/video uploads via Server Actions (default is 1 MB).
-      bodySizeLimit: "50mb",
+      // Keep >= the client cap in components/admin/ui.tsx and the Caddy
+      // request_body.max_size label, or the request dies before Next sees it.
+      bodySizeLimit: "200mb",
     },
   },
 };

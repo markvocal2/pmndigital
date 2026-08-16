@@ -5,6 +5,8 @@ import { useEditor, EditorContent, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TextAlign from '@tiptap/extension-text-align';
 import Image from '@tiptap/extension-image';
+import { Video } from './tiptapVideo';
+import { isVideoUrl } from '@/lib/cms';
 import { uploadMediaAction } from '@/lib/cms-actions';
 import { MediaPicker } from './MediaPicker';
 import { ARTICLE_BODY_CLASS } from '@/lib/articleBodyClass';
@@ -42,26 +44,33 @@ function Toolbar({ editor }: { editor: Editor }) {
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const insertImage = useCallback((url: string) => {
-    if (url) editor.chain().focus().setImage({ src: url }).run();
+  // Uploads and the media library both land here: a clip has to become a <video> node,
+  // not an <img> pointed at an .mp4.
+  const insertMedia = useCallback((url: string) => {
+    if (!url) return;
+    if (isVideoUrl(url)) {
+      editor.chain().focus().insertContent({ type: 'video', attrs: { src: url } }).run();
+    } else {
+      editor.chain().focus().setImage({ src: url }).run();
+    }
   }, [editor]);
 
   const onFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    if (file.size > 50 * 1024 * 1024) { alert('ไฟล์ใหญ่เกินไป — สูงสุด 50MB'); return; }
+    if (file.size > 200 * 1024 * 1024) { alert('ไฟล์ใหญ่เกินไป — สูงสุด 200MB'); return; }
     setBusy(true);
     try {
       const fd = new FormData();
       fd.set('file', file);
       const res = await uploadMediaAction(fd);
-      if (res.ok) insertImage(res.data.url);
+      if (res.ok) insertMedia(res.data.url);
       else alert(res.error);
     } finally {
       setBusy(false);
     }
-  }, [insertImage]);
+  }, [insertMedia]);
 
   const setLink = useCallback(() => {
     if (editor.isActive('link')) { editor.chain().focus().unsetLink().run(); return; }
@@ -130,11 +139,11 @@ function Toolbar({ editor }: { editor: Editor }) {
 
       {/* link + image */}
       <Btn title="ลิงก์" active={editor.isActive('link')} onClick={setLink}>🔗</Btn>
-      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
-      <Btn title="แทรกรูป (อัปโหลด)" disabled={busy} onClick={() => fileRef.current?.click()}>{busy ? '…' : '🖼️'}</Btn>
-      <Btn title="แทรกรูปจากคลังสื่อ" onClick={() => setPick(true)}>คลัง</Btn>
+      <input ref={fileRef} type="file" accept="image/*,video/mp4,video/webm,video/quicktime" className="hidden" onChange={onFile} />
+      <Btn title="แทรกรูป/วิดีโอ (อัปโหลด)" disabled={busy} onClick={() => fileRef.current?.click()}>{busy ? '…' : '🖼️'}</Btn>
+      <Btn title="แทรกจากคลังสื่อ" onClick={() => setPick(true)}>คลัง</Btn>
 
-      <MediaPicker open={pick} onClose={() => setPick(false)} onPick={insertImage} />
+      <MediaPicker open={pick} onClose={() => setPick(false)} onPick={insertMedia} />
     </div>
   );
 }
@@ -155,6 +164,7 @@ export function RichTextEditor({
       }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Image.configure({ inline: false }),
+      Video,
     ],
     content: value || '',
     editorProps: {

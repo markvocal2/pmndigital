@@ -22,6 +22,7 @@ export const ARTICLE_BODY_CLASS = [
   '[&_code]:rounded [&_code]:bg-white/10 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[14px]',
   '[&_pre]:my-5 [&_pre]:overflow-auto [&_pre]:rounded-lg [&_pre]:bg-black/40 [&_pre]:p-4 [&_pre_code]:bg-transparent [&_pre_code]:p-0',
   '[&_img]:my-6 [&_img]:block [&_img]:mx-auto [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg',
+  '[&_video]:my-6 [&_video]:block [&_video]:mx-auto [&_video]:w-full [&_video]:max-w-full [&_video]:rounded-lg [&_video]:bg-black',
   '[&_figure]:my-6 [&_figcaption]:mt-2 [&_figcaption]:text-center [&_figcaption]:text-sm [&_figcaption]:text-slate-400',
   '[&_hr]:my-8 [&_hr]:border-white/10',
 ].join(' ');

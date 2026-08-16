@@ -158,8 +158,8 @@ export function ImageUpload({
     e.target.value = '';
     if (!file) return;
     setErr(null);
-    if (file.size > 50 * 1024 * 1024) {
-      setErr(`ไฟล์ใหญ่เกินไป (${(file.size / 1048576).toFixed(1)}MB) — สูงสุด 50MB`);
+    if (file.size > 200 * 1024 * 1024) {
+      setErr(`ไฟล์ใหญ่เกินไป (${(file.size / 1048576).toFixed(1)}MB) — สูงสุด 200MB`);
       return;
     }
     setBusy(true);

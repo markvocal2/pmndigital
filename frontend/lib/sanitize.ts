@@ -14,11 +14,15 @@ const CONFIG: sanitizeHtml.IOptions = {
     'ul', 'ol', 'li',
     'blockquote', 'code', 'pre',
     'a', 'img', 'figure', 'figcaption',
+    'video', 'source',
     'span', 'div',
   ],
   allowedAttributes: {
     a: ['href', 'name', 'target', 'rel', 'style'],
     img: ['src', 'alt', 'title', 'width', 'height', 'style'],
+    // No autoplay/loop/muted on purpose: a body video must never start on its own.
+    video: ['src', 'controls', 'preload', 'playsinline', 'poster', 'width', 'height', 'style'],
+    source: ['src', 'type'],
     '*': ['style'],
   },
   // Only text-align is allowed through inline styles (used by the align buttons).
@@ -26,7 +30,12 @@ const CONFIG: sanitizeHtml.IOptions = {
     '*': { 'text-align': [/^(left|right|center|justify)$/] },
   },
   allowedSchemes: ['http', 'https'],
-  allowedSchemesByTag: { img: ['http', 'https'], a: ['http', 'https', 'mailto', 'tel'] },
+  allowedSchemesByTag: {
+    img: ['http', 'https'],
+    video: ['http', 'https'],
+    source: ['http', 'https'],
+    a: ['http', 'https', 'mailto', 'tel'],
+  },
   // root-relative URLs (e.g. /uploads/...) have no scheme → allowed; block //host.
   allowProtocolRelative: false,
   transformTags: {
