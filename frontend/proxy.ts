@@ -16,7 +16,7 @@ export default auth((req) => {
 export const config = {
   matcher: [
     // Run on every request except: Next internals, public assets, auth routes
-    '/((?!api/auth|api|_next/static|_next/image|favicon.ico|uploads|login|register|$).*)',
+    '/((?!api/auth|api|_next/static|_next/image|favicon.ico|uploads|assets|login|register|$).*)',
     '/profile/:path*',
   ],
 };
