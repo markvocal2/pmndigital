@@ -424,19 +424,17 @@
 
 
   /* ------------------------------------------------------------------------
-     Hero: a wide brush paints the white paper away to show the system world
-     underneath, while every word stays on top. The tip is an oval whose long
-     axis lies on the 14° italic of the wordmark, so strokes swell across the
-     slant and stay full along it. Strokes are drawn in "tip space", where the
-     oval is a circle, as round-capped curves through the midpoints, so every
-     edge is a smooth curve; each stroke dries shut from its tail. The hero
-     opens with a tide: sea swells rise over the paper to the full picture,
-     then ebb to a low band that keeps rolling along the bottom.
+     Hero: the PMN wordmark is a glass of water over the IT city. The page
+     opens on a white veil (the city film shows through it at 25%) with the
+     letters as faint empty glass; water then rises inside them to near the
+     brim, its surface rolling in soft, slow swells, the city clear beneath.
+     Scrolling down lets the water go down little by little.
+     Canvas 2D: the veil, minus the letters faintly, minus the water fully.
      ------------------------------------------------------------------------ */
   function hero() {
     const sec = $('[data-hero]');
     if (!sec) return;
-    const wm = $$('.hero__mark path', sec);
+    const wm = $$('.hero__mark .wm-l', sec);
     if (MOTION && wm.length) {
       gsap.set(wm, { y: 620, x: -620 * SL, visibility: 'visible' });
       whenReady(() => gsap.to(wm, { y: 0, x: 0, duration: 1.3, ease: EASE, stagger: 0.12, delay: 0.1 }));
@@ -450,177 +448,100 @@
     if (!ctx) return;
     html.classList.add('has-paper');
 
-    // tip space → screen: the unit circle becomes an oval, long along the italic stem (N), short across it (P)
-    const NX = SL / Math.hypot(1, SL); const NY = -1 / Math.hypot(1, SL);
-    const ASPECT = 0.62;
-    const M0 = -NY * ASPECT; const M1 = NX * ASPECT; const M2 = NX; const M3 = NY;
-    const DET = M0 * M3 - M2 * M1;
-    const HOLD = 1; const DRY = 1.3; // seconds a stroke stays open, then how long it takes to close
-    const pts = [];
-    let ws = new Float32Array(512);
-    let dpr = 1; let W = 0; let H = 0; let tip = 150;
-    let visible = true; let fade = 1; let dirty = true;
-    let tx = null; let ty = null; let sx = 0; let sy = 0; let vel = 0; let fresh = true; let down = 0; let moved = 0;
-    const pour = { on: false, level: 0, amp: 0 };
-    let restLevel = 0.12; let footTop = 0; let footMid = 0; let tideOn = false;
-
+    const water = { level: 0, amp: 0 }; // level: share of the letters' height under water
+    let dpr = 1; let visible = true; let out = 0; let drain = 0;
+    const vessel = $('.glass-wm', sec);
+    const shapes = vessel ? $$('.wm-rim', vessel).map((p) => new Path2D(p.getAttribute('d'))) : [];
+    let letters = null; let lx = 0; let ly = 0; let lw = 0; let lh = 0;
     const size = () => {
       dpr = Math.min(devicePixelRatio || 1, 1.5);
-      W = sec.clientWidth; H = sec.clientHeight;
-      canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
-      tip = Math.min(Math.max(W * 0.11, 70), 220);
-      // the resting tide lies just above the foot row, whatever the screen
-      const foot = $('.hero__foot', sec);
-      if (foot) {
-        const f = foot.getBoundingClientRect(); const s = sec.getBoundingClientRect();
-        footTop = f.top - s.top; footMid = footTop + f.height / 2;
-        restLevel = Math.min(0.4, (H - footTop + 20) / (H + H * 0.05 * 2.4));
+      canvas.width = Math.round(sec.clientWidth * dpr); canvas.height = Math.round(sec.clientHeight * dpr);
+      if (vessel && shapes.length) {
+        // the vessel box is exactly the letters' box, so the outlines map onto the canvas one to one
+        const s = sec.getBoundingClientRect(); const r = vessel.getBoundingClientRect();
+        lx = r.left - s.left; ly = r.top - s.top; lw = r.width; lh = r.height;
+        const k = lw / 1612;
+        const m = new DOMMatrix([k, 0, 0, k, lx - 243 * k, ly - 139 * k]);
+        letters = new Path2D();
+        shapes.forEach((p) => letters.addPath(p, m));
       }
-      dirty = true;
     };
-    const wet = (p, now) => {
-      const age = (now - p.born) / 1000 - HOLD;
-      if (age <= 0) return 1;
-      const k = 1 - age / DRY;
-      return k <= 0 ? 0 : k * k * (3 - 2 * k);
-    };
-    const put = (x, y, l, brk, now) => pts.push({ u: (M3 * x - M2 * y) / DET, v: (M0 * y - M1 * x) / DET, l, born: now, brk });
-    // a jump (touch, re-entry) starts a new stroke instead of dragging paint across the gap
-    const aim = (x, y) => { if (tx === null || Math.hypot(x - tx, y - ty) > 240) fresh = true; tx = x; ty = y; };
-    const at = (e) => { const r = sec.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-    sec.addEventListener('pointermove', (e) => aim(...at(e)));
-    sec.addEventListener('pointerdown', (e) => { tx = null; aim(...at(e)); });
-    sec.addEventListener('pointerleave', () => { tx = ty = null; });
 
     const TAU = Math.PI * 2;
-    const capsule = (x0, y0, r0, x1, y1, r1) => {
-      const dx = x1 - x0; const dy = y1 - y0; const d = Math.hypot(dx, dy);
-      if (d <= Math.abs(r1 - r0) + 0.01) {
-        const r = Math.max(r0, r1); const x = r0 > r1 ? x0 : x1; const y = r0 > r1 ? y0 : y1;
-        ctx.moveTo(x + r, y); ctx.arc(x, y, r, 0, TAU);
-        return;
+    const wave = (base, A, t) => {
+      // a soft surface: three long, slow sine swells (1.6, 3.5 and 6.8 across the word), no sharp crests
+      ctx.beginPath();
+      ctx.moveTo(lx - 16, ly + lh + 4);
+      for (let x = lx - 16; x <= lx + lw + 16; x += 8) {
+        const u = (x - lx) / lw;
+        ctx.lineTo(x, base - A * (Math.sin(u * TAU * 1.6 + t * 0.9) * 0.6 + Math.sin(u * TAU * 3.5 - t * 1.3 + 1.3) * 0.28 + Math.sin(u * TAU * 6.8 + t * 1.8 + 2.7) * 0.12));
       }
-      const th = Math.atan2(dy, dx); const ph = Math.acos((r0 - r1) / d);
-      ctx.moveTo(x0 + r0 * Math.cos(th + ph), y0 + r0 * Math.sin(th + ph));
-      ctx.arc(x0, y0, r0, th + ph, th - ph + TAU);
-      ctx.arc(x1, y1, r1, th - ph, th + ph);
+      ctx.lineTo(lx + lw + 16, ly + lh + 4);
       ctx.closePath();
+      ctx.fill();
     };
-
     const tick = () => {
       if (!visible) return;
-      const now = performance.now();
-      if (tx !== null && fade > 0.35) {
-        const dr = Math.min(Math.max(gsap.ticker.deltaRatio(), 0.25), 4);
-        if (fresh) { sx = tx; sy = ty; vel = 0; moved = 0; fresh = false; }
-        const a = 1 - Math.pow(0.7, dr);
-        const nx = sx + (tx - sx) * a; const ny = sy + (ty - sy) * a;
-        const step = Math.hypot(nx - sx, ny - sy) / dr;
-        vel += (step - vel) * (1 - Math.pow(0.85, dr));
-        if (step > 0.35) {
-          // after a pause the brush is put down again where it rests, so a resting pointer never leaves marks
-          if (now - moved > 260) { down = now; put(sx, sy, tip * fade * 0.3, true, now); }
-          const r = Math.min(1, (now - down) / 220);
-          put(nx, ny, tip * fade * (0.3 + 0.7 * r * (2 - r)) * (1 - Math.min(vel / 200, 0.22)), false, now);
-          moved = now;
-        }
-        sx = nx; sy = ny;
-      }
-      const had = pts.length;
-      while (pts.length && wet(pts[0], now) === 0) pts.shift();
-      if (pts.length > 360) pts.splice(0, pts.length - 360);
-      if (!pts.length && !had && !dirty && !pour.on) return;
-
+      const t = performance.now() / 1000;
+      drain += (out - drain) * 0.08; // the water follows the scroll a little behind, so it settles rather than jumps
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalCompositeOperation = 'source-over';
-      ctx.fillStyle = '#fff';
+      ctx.globalAlpha = 1;
+      ctx.clearRect(0, 0, canvas.width, canvas.height); // the veil is translucent, so each frame starts clean
+      ctx.fillStyle = 'rgba(255, 255, 255, .75)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      if (pour.on) {
-        // the tide: sea swells (sharp crests, broad troughs, three lengths rolling sideways) rise from the bottom and cut
-        // the paper away; a translucent swash runs just ahead of the water line like foam on the beach
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        ctx.fillStyle = '#000';
-        const t = now / 1000;
-        const AM = H * 0.05; const A = AM * pour.amp;
-        const base = H - pour.level * fade * (H + AM * 2.4);
-        const covers = pour.level * fade > 0.001 && base < footMid;
-        if (covers !== tideOn) { tideOn = covers; sec.classList.toggle('is-tide', covers); }
-        const swell = (p) => ((Math.sin(p) + 1) / 2) ** 2.2;
-        const surf = (x, lag) => base + lag - A * (swell(x * 0.0062 + t * 1.5) + swell(x * 0.0131 + t * 2.3 + 1.7) * 0.55 + swell(x * 0.027 - t * 1.1 + 4) * 0.3);
-        const body = (lag) => {
-          ctx.beginPath();
-          ctx.moveTo(-16, H + 4);
-          for (let x = -16; x <= W + 16; x += 12) ctx.lineTo(x, surf(x, lag));
-          ctx.lineTo(W + 16, H + 4);
-          ctx.closePath();
-          ctx.fill();
-        };
-        if (pour.level > 0) {
-          ctx.globalAlpha = 0.32 * pour.amp;
-          body(-A * 0.9 - Math.sin(t * 2.1) * A * 0.25);
-          ctx.globalAlpha = 1;
-          body(0);
-        }
+      // the logo flight hides the wordmark while it travels: the glass leaves with it
+      if (!letters || vessel.style.opacity === '0') return;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.fillStyle = '#000';
+      ctx.save();
+      ctx.clip(letters, 'evenodd');
+      // the empty glass: the letters read faintly even above the water
+      ctx.globalAlpha = 0.22;
+      ctx.fillRect(lx - 16, ly - 16, lw + 32, lh + 32);
+      const fill = water.level * (1 - drain);
+      if (fill > 0.002) {
+        const base = ly + lh - fill * lh;
+        const A = lh * 0.04 * water.amp * Math.min(1, fill * 4); // calmer as the glass runs dry
+        ctx.globalAlpha = 0.5; // a softer swell just behind the surface
+        wave(base - A * 0.6, A, t + 1.9);
+        ctx.globalAlpha = 1;
+        wave(base, A, t);
+        // the water itself: a pale blue just under the surface, fading with depth
         ctx.globalCompositeOperation = 'source-over';
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        const tint = ctx.createLinearGradient(0, base - A, 0, base + lh * 0.4);
+        tint.addColorStop(0, 'rgba(160, 215, 255, .32)');
+        tint.addColorStop(1, 'rgba(160, 215, 255, 0)');
+        ctx.fillStyle = tint;
+        wave(base, A, t);
       }
-      const n = pts.length;
-      if (n) {
-        if (ws.length < n) ws = new Float32Array(n * 2);
-        for (let i = 0; i < n; i++) ws[i] = pts[i].l * wet(pts[i], now);
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.setTransform(M0 * dpr, M1 * dpr, M2 * dpr, M3 * dpr, 0, 0);
-        // the whole wet area is one path of tapered capsules (the hull of two tip circles), all wound the
-        // same way, so width changes along a stroke are exact and the single fill has no seams or steps
-        ctx.beginPath();
-        for (let i = 0; i < n; i++) {
-          const p = pts[i]; const w = ws[i];
-          const prev = i > 0 && !p.brk ? pts[i - 1] : null;
-          const next = i + 1 < n && !pts[i + 1].brk ? pts[i + 1] : null;
-          if (!prev && !next) { if (w > 0.5) { ctx.moveTo(p.u + w / 2, p.v); ctx.arc(p.u, p.v, w / 2, 0, TAU); } continue; }
-          // each point bends the path between its two midpoints, so fast strokes curve instead of kinking
-          const ax = prev ? (prev.u + p.u) / 2 : p.u; const ay = prev ? (prev.v + p.v) / 2 : p.v;
-          const bx = next ? (p.u + next.u) / 2 : p.u; const by = next ? (p.v + next.v) / 2 : p.v;
-          const ra = (prev ? (ws[i - 1] + w) / 2 : w) / 2; const rb = (next ? (w + ws[i + 1]) / 2 : w) / 2;
-          if (ra < 0.25 && rb < 0.25) continue;
-          const S = Math.min(8, Math.max(1, Math.ceil((Math.hypot(p.u - ax, p.v - ay) + Math.hypot(bx - p.u, by - p.v)) / 14)));
-          let x0 = ax; let y0 = ay; let r0 = ra;
-          for (let k = 1; k <= S; k++) {
-            const t = k / S; const mt = 1 - t;
-            const x1 = mt * mt * ax + 2 * mt * t * p.u + t * t * bx;
-            const y1 = mt * mt * ay + 2 * mt * t * p.v + t * t * by;
-            const r1 = ra + (rb - ra) * t;
-            capsule(x0, y0, r0, x1, y1, r1);
-            x0 = x1; y0 = y1; r0 = r1;
-          }
-        }
-        ctx.fillStyle = '#000';
-        ctx.fill();
-      }
+      ctx.restore();
+      ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = 'source-over';
-      dirty = false;
     };
+
     size();
-    addEventListener('resize', size);
+    new ResizeObserver(size).observe(sec); // the hero grows when the full-width wordmark needs the room
+    ScrollTrigger.addEventListener('refresh', size);
     gsap.ticker.add(tick);
     new IntersectionObserver(([en]) => {
       visible = en.isIntersecting;
       if (video) { if (visible) video.play().catch(() => {}); else video.pause(); }
     }).observe(sec);
-    ScrollTrigger.create({ trigger: sec, start: 'top top', end: 'bottom top', onUpdate: (st) => { fade = 1 - st.progress; } });
+    // the water is all gone by the time the logo flight lifts the wordmark off (or once the hero has mostly gone)
+    const lift = $('.reel-sec__statement');
+    ScrollTrigger.create({ trigger: sec, start: 'top top', ...(lift ? { endTrigger: lift, end: 'top 92%' } : { end: 'bottom 35%' }),
+      onUpdate: (st) => { out = st.progress; } });
 
-    // the opening tide: the picture rolls in over the paper like sea waves, holds, then ebbs back to white
+    // the opening: the water rises inside the letters to near the brim, then its swells settle
     whenReady(() => {
-      // after the flood the sea ebbs to a low band that keeps rolling along the bottom of the hero
-      gsap.timeline({ delay: 1.5, onStart: () => { pour.on = true; } })
-        .to(pour, { amp: 1, duration: 0.6, ease: 'power1.out' }, 0)
-        .to(pour, { level: 1, duration: 1.7, ease: 'power2.inOut' }, 0)
-        .to(pour, { level: () => restLevel, duration: 1.4, ease: 'power2.inOut' }, 2.4)
-        .to(pour, { amp: 0.55, duration: 0.8, ease: 'power1.inOut' }, 3.0);
+      gsap.timeline({ delay: 0.9, onStart: size })
+        .to(water, { amp: 1, duration: 1, ease: 'power1.out' }, 0)
+        .to(water, { level: 0.8, duration: 2.4, ease: 'power2.inOut' }, 0)
+        .to(water, { amp: 0.75, duration: 1.2, ease: 'power1.inOut' }, 2.2);
     });
   }
-
 
   /* ------------------------------------------------------------------------
      Reel: scrolling sorts the pile. The film starts on the scrambled heap in
@@ -686,9 +607,12 @@
       } else {
         w = Math.max(W, H * ar); h = w / ar; left = (W - w) / 2;
       }
-      film.top = (H - h) * 0.46; film.h = h;
+      // a phone's band sits just under the nav, so the statement above runs straight into the film (no dead black gap)
+      film.top = film.band ? parseFloat(getComputedStyle(sticky).paddingTop) || 0 : (H - h) * 0.46; film.h = h;
       Object.assign(video.style, { left: `${left}px`, top: `${film.top}px`, width: `${w}px`, height: `${h}px` });
       box.classList.toggle('is-band', film.band);
+      // on a phone the caption follows straight under the band, so film and words read as one block
+      if (caption) Object.assign(caption.style, film.band ? { top: `${film.top + h + 20}px`, bottom: 'auto' } : { top: '', bottom: '' });
     };
     // the starting frame, as a parallelogram on the logo's 14° slant
     const geo = () => {
@@ -731,7 +655,9 @@
       // the engineers walk in about a quarter of the way through the film; the stamp lands with them
       tl.fromTo(tool, { autoAlpha: 0, yPercent: -160 }, { autoAlpha: 1, yPercent: 0, ease: 'power2.in', duration: 0.07 }, 0.22)
         .fromTo(print, { autoAlpha: 0, scale: 1.3, rotate: -12 }, { autoAlpha: 1, scale: 1, rotate: -6, ease: EASE, duration: 0.035 }, 0.29)
-        .to(tool, { yPercent: -180, autoAlpha: 0, ease: 'power2.out', duration: 0.08 }, 0.32);
+        .to(tool, { yPercent: -180, autoAlpha: 0, ease: 'power2.out', duration: 0.08 }, 0.32)
+        // the mark lifts away before the camera pushes into the dashboard, so it never covers the system it introduced
+        .to(print, { autoAlpha: 0, scale: 0.92, ease: 'power1.in', duration: 0.05 }, 0.54);
     }
     // the film follows the proxy every frame rather than from tween callbacks, because a ScrollTrigger
     // refresh (fonts, images) restores the timeline silently and would leave the film on its first frame
@@ -814,9 +740,10 @@
       const flying = p > 0.001 && p < 0.999;
       // the small nav mark waits until the statement has gone by; the hero wordmark itself is what travels
       if (mark) mark.classList.toggle('is-away', !past);
-      big.style.opacity = p > 0.001 ? '0' : ''; // opacity, not visibility: the letters carry their own visibility from the intro
+      (big.closest('.glass-wm') || big).style.opacity = p > 0.001 ? '0' : ''; // opacity, not visibility: the letters carry their own visibility from the intro
       host.classList.toggle('logo-landed', p >= 0.999);
       flyer.style.display = flying && slot ? 'block' : 'none';
+      flyer.style.opacity = String(Math.min(1, p / 0.15)); // the ink logo forms as the emptied window lifts off
       if (!flying || !slot) return;
       const a = letters(); const b = slot.getBoundingClientRect();
       if (!b.height || !a.height) return;

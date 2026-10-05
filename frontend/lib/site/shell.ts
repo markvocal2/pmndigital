@@ -1,10 +1,10 @@
-import { CURTAIN, FOOTER_MARK, LOADER_FRAME, LOADER_LETTERS, LOADER_SUB, NAV_PMN, NAV_SUB } from './brand';
+import { CURTAIN, FOOTER_MARK, NAV_PMN, NAV_SUB } from './brand';
 import { html, raw, type Raw } from './html';
 import type { SiteCtx } from './data';
 
 export const SITE = 'https://pmndigital.co';
 /** Bump when anything under public/assets/{css,js} changes (cache-busting query). */
-export const ASSET_V = '202610051';
+export const ASSET_V = '202610052';
 
 export type NavKey = 'home' | 'services' | 'portfolio' | 'pricing' | 'contact' | 'blog' | 'status' | null;
 
@@ -52,8 +52,6 @@ export interface PageOpts {
   noindex?: boolean;
   ld?: Record<string, unknown>[];
   bodyClass: string;
-  /** Home only: the stamp/counter intro instead of the page curtain. */
-  loader?: boolean;
   /** Pages with media rows that preview on hover (home, blog). */
   preview?: boolean;
   footerCta?: FooterCta;
@@ -68,23 +66,6 @@ const abs = (u: string) => (u.startsWith('http') ? u : SITE + u);
 
 /** Headless JSON for <script type="application/ld+json"> — "<" is escaped so the payload cannot close the tag. */
 const ldJson = (o: unknown) => raw(JSON.stringify(o).replace(/</g, '\\u003c'));
-
-function loaderBlock(count: number): Raw {
-  return html`<div class="loader">
-  <div class="loader__grid" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-  <div class="loader__stage" aria-hidden="true">
-    <div class="loader__badge">
-      ${raw(LOADER_FRAME)}
-      ${raw(LOADER_LETTERS)}
-      ${raw(LOADER_SUB)}
-    </div>
-    <img class="loader__stamp" src="/assets/img/obj-stamp-sm.webp" alt="" width="560" height="560" decoding="async">
-  </div>
-  <p class="loader__count" aria-hidden="true" data-target="${count}"><span>โปรเจกต์ที่ส่งมอบ</span><span class="odo-n">000</span></p>
-  <button class="loader__skip ulink" type="button">ข้ามอินโทร</button>
-</div>
-`;
-}
 
 export function renderPage(o: PageOpts): string {
   const { ctx } = o;
@@ -141,13 +122,13 @@ if(/[?&]raf=timer/.test(location.search)){window.requestAnimationFrame=function(
 var rm=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 if(!rm){h.classList.add('anim');}
 try{if(!rm&&sessionStorage.getItem('pmn-nav')==='1'){h.classList.add('is-entering');}sessionStorage.removeItem('pmn-nav');
-if(${raw(o.loader ? 'true' : 'false')}&&!rm&&!sessionStorage.getItem('pmn-loaded')){h.classList.add('show-loader');}}catch(e){}
+}catch(e){}
 setTimeout(function(){if(!window.__pmnBooted){h.classList.remove('anim','is-entering','show-loader');}},4000);})();
 </script>
 ${lds.map((l) => html`<script type="application/ld+json">${ldJson(l)}</script>\n`)}</head>
 <body class="${o.bodyClass}"${o.bodyAttrs ?? ''}>
 ${raw(SPRITE)}
-${o.loader ? loaderBlock(ctx.loaderCount) : ''}<a class="skip" href="#main">ข้ามไปยังเนื้อหา</a>
+<a class="skip" href="#main">ข้ามไปยังเนื้อหา</a>
 <div class="curtain" aria-hidden="true">${raw(CURTAIN)}</div>
 <header class="nav">
   <a class="nav__mark" href="/" aria-label="PMN Digital — หน้าแรก">${raw(NAV_PMN)}<span class="mk-subwrap">${raw(NAV_SUB)}</span></a>

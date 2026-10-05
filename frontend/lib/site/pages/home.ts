@@ -1,8 +1,10 @@
 import { getPublicPromotions, getServerStatus, type ServerStatus, type Promotion } from '@/lib/cms';
-import { HERO_MARK, PMN_SLOT, REEL_INK } from '../brand';
+import { defaultHomeContent } from '@/lib/home-content';
+import { GLASS_WM, PMN_SLOT, REEL_INK } from '../brand';
 import {
   clientArt,
   dateMid,
+  designOr,
   getAllArticles,
   getCats,
   indexRow,
@@ -27,21 +29,22 @@ function hero(c: SiteCtx): Raw {
   const h = c.home.hero;
   const s = c.home.stats;
   const proofLine = s.length >= 2 ? `${statStr(s[1])} องค์กร · ${statStr(s[0])} โปรเจกต์` : h.statNote;
+  // the big PMN is a glass of water over the IT city: main.js fills the letters from the rim paths
   return html`<section class="hero" data-hero aria-label="PMN Digital">
   <div class="hero__media" aria-hidden="true"><video src="/assets/video/hero-city-loop.mp4" poster="/assets/img/scene-city.webp" muted loop playsinline preload="auto"></video></div>
   <canvas class="hero__paper" aria-hidden="true"></canvas>
   <div class="hero__ui">
     <div class="hero__intro">
-      <h1 class="hero__title" data-line data-intro>${h.title1} ${h.highlight} <span class="nw">${h.title2}</span></h1>
-      <p class="hero__lead" data-line data-intro data-delay=".15">${h.subtitle}</p>
-      <div class="hero__ctas" data-fade data-intro data-delay=".55"><a class="badge badge--fill" href="#register">${h.ctaPrimary} ${ARW}</a></div>
+      <div class="hero__head">
+        <h1 class="hero__title" data-line data-intro>${h.title1} ${h.highlight} <span class="nw">${h.title2}</span></h1>
+        <div class="hero__meta" data-fade data-intro data-delay="1"><p class="caps nw">Digital agency<span class="hide-sm"> · 100% online</span></p><p class="data">${proofLine}</p></div>
+      </div>
+      <div class="hero__side">
+        <p class="hero__lead" data-line data-intro data-delay=".15">${h.subtitle}</p>
+        <div class="hero__ctas" data-fade data-intro data-delay=".55"><a class="badge badge--fill" href="#register">${h.ctaPrimary} ${ARW}</a><a class="badge" href="/services">${designOr(h.ctaSecondary, defaultHomeContent.hero.ctaSecondary, 'ดูบริการ')} ${ARW}</a></div>
+      </div>
     </div>
-    <p class="hero__hint caps" aria-hidden="true">${ico('i-ur')}<span class="hint-mouse">ลากเมาส์ ดูระบบใต้กระดาษ</span><span class="hint-touch">ปัดนิ้วไปด้านข้าง ดูระบบใต้กระดาษ</span></p>
-    <div class="hero__mark">${raw(HERO_MARK)}</div>
-    <div class="hero__foot" data-fade data-intro data-delay="1">
-      <p class="caps nw">Digital agency<span class="hide-sm"> · 100% online</span></p>
-      <div class="hero__proof"><p class="data">${proofLine}</p><a class="badge badge--sm" href="/services">ดูบริการ ${ARW}</a></div>
-    </div>
+    <div class="hero__mark">${raw(GLASS_WM)}</div>
   </div>
 </section>`;
 }
@@ -311,7 +314,6 @@ ${articles}
     ogImage: c.seo.ogImage || c.settings?.ogDefaultUrl || null,
     canonical: '/',
     bodyClass: 'page-home',
-    loader: true,
     preview: true,
     main,
   });

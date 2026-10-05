@@ -16,8 +16,6 @@ export interface SiteCtx {
   settings: SiteSettings | null;
   email: string;
   footerDesc: Raw;
-  /** Projects counter the home loader runs up to (first stat on the home page). */
-  loaderCount: number;
   /** Home SEO overrides from /admin/home. */
   seo: { metaTitle?: string; metaDesc?: string; ogImage?: string };
 }
@@ -27,9 +25,8 @@ export async function loadCtx(): Promise<SiteCtx> {
   const home = mergeHome(homeRow?.data);
   const email = home.contact.email || settings?.contactEmail || 'support@pmndigital.co';
   const footerDesc = raw(esc(home.footer.desc));
-  const loaderCount = Math.round(home.stats[0]?.target ?? 120);
   const seo = (homeRow?.seo ?? {}) as SiteCtx['seo'];
-  return { home, settings, email, footerDesc, loaderCount, seo };
+  return { home, settings, email, footerDesc, seo };
 }
 
 /**
