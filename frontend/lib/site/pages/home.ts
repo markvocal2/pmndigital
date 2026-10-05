@@ -1,5 +1,5 @@
 import { getPublicPromotions, getServerStatus, type ServerStatus, type Promotion } from '@/lib/cms';
-import { HERO_MARK } from '../brand';
+import { HERO_MARK, PMN_SLOT, REEL_INK } from '../brand';
 import {
   clientArt,
   dateMid,
@@ -15,10 +15,12 @@ import {
   type SiteCtx,
 } from '../data';
 import { html, noBreaks, raw, withBreaks, type Raw } from '../html';
-import { discountSwitch, plans, processSection, proof, railsBlock, registerForm, worksGrid } from '../sections';
+import { discountSwitch, ILLUS_NOTE, plans, processSection, proof, railsBlock, registerForm, worksGrid } from '../sections';
 import { ARW, ico, renderPage } from '../shell';
 
-const SVC_OBJ: Record<string, string> = { db: 'obj-database-sm.webp', erp: 'obj-abacus-sm.webp', crm: 'obj-rolodex-sm.webp', code: 'obj-tape-sm.webp' };
+const SVC_OBJ: Record<string, string> = { db: 'svc-database-sm.webp', erp: 'svc-erp-sm.webp', crm: 'svc-crm-sm.webp', code: 'svc-custom-sm.webp' };
+/* Why-PMN card icons, in the order of the default four reasons (more reasons reuse them). */
+const WHY_ICONS = ['why-online-sm.webp', 'why-secure-sm.webp', 'why-ontime-sm.webp', 'why-support-sm.webp'];
 const SVC_ANCHOR: Record<string, string> = { db: 'database', erp: 'erp', crm: 'crm', code: 'custom' };
 
 function hero(c: SiteCtx): Raw {
@@ -26,7 +28,7 @@ function hero(c: SiteCtx): Raw {
   const s = c.home.stats;
   const proofLine = s.length >= 2 ? `${statStr(s[1])} องค์กร · ${statStr(s[0])} โปรเจกต์` : h.statNote;
   return html`<section class="hero" data-hero aria-label="PMN Digital">
-  <div class="hero__media" aria-hidden="true"><video src="/assets/video/hero-order-loop.mp4" poster="/assets/img/scene-order.webp" muted loop playsinline preload="auto"></video></div>
+  <div class="hero__media" aria-hidden="true"><video src="/assets/video/hero-city-loop.mp4" poster="/assets/img/scene-city.webp" muted loop playsinline preload="auto"></video></div>
   <canvas class="hero__paper" aria-hidden="true"></canvas>
   <div class="hero__ui">
     <div class="hero__intro">
@@ -37,19 +39,28 @@ function hero(c: SiteCtx): Raw {
     <p class="hero__hint caps" aria-hidden="true">${ico('i-ur')}<span class="hint-mouse">ลากเมาส์ ดูระบบใต้กระดาษ</span><span class="hint-touch">ปัดนิ้วไปด้านข้าง ดูระบบใต้กระดาษ</span></p>
     <div class="hero__mark">${raw(HERO_MARK)}</div>
     <div class="hero__foot" data-fade data-intro data-delay="1">
-      <p class="caps nw">Digital systems agency — Bangkok<span class="hide-sm"> · 100% online</span></p>
+      <p class="caps nw">Digital agency<span class="hide-sm"> · 100% online</span></p>
       <div class="hero__proof"><p class="data">${proofLine}</p><a class="badge badge--sm" href="/services">ดูบริการ ${ARW}</a></div>
     </div>
   </div>
 </section>`;
 }
 
+/* "[PMN] ยินดีช่วยวางระบบให้ธุรกิจของคุณ…" — the wordmark sits in the sentence, "คุณ" rotates through
+   you/您/당신/Sie, and the PMN stamp presses onto the story reel. */
 const REEL = raw(`<section class="reel-sec s-dark" data-reel-sec aria-labelledby="reel-title">
-  <div class="reel-sec__head"><h2 class="display reel-sec__statement" id="reel-title" data-line><span class="nw">จัดข้อมูล</span>​<span class="nw">ให้เป็นระเบียบ</span> <span class="nw">แล้วสร้างระบบ</span>​<span class="nw">ที่ทีมของคุณ</span>​<span class="nw">ใช้ได้จริงทุกวัน</span></h2></div>
+  <div class="reel-sec__head"><h2 class="display reel-sec__statement" id="reel-title" data-line aria-label="PMN ยินดีช่วยวางระบบให้ธุรกิจของคุณ ตั้งแต่จัดการข้อมูล จนทั้งองค์กรใช้งานได้ง่ายทุกวัน"><span class="pmn-slot" aria-hidden="true">${PMN_SLOT}</span>ยินดีช่วย<span class="nw">วางระบบ</span>ให้<span class="nw">ธุรกิจของ<span class="rotword" data-rotate="you|您|당신|Sie">คุณ</span></span> ตั้งแต่<span class="nw">จัดการข้อมูล</span> <span class="nw">จนทั้ง</span><span class="nw">องค์กรใช้งาน</span><span class="nw">ได้ง่ายทุกวัน</span></h2></div>
   <div class="reel-sec__track">
     <div class="reel-sec__sticky">
-      <div class="reel"><video src="/assets/video/reel-chaos-to-order.mp4" poster="/assets/img/scene-chaos.webp" muted playsinline preload="metadata" aria-hidden="true"></video></div>
-      <div class="reel-sec__caption"><p class="mute">PMN ออกแบบ พัฒนา ติดตั้ง และดูแลให้แบบจบในทีมเดียว</p><div class="reel__meter" aria-hidden="true"><span class="caps mute">จัดระเบียบแล้ว</span><span class="odo-n">100</span></div></div>
+      <div class="reel"><video src="/assets/video/reel-pmn-story.mp4" poster="/assets/img/scene-story-start.webp" data-focus=".5" muted playsinline preload="metadata" aria-hidden="true"></video></div>
+      <div class="reel__stamp" aria-hidden="true">
+        <img class="reel__stamp-tool" src="/assets/img/obj-stamp-sm.webp" alt="" width="560" height="560" loading="lazy" decoding="async">
+        <div class="reel__stamp-print">
+          ${REEL_INK}
+          <span class="reel__stamp-label caps">เข้ามาจัดการระบบ</span>
+        </div>
+      </div>
+      <div class="reel-sec__caption"><p class="mute">PMN ออกแบบ พัฒนา ติดตั้ง และดูแลให้แบบจบในทีมเดียว</p><div class="reel__meter" aria-hidden="true"><span class="caps mute">ระบบพร้อมใช้งาน</span><span class="odo-n">100</span></div></div>
     </div>
   </div>
 </section>`);
@@ -58,14 +69,16 @@ function clients(c: SiteCtx): Raw {
   const logos = c.home.trustedLogos.filter((l) => l.logoUrl);
   if (!logos.length) return raw('');
   const [th, en] = c.home.trustedLabel.split(/\s+—\s+/);
+  // each logo twice: a grey "ink" print, and the colour original revealed on hover
   const items = logos.map((l) => {
     const a = clientArt(l);
-    const img = html`<img src="${a.src}" alt="${a.alt}" width="240" height="120" loading="lazy" decoding="async">`;
-    return l.url ? html`<li class="client"><a href="${l.url}" target="_blank" rel="noopener" data-no-transition>${img}</a></li>` : html`<li class="client">${img}</li>`;
+    const imgs = html`<img class="client__ink" src="${a.src}" alt="${a.alt}" width="${a.w}" height="${a.h}" loading="lazy" decoding="async" style="--h:${a.hPct}"><img class="client__color" src="${a.src}" alt="" width="${a.w}" height="${a.h}" loading="lazy" decoding="async" style="--h:${a.hPct}" aria-hidden="true">`;
+    return l.url ? html`<li class="client"><a href="${l.url}" target="_blank" rel="noopener" data-no-transition>${imgs}</a></li>` : html`<li class="client">${imgs}</li>`;
   });
   return html`<section class="sec sec--tight s-dark clients" aria-labelledby="clients-title">
   <div class="clients__head"><h2 class="h3" id="clients-title" data-line>${th}</h2><p class="caps mute">${en ? en.charAt(0) + en.slice(1).toLowerCase() : 'Trusted by our clients'} <span class="data">( ${pad2(logos.length)} )</span></p></div>
   <ul class="clients__grid">${items}</ul>
+  ${raw('<svg class="sr-only" aria-hidden="true" focusable="false"><filter id="ink-grey" color-interpolation-filters="sRGB"><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncR type="gamma" exponent="2"/><feFuncG type="gamma" exponent="2"/><feFuncB type="gamma" exponent="2"/></feComponentTransfer></filter></svg>')}
 </section>`;
 }
 
@@ -88,22 +101,17 @@ function services(c: SiteCtx): Raw {
 
 function why(c: SiteCtx): Raw {
   const w = c.home.why;
-  const values = w.bento.map(
-    (b) => html`<li class="value"><span class="value__dot" data-scale data-delay=".2"></span><h3>${b.h}</h3><p>${b.d}</p></li>`,
+  const cards = w.bento.map(
+    (b, i) =>
+      html`<li class="why-card" data-why-card><span class="why-card__no data">${pad2(i + 1)}</span><span class="why-card__icon" aria-hidden="true"><img src="/assets/img/${WHY_ICONS[i % WHY_ICONS.length]}" alt="" width="560" height="560" loading="lazy" decoding="async"></span><h3>${b.h}</h3><p>${b.d}</p></li>`,
   );
+  // manifesto types itself out: the ghost holds the final layout, the live line is filled by main.js
   return html`<section class="sec s-dark why" id="why" aria-labelledby="why-title">
   <div class="why__top">
     <h2 class="h2" id="why-title" data-line>${withBreaks(w.title)}</h2>
-    <p class="why__manifesto" data-line>${w.subtitle}</p>
+    <p class="why__manifesto type" data-type><span class="sr-only">${w.subtitle}</span><span class="type__ghost" aria-hidden="true">${w.subtitle}</span><span class="type__live" aria-hidden="true"></span></p>
   </div>
-  <div class="why__imgs" aria-hidden="true">
-    <div class="why__img why__img--a" data-parallax="-100" data-scrub="1"><img src="/assets/img/obj-abacus.webp" alt="" width="1200" height="1200" loading="lazy" decoding="async"></div>
-    <div class="why__img why__img--b" data-parallax="-60" data-scrub="2"><img src="/assets/img/obj-receipt.webp" alt="" width="1200" height="1200" loading="lazy" decoding="async"></div>
-    <div class="why__img why__img--c" data-parallax="-160" data-scrub="2.5"><img src="/assets/img/obj-stamp-sm.webp" alt="" width="560" height="560" loading="lazy" decoding="async"></div>
-  </div>
-  <div class="values">
-    <ul class="values__list">${values}</ul>
-  </div>
+  <ol class="why-cards">${cards}</ol>
   ${railsBlock(c.home, w.techTitle, w.techDesc)}
 </section>`;
 }
@@ -113,7 +121,7 @@ const CHAOS = raw(`<section class="chaos" data-chaos aria-labelledby="chaos-titl
   <div class="chaos__stage">
     <div class="chaos__bg" aria-hidden="true"><img src="/assets/img/scene-paper.webp" alt="" width="2200" height="1238" loading="lazy" decoding="async"></div>
     <h2 class="sr-only" id="chaos-title">จากเอกสารกระดาษ สู่ระบบดิจิทัล — กรณีศึกษาโรงงานเหล็ก</h2>
-    <ol class="chaos__table" aria-label="ปัญหาเดิม ที่ระบบแก้แล้ว"><li class="slip"><span class="slip__t">ใบงานกระดาษหายบ่อย</span><span class="slip__stamp">แก้แล้ว</span></li><li class="slip"><span class="slip__t">คีย์ข้อมูลซ้ำหลายรอบ</span><span class="slip__stamp">แก้แล้ว</span></li><li class="slip"><span class="slip__t">รายงานล่าช้าหลายวัน</span><span class="slip__stamp">แก้แล้ว</span></li><li class="slip"><span class="slip__t">ตัวเลขไม่ตรง</span><span class="slip__stamp">แก้แล้ว</span></li><li class="slip"><span class="slip__t">ผู้บริหารไม่เห็นภาพรวมการผลิต</span><span class="slip__stamp">แก้แล้ว</span></li><li class="slip"><span class="slip__t">เอกสารกระดาษนับพันใบต่อเดือน</span><span class="slip__stamp">แก้แล้ว</span></li></ol>
+    <ol class="chaos__table" aria-label="ปัญหาเดิม ที่ระบบแก้แล้ว"><li class="slip"><div class="slip__head"><span class="slip__no">ปัญหา 01</span><span class="slip__ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M10 12.2a2 2 0 1 1 2.8 1.9c-.5.3-.8.6-.8 1.1v.4"/><path d="M12 18.3h.01"/></svg></span></div><span class="slip__t">ใบงานกระดาษหายบ่อย</span><span class="slip__stamp">แก้แล้ว</span></li><li class="slip"><div class="slip__head"><span class="slip__no">ปัญหา 02</span><span class="slip__ic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></span></div><span class="slip__t">คีย์ข้อมูลซ้ำหลายรอบ</span><span class="slip__stamp">แก้แล้ว</span></li><li class="slip"><div class="slip__head"><span class="slip__no">ปัญหา 03</span><span class="slip__ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span></div><span class="slip__t">รายงานล่าช้าหลายวัน</span><span class="slip__stamp">แก้แล้ว</span></li><li class="slip"><div class="slip__head"><span class="slip__no">ปัญหา 04</span><span class="slip__ic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 10h8M8 14h8M14 7l-4 10"/></svg></span></div><span class="slip__t">ตัวเลขไม่ตรง</span><span class="slip__stamp">แก้แล้ว</span></li><li class="slip"><div class="slip__head"><span class="slip__no">ปัญหา 05</span><span class="slip__ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M10.6 6.1A9.8 9.8 0 0 1 12 6c5 0 8.5 4 9.5 6a12 12 0 0 1-2.4 3.2M6.6 7.6C4.6 8.9 3.2 10.7 2.5 12c1 2 4.5 6 9.5 6 1.6 0 3-.4 4.3-1"/><path d="M9.9 10a3 3 0 0 0 4.1 4.2"/></svg></span></div><span class="slip__t">ผู้บริหารไม่เห็นภาพรวมการผลิต</span><span class="slip__stamp">แก้แล้ว</span></li><li class="slip"><div class="slip__head"><span class="slip__no">ปัญหา 06</span><span class="slip__ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l9 4.5-9 4.5-9-4.5z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 16.5l9 4.5 9-4.5"/></svg></span></div><span class="slip__t">เอกสารกระดาษนับพันใบต่อเดือน</span><span class="slip__stamp">แก้แล้ว</span></li></ol>
     <div class="chaos__final">
       <p class="chaos__line">หลังใช้ระบบ ใบงานอยู่ในมือถือ ผู้บริหารดู dashboard ได้ทันที และเวลางานเอกสารลดลง <span data-odo="40%" data-odo-scrub>40%</span></p>
       <a class="arrow-link ulink chaos__more" href="/blog/case-steel-factory">กรณีศึกษา: โรงงานเหล็ก <svg class="ico arw" viewBox="0 0 24 14" aria-hidden="true"><line x1="1" y1="7" x2="22.5" y2="7"/><path d="M16.5 1.5L22.5 7l-6 5.5"/></svg></a>
@@ -123,10 +131,10 @@ const CHAOS = raw(`<section class="chaos" data-chaos aria-labelledby="chaos-titl
 
 function works(c: SiteCtx): Raw {
   const all = portfolioWorks(c.home);
-  return html`<section class="sec s-dark" id="work" aria-labelledby="work-title">
+  return html`<section class="sec s-dark proof-a" id="work" aria-labelledby="work-title">
   <div class="sec-head"><h2 class="h2" id="work-title" data-line>ผลงานล่าสุด</h2><div class="sec-head__aside"><a class="arrow-link ulink" href="/portfolio">ดูผลงานทั้งหมด <span class="data">( ${pad2(all.length)} )</span> ${ARW}</a></div></div>
   ${worksGrid(all.slice(0, 4), 'works-home')}
-  <div class="works-foot"><p class="illus-note">ภาพประกอบเป็นงานศิลป์เชิงสัญลักษณ์ ไม่ใช่ภาพหน้าจอระบบของลูกค้า</p><a class="badge" href="/portfolio">ดูผลงานทั้งหมด ${ARW}</a></div>
+  <div class="works-foot"><p class="illus-note">${ILLUS_NOTE}</p><a class="badge" href="/portfolio">ดูผลงานทั้งหมด ${ARW}</a></div>
 </section>`;
 }
 
@@ -225,7 +233,7 @@ function register(c: SiteCtx): Raw {
       <h2 class="h2" id="reg-title" data-line>${withBreaks(r.title)}</h2>
       <p class="lead mute" data-line>${r.subtitle}</p>
       <ol class="perks">${perks}</ol>
-      <div class="perk__obj" data-parallax="-80" aria-hidden="true"><img src="/assets/img/obj-stamp-sm.webp" alt="" width="560" height="560" loading="lazy" decoding="async"></div>
+      <div class="perk__obj" data-parallax="-80" aria-hidden="true"><img src="/assets/img/perk-gift-sm.webp" alt="" width="560" height="560" loading="lazy" decoding="async"></div>
     </div>
     ${registerForm(c.home)}
   </div>
@@ -235,9 +243,10 @@ function register(c: SiteCtx): Raw {
 function testimonials(c: SiteCtx): Raw {
   if (!c.home.testimonials.length) return raw('');
   const qs = c.home.testimonials.map(
-    (q) => html`<figure class="quote"><figcaption class="quote__who"><b>${q.n}</b><span>${q.r.replace(/,\s*/, ' · ')}</span></figcaption><blockquote data-line>“${q.q}”</blockquote></figure>`,
+    // role only: the design leaves the company names off
+    (q) => html`<figure class="quote"><figcaption class="quote__who"><b>${q.n}</b><span>${q.r.split(',')[0].trim()}</span></figcaption><blockquote data-line>“${q.q}”</blockquote></figure>`,
   );
-  return html`<section class="sec s-dark" id="testimonials" aria-labelledby="t-title">
+  return html`<section class="sec s-dark proof-b" id="testimonials" aria-labelledby="t-title">
   <div class="sec-head"><h2 class="h2" id="t-title" data-line>ลูกค้าพูดถึงเรา</h2><p class="sec-head__note">จากลูกค้าจริงของเรา</p></div>
   <div class="quotes">${qs}</div>
 </section>`;
@@ -279,6 +288,8 @@ ${processSection(h)}
 
 ${works(c)}
 
+${testimonials(c)}
+
 ${consoleSec(status)}
 
 ${promotions(promos)}
@@ -286,8 +297,6 @@ ${promotions(promos)}
 ${pricing(c)}
 
 ${register(c)}
-
-${testimonials(c)}
 
 ${articles}
 `;

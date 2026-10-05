@@ -52,8 +52,7 @@
   const ZW = '​';
   const SEG = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter('th', { granularity: 'word' }) : null;
   const OPENERS = /^[“‘("'[«]+$/;
-  const prepareText = (text, el) => {
-    if (el && el.closest && el.closest('.nw')) return text;   // a .nw phrase splits as one word, never inside
+  const prepareText = (text) => {
     const parts = SEG ? Array.from(SEG.segment(text), (s) => s.segment) : text.split(/(\s+)/);
     const out = [];
     for (let i = 0; i < parts.length; i++) {
@@ -81,12 +80,8 @@
      Lenis smooth scroll wired to GSAP's clock
      ------------------------------------------------------------------------ */
   let lenis = null;
-  let wheelGate = null;   // a pinned scene may take over wheel input (process: one gesture = one step)
   if (MOTION && typeof Lenis !== 'undefined') {
-    lenis = new Lenis({
-      duration: 1.2, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), touchMultiplier: 2,
-      virtualScroll: (e) => (wheelGate ? wheelGate(e) : true),
-    });
+    lenis = new Lenis({ duration: 1.2, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), touchMultiplier: 2 });
     lenis.on('scroll', ScrollTrigger.update);
     gsap.ticker.add((t) => lenis.raf(t * 1000));
     gsap.ticker.lagSmoothing(0);
@@ -243,8 +238,7 @@
     const url = new URL(a.getAttribute('href'), location.href);
     if (url.protocol !== location.protocol) return;
     if (location.protocol !== 'file:' && url.origin !== location.origin) return;
-    const page = (path) => path.replace(/index\.html$/, '');   // "/" and "/index.html" are the same page
-    const samePage = page(url.pathname) === page(location.pathname) && url.search === location.search;
+    const samePage = url.pathname === location.pathname && url.search === location.search;
     if (samePage && url.hash) {
       const t = d.getElementById(decodeURIComponent(url.hash.slice(1)));
       if (t) { e.preventDefault(); closeMenus(); scrollToEl(t); history.replaceState(null, '', url.hash); }
@@ -358,7 +352,7 @@
 
 
   /* ------------------------------------------------------------------------
-     Loader (every visit to the home page; it stands in for the page curtain there): on cobalt, the logo frame sweeps in,
+     Loader (home, once per session): on cobalt, the logo frame sweeps in,
      the rubber stamp presses PMN into it, the delivered-projects counter
      runs up, and the panel leaves along the slant.
      ------------------------------------------------------------------------ */
@@ -409,6 +403,7 @@
           onComplete: () => {
             L.remove();
             html.classList.remove('show-loader');
+            try { sessionStorage.setItem('pmn-loaded', '1'); } catch (e) { /* ignore */ }
             lenis && lenis.start();
             resolve();
           },
@@ -434,7 +429,9 @@
      axis lies on the 14° italic of the wordmark, so strokes swell across the
      slant and stay full along it. Strokes are drawn in "tip space", where the
      oval is a circle, as round-capped curves through the midpoints, so every
-     edge is a smooth curve; each stroke dries shut from its tail.
+     edge is a smooth curve; each stroke dries shut from its tail. The hero
+     opens with a tide: sea swells rise over the paper to the full picture,
+     then ebb to a low band that keeps rolling along the bottom.
      ------------------------------------------------------------------------ */
   function hero() {
     const sec = $('[data-hero]');
@@ -463,13 +460,22 @@
     let ws = new Float32Array(512);
     let dpr = 1; let W = 0; let H = 0; let tip = 150;
     let visible = true; let fade = 1; let dirty = true;
-    let tx = null; let ty = null; let sx = 0; let sy = 0; let vel = 0; let fresh = true; let down = 0; let moved = 0; let teach = null;
+    let tx = null; let ty = null; let sx = 0; let sy = 0; let vel = 0; let fresh = true; let down = 0; let moved = 0;
+    const pour = { on: false, level: 0, amp: 0 };
+    let restLevel = 0.12; let footTop = 0; let footMid = 0; let tideOn = false;
 
     const size = () => {
       dpr = Math.min(devicePixelRatio || 1, 1.5);
       W = sec.clientWidth; H = sec.clientHeight;
       canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
       tip = Math.min(Math.max(W * 0.11, 70), 220);
+      // the resting tide lies just above the foot row, whatever the screen
+      const foot = $('.hero__foot', sec);
+      if (foot) {
+        const f = foot.getBoundingClientRect(); const s = sec.getBoundingClientRect();
+        footTop = f.top - s.top; footMid = footTop + f.height / 2;
+        restLevel = Math.min(0.4, (H - footTop + 20) / (H + H * 0.05 * 2.4));
+      }
       dirty = true;
     };
     const wet = (p, now) => {
@@ -482,10 +488,7 @@
     // a jump (touch, re-entry) starts a new stroke instead of dragging paint across the gap
     const aim = (x, y) => { if (tx === null || Math.hypot(x - tx, y - ty) > 240) fresh = true; tx = x; ty = y; };
     const at = (e) => { const r = sec.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-    sec.addEventListener('pointermove', (e) => {
-      if (teach) { teach.kill(); teach = null; tx = null; }
-      aim(...at(e));
-    });
+    sec.addEventListener('pointermove', (e) => aim(...at(e)));
     sec.addEventListener('pointerdown', (e) => { tx = null; aim(...at(e)); });
     sec.addEventListener('pointerleave', () => { tx = ty = null; });
 
@@ -526,12 +529,42 @@
       const had = pts.length;
       while (pts.length && wet(pts[0], now) === 0) pts.shift();
       if (pts.length > 360) pts.splice(0, pts.length - 360);
-      if (!pts.length && !had && !dirty) return;
+      if (!pts.length && !had && !dirty && !pour.on) return;
 
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalCompositeOperation = 'source-over';
       ctx.fillStyle = '#fff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+      if (pour.on) {
+        // the tide: sea swells (sharp crests, broad troughs, three lengths rolling sideways) rise from the bottom and cut
+        // the paper away; a translucent swash runs just ahead of the water line like foam on the beach
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.fillStyle = '#000';
+        const t = now / 1000;
+        const AM = H * 0.05; const A = AM * pour.amp;
+        const base = H - pour.level * fade * (H + AM * 2.4);
+        const covers = pour.level * fade > 0.001 && base < footMid;
+        if (covers !== tideOn) { tideOn = covers; sec.classList.toggle('is-tide', covers); }
+        const swell = (p) => ((Math.sin(p) + 1) / 2) ** 2.2;
+        const surf = (x, lag) => base + lag - A * (swell(x * 0.0062 + t * 1.5) + swell(x * 0.0131 + t * 2.3 + 1.7) * 0.55 + swell(x * 0.027 - t * 1.1 + 4) * 0.3);
+        const body = (lag) => {
+          ctx.beginPath();
+          ctx.moveTo(-16, H + 4);
+          for (let x = -16; x <= W + 16; x += 12) ctx.lineTo(x, surf(x, lag));
+          ctx.lineTo(W + 16, H + 4);
+          ctx.closePath();
+          ctx.fill();
+        };
+        if (pour.level > 0) {
+          ctx.globalAlpha = 0.32 * pour.amp;
+          body(-A * 0.9 - Math.sin(t * 2.1) * A * 0.25);
+          ctx.globalAlpha = 1;
+          body(0);
+        }
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+      }
       const n = pts.length;
       if (n) {
         if (ws.length < n) ws = new Float32Array(n * 2);
@@ -577,15 +610,14 @@
     }).observe(sec);
     ScrollTrigger.create({ trigger: sec, start: 'top top', end: 'bottom top', onUpdate: (st) => { fade = 1 - st.progress; } });
 
-    // one authored stroke once the wordmark has landed shows that the paper can be painted away
+    // the opening tide: the picture rolls in over the paper like sea waves, holds, then ebbs back to white
     whenReady(() => {
-      const o = { t: 0 };
-      teach = gsap.to(o, {
-        t: 1, duration: 1.7, ease: 'power1.inOut', delay: 1.6,
-        onStart: () => { tx = null; },
-        onUpdate: () => aim(W * (0.06 + o.t * 0.88), H * (0.8 - o.t * 0.3 + Math.sin(o.t * Math.PI * 2) * 0.06)),
-        onComplete: () => { tx = ty = null; teach = null; },
-      });
+      // after the flood the sea ebbs to a low band that keeps rolling along the bottom of the hero
+      gsap.timeline({ delay: 1.5, onStart: () => { pour.on = true; } })
+        .to(pour, { amp: 1, duration: 0.6, ease: 'power1.out' }, 0)
+        .to(pour, { level: 1, duration: 1.7, ease: 'power2.inOut' }, 0)
+        .to(pour, { level: () => restLevel, duration: 1.4, ease: 'power2.inOut' }, 2.4)
+        .to(pour, { amp: 0.55, duration: 0.8, ease: 'power1.inOut' }, 3.0);
     });
   }
 
@@ -639,15 +671,23 @@
     };
     ScrollTrigger.create({ trigger: sec, start: 'top bottom+=150%', once: true, onEnter: load });
 
-    // the film is full-bleed behind the grid: it covers a landscape screen; on a portrait screen it is a
-    // band 1.4x the screen width (so the whole ordered grid stays in view) on a cobalt ground sampled from it
+    // the film is full-bleed behind the grid: it covers a landscape screen; on a portrait screen it is a band
+    // just wider than the screen (the whole cast and the dashboard stay in view), framed by data-focus
+    // (0..1 across the film), its top and bottom feathered into a cobalt ground sampled from the film
     const film = { top: 0, h: 0, band: false };
+    const focus = parseFloat(video.dataset.focus) || 0.5;
     const fit = () => {
       const W = sticky.clientWidth; const H = sticky.clientHeight; const ar = 16 / 9;
       film.band = W / H < 0.9;
-      const w = film.band ? W * 1.4 : Math.max(W, H * ar); const h = w / ar;
-      film.top = (H - h) / 2; film.h = h;
-      Object.assign(video.style, { left: `${(W - w) / 2}px`, top: `${film.top}px`, width: `${w}px`, height: `${h}px` });
+      let w; let h; let left;
+      if (film.band) {
+        w = W * 1.12; h = w / ar;
+        left = Math.min(0, Math.max(W - w, W / 2 - w * focus));
+      } else {
+        w = Math.max(W, H * ar); h = w / ar; left = (W - w) / 2;
+      }
+      film.top = (H - h) * 0.46; film.h = h;
+      Object.assign(video.style, { left: `${left}px`, top: `${film.top}px`, width: `${w}px`, height: `${h}px` });
       box.classList.toggle('is-band', film.band);
     };
     // the starting frame, as a parallelogram on the logo's 14° slant
@@ -662,11 +702,13 @@
         const col = (W - pl - pr - gap * 11) / 12;
         return { W, H, x0: pl, x1: pl + col * 9 + gap * 8, y0: pt, y1: H - pb };
       }
-      if (film.band) return { W, H, x0: pl, x1: W - pr, y0: film.top, y1: film.top + film.h };
+      // a phone's starting frame stops above the caption, so the caption never sits on the film at rest
+      if (film.band) return { W, H, x0: pl, x1: W - pr, y0: film.top, y1: Math.min(film.top + film.h, H - pb - (caption ? caption.offsetHeight + 16 : 0)) };
       return { W, H, x0: pl, x1: W - pr, y0: pt, y1: H - pb - (caption ? caption.offsetHeight + 16 : 0) };
     };
     const framed = () => {
-      const g = geo(); const s = (g.y1 - g.y0) * SL;
+      // the 14° slant, capped so a tall phone frame does not lean further than a fifth of its width
+      const g = geo(); const s = Math.min((g.y1 - g.y0) * SL, (g.x1 - g.x0) * 0.2);
       return `polygon(${g.x0 + s}px ${g.y0}px, ${g.x1}px ${g.y0}px, ${g.x1 - s}px ${g.y1}px, ${g.x0}px ${g.y1}px)`;
     };
     const opened = () => { const g = geo(); return `polygon(0px 0px, ${g.W}px 0px, ${g.W}px ${g.H}px, 0px ${g.H}px)`; };
@@ -674,14 +716,23 @@
     const rule = $('.reel__meter', sec);
     if (meter) setOdo(meter, '000', { instant: true });
     const proxy = { t: 0 };
-    gsap.timeline({ scrollTrigger: { trigger: $('.reel-sec__track', sec), start: 'top top', end: 'bottom bottom', scrub: 0.6, invalidateOnRefresh: true } })
-      .fromTo(box, { clipPath: framed }, { clipPath: opened, ease: 'power2.inOut', duration: 0.62 }, 0.06)
+    const tl = gsap.timeline({ scrollTrigger: { trigger: $('.reel-sec__track', sec), start: 'top top', end: 'bottom bottom', scrub: 0.6, invalidateOnRefresh: true } });
+    tl.fromTo(box, { clipPath: framed }, { clipPath: opened, ease: 'power2.inOut', duration: 0.62 }, 0.06)
       .fromTo(video, { scale: 1.12 }, { scale: 1, ease: 'power1.out', duration: 0.62 }, 0.06)
       .to(proxy, { t: 1, ease: 'none', duration: 0.76 }, 0.1)
       // the caption ends up over the cobalt film, so its quiet greys turn white
       .to(quiet, { color: '#fff', ease: 'none', duration: 0.16 }, 0.16)
       .to(rule, { borderTopColor: 'rgba(255,255,255,.45)', ease: 'none', duration: 0.16 }, 0.16)
       .to({}, { duration: 0.14 });
+    // PMN arrives as the film turns: the rubber stamp drops, presses the white PMN mark onto the scene and lifts away
+    const stamp = $('.reel__stamp', sec);
+    if (stamp) {
+      const tool = $('.reel__stamp-tool', stamp); const print = $('.reel__stamp-print', stamp);
+      // the engineers walk in about a quarter of the way through the film; the stamp lands with them
+      tl.fromTo(tool, { autoAlpha: 0, yPercent: -160 }, { autoAlpha: 1, yPercent: 0, ease: 'power2.in', duration: 0.07 }, 0.22)
+        .fromTo(print, { autoAlpha: 0, scale: 1.3, rotate: -12 }, { autoAlpha: 1, scale: 1, rotate: -6, ease: EASE, duration: 0.035 }, 0.29)
+        .to(tool, { yPercent: -180, autoAlpha: 0, ease: 'power2.out', duration: 0.08 }, 0.32);
+    }
     // the film follows the proxy every frame rather than from tween callbacks, because a ScrollTrigger
     // refresh (fonts, images) restores the timeline silently and would leave the film on its first frame
     gsap.ticker.add(() => {
@@ -707,34 +758,160 @@
   }
 
   /* ------------------------------------------------------------------------
-     Client board: tiles open in reading order with the slanted sweep, then
-     one logo at a time shows its colours, in reading order, on a loop
-     (only while the board is on screen; hovering a tile pauses the loop)
+     Client board: tiles open in reading order with the slanted sweep
      ------------------------------------------------------------------------ */
   function clients() {
     const grid = $('.clients__grid');
-    if (!grid) return;
+    if (!grid || !MOTION) return;
     const tiles = $$('.client', grid);
-    if (MOTION) {
-      gsap.set(tiles, { clipPath: slantFrom(1) });
-      onEnter(grid, () => gsap.to(tiles, { clipPath: SLANT_OPEN, duration: 0.8, ease: EASE, stagger: { each: 0.04, grid: 'auto', from: 'start' } }), 'top 85%');
-    }
-    let lit = -1, timer = 0, onScreen = false, hovering = false;
+    gsap.set(tiles, { clipPath: slantFrom(1) });
+    onEnter(grid, () => gsap.to(tiles, { clipPath: SLANT_OPEN, duration: 0.8, ease: EASE, stagger: { each: 0.04, grid: 'auto', from: 'start' } }), 'top 85%');
+    // then the marks light up one after another in reading order; a hovered tile takes over and the walk waits
+    let at = -1; let seen = false; let held = false;
+    new IntersectionObserver(([en]) => { seen = en.isIntersecting; }, { threshold: 0.25 }).observe(grid);
+    tiles.forEach((t) => {
+      t.addEventListener('pointerenter', () => { held = true; tiles.forEach((o) => o.classList.remove('is-lit')); });
+      t.addEventListener('pointerleave', () => { held = false; });
+    });
     const step = () => {
-      if (lit >= 0) tiles[lit].classList.remove('is-lit');
-      lit = (lit + 1) % tiles.length;
-      tiles[lit].classList.add('is-lit');
+      if (!seen || held) return;
+      if (at >= 0) tiles[at].classList.remove('is-lit');
+      at = (at + 1) % tiles.length;
+      tiles[at].classList.add('is-lit');
     };
-    const run = () => {
-      clearInterval(timer);
-      timer = onScreen && !hovering && !d.hidden ? setInterval(step, 1400) : 0;
-    };
-    new IntersectionObserver(([e]) => { onScreen = e.isIntersecting; run(); }, { threshold: 0.25 }).observe(grid);
-    d.addEventListener('visibilitychange', run);
-    grid.addEventListener('pointerenter', () => { hovering = true; run(); });
-    grid.addEventListener('pointerleave', () => { hovering = false; run(); });
+    onEnter(grid, () => gsap.delayedCall(1.2, function walk() { step(); gsap.delayedCall(1.1, walk); }), 'top 85%');
   }
 
+
+  /* ------------------------------------------------------------------------
+     Logo flight (home): as the reel statement scrolls up, the hero's giant
+     PMN wordmark lifts off the paper, shrinks and flies down along the scroll
+     into the statement in place of the word "PMN"; scrolling back sends it
+     home. The small nav mark stays hidden until the statement has gone by. Without motion the statement shows the logo
+     where the word was.
+     ------------------------------------------------------------------------ */
+  function logoFlight() {
+    const host = $('.reel-sec__statement');
+    const mark = $('.nav__mark');
+    const big = $('.hero__mark svg');
+    if (!MOTION || !host || !big || !host.querySelector('.pmn-slot')) return;
+    host.classList.add('logo-fly');
+    const flyer = mk('div', 'logo-flyer');
+    flyer.setAttribute('aria-hidden', 'true');
+    flyer.innerHTML = host.querySelector('.pmn-slot').innerHTML;
+    d.body.appendChild(flyer);
+    const vb = big.viewBox.baseVal; const AR = vb.width / vb.height;
+    // the letters inside the hero svg: it keeps their aspect and anchors them bottom-left (xMinYMax meet)
+    const letters = () => {
+      const r = big.getBoundingClientRect();
+      const w = Math.min(r.width, r.height * AR); const h = w / AR;
+      return { left: r.left, top: r.bottom - h, height: h };
+    };
+    let p = 0; let past = false;
+    const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - ((-2 * t + 2) ** 2) / 2);
+    const render = () => {
+      const slot = host.querySelector('.pmn-slot svg'); // looked up each time: SplitText rebuilds the heading
+      const flying = p > 0.001 && p < 0.999;
+      // the small nav mark waits until the statement has gone by; the hero wordmark itself is what travels
+      if (mark) mark.classList.toggle('is-away', !past);
+      big.style.opacity = p > 0.001 ? '0' : ''; // opacity, not visibility: the letters carry their own visibility from the intro
+      host.classList.toggle('logo-landed', p >= 0.999);
+      flyer.style.display = flying && slot ? 'block' : 'none';
+      if (!flying || !slot) return;
+      const a = letters(); const b = slot.getBoundingClientRect();
+      if (!b.height || !a.height) return;
+      const e = ease(p);
+      const h = a.height + (b.height - a.height) * e;
+      // ink follows the ground under it: black while over the white paper, white once over the dark statement
+      const y = a.top + (b.top - a.top) * e; const heroEdge = big.closest('[data-hero]').getBoundingClientRect().bottom;
+      flyer.style.color = y + h / 2 < heroEdge ? getComputedStyle(big).color : getComputedStyle(host).color;
+      flyer.style.width = `${b.width}px`; flyer.style.height = `${b.height}px`;
+      flyer.style.transform = `translate(${a.left + (b.left - a.left) * e}px, ${y}px) scale(${h / b.height})`;
+    };
+    ScrollTrigger.create({ trigger: host, start: 'top 92%', end: 'top 36%', onUpdate: (st) => { p = st.progress; render(); }, onRefresh: (st) => { p = st.progress; render(); } });
+    ScrollTrigger.create({ trigger: host, start: 'bottom top', end: 'max', onToggle: (st) => { past = st.isActive; render(); }, onRefresh: (st) => { past = st.isActive; render(); } });
+    gsap.ticker.add(() => { if (p > 0.001 && p < 0.999) render(); });
+    render();
+  }
+
+  /* ------------------------------------------------------------------------
+     Rotating word: "คุณ" in the reel statement keeps changing language. Each
+     word leaves upward on the 14° slant, the next rises in, and the
+     slot is sized to the widest word so the sentence never reflows. It starts
+     after the line reveal (SplitText rebuilds the heading when it reverts, so
+     the slot is looked up again on every turn) and rests while off screen.
+     ------------------------------------------------------------------------ */
+  function rotWords() {
+    if (!MOTION) return;
+    $$('[data-rotate]').forEach((first) => {
+      const host = first.closest('[data-line]') || first.parentElement;
+      const words = [first.textContent.trim(), ...first.dataset.rotate.split('|').filter(Boolean)];
+      let i = 0; let seen = false;
+      new IntersectionObserver(([en]) => { seen = en.isIntersecting; }).observe(host);
+      const widthOf = (slot, word) => {
+        const m = slot.cloneNode(false);
+        m.removeAttribute('data-rotate');
+        Object.assign(m.style, { position: 'absolute', visibility: 'hidden', width: 'auto' });
+        m.textContent = word;
+        slot.parentNode.appendChild(m);
+        const w = m.getBoundingClientRect().width;
+        m.remove();
+        return w;
+      };
+      const turn = () => {
+        const slot = host.querySelector('[data-rotate]');
+        if (!slot || host.querySelector('.ln') || !seen) return;
+        let inner = slot.firstElementChild;
+        if (!inner) { inner = mk('span'); inner.textContent = slot.textContent; slot.textContent = ''; slot.appendChild(inner); }
+        i = (i + 1) % words.length;
+        // cross-fade: the next word rises in while the current one leaves, so the slot is never empty
+        const nxt = mk('span', 'rotword__next');
+        nxt.textContent = words[i];
+        slot.appendChild(nxt);
+        gsap.to(inner, { yPercent: -70, skewX: -14, autoAlpha: 0, duration: 0.45, ease: 'power2.in' });
+        gsap.fromTo(nxt, { yPercent: 70, skewX: -14, autoAlpha: 0 }, { yPercent: 0, skewX: 0, autoAlpha: 1, duration: 0.6, ease: OUT, delay: 0.12,
+          onComplete: () => { inner.remove(); nxt.classList.remove('rotword__next'); gsap.set(nxt, { clearProps: 'transform' }); } }); // the old word keeps the slot's height until the new one takes its place
+      };
+      // the slot keeps the widest word's width (in em, so it scales with the type), so the sentence never reflows
+      const fs = parseFloat(getComputedStyle(first).fontSize) || 16;
+      first.style.width = `${(Math.max(...words.map((w) => widthOf(first, w))) / fs + 0.04).toFixed(3)}em`;
+      onEnter(host, () => gsap.delayedCall(2.2, function loop() { turn(); gsap.delayedCall(1.9, loop); }), 'top 80%');
+    });
+  }
+
+  /* ------------------------------------------------------------------------
+     Why PMN: the manifesto types itself out behind a slanted cobalt caret
+     (grapheme by grapheme, so Thai vowels and tone marks never split), then
+     the four reason cards slide in from the left one after another and
+     their icons settle into a slow float.
+     ------------------------------------------------------------------------ */
+  function whySec() {
+    if (!MOTION) return;
+    $$('[data-type]').forEach((el) => {
+      const ghost = $('.type__ghost', el); const live = $('.type__live', el);
+      if (!ghost || !live) return;
+      const text = ghost.textContent;
+      const parts = window.Intl && Intl.Segmenter ? Array.from(new Intl.Segmenter('th', { granularity: 'grapheme' }).segment(text), (s) => s.segment) : Array.from(text);
+      el.classList.add('is-typing');
+      const o = { n: 0 };
+      onEnter(el, () => gsap.to(o, {
+        n: parts.length, duration: Math.min(3.4, parts.length * 0.032), ease: 'none', delay: 0.15,
+        onUpdate: () => { live.textContent = parts.slice(0, Math.round(o.n)).join(''); },
+      }), 'top 78%');
+    });
+    const cards = $$('[data-why-card]');
+    if (!cards.length) return;
+    const icons = cards.map((c) => $('.why-card__icon', c));
+    gsap.set(cards, { autoAlpha: 0, x: -64 });
+    gsap.set(icons, { yPercent: 16, scale: 0.86, rotate: -6 });
+    onEnter(cards[0].parentElement, () => {
+      gsap.to(cards, { autoAlpha: 1, x: 0, duration: 0.9, ease: EASE, stagger: 0.14 });
+      gsap.to(icons, {
+        yPercent: 0, scale: 1, rotate: 0, duration: 1.1, ease: OUT, stagger: 0.14, delay: 0.1,
+        onComplete: () => icons.forEach((ic, i) => gsap.to(ic, { y: -8, duration: 2.4 + i * 0.35, ease: 'sine.inOut', yoyo: true, repeat: -1 })),
+      });
+    }, 'top 82%');
+  }
 
   /* ------------------------------------------------------------------------
      Tech stack as abacus rails: hovering a rail counts its beads across.
@@ -781,7 +958,8 @@
      "แก้แล้ว", then the outcome line arrives and its figure rolls to 40%.
      ------------------------------------------------------------------------ */
   // loose offsets per slip (vw, vh, deg), kept inside the frame for every column
-  const LOOSE = [[7, 44, -9], [-9, 58, 7], [-7, 34, 11], [15, 30, -6], [4, 50, 9], [-15, 36, -12]];
+  // loose slips: scattered over the paper storm but with their words still readable (x vw, y vh, rotation)
+  const LOOSE = [[3, 40, -8], [-5, 60, 6], [-5, 34, 9], [-5, 44, 7], [2, 24, -5], [-1, 42, -10]];
   function chaos() {
     const sec = $('[data-chaos]');
     if (!sec || !MOTION) return;
@@ -793,21 +971,24 @@
       const vw = innerWidth / 100; const vh = innerHeight / 100;
       slips.forEach((s, i) => {
         const [x, y, r] = LOOSE[i % LOOSE.length];
-        gsap.set(s, { x: x * vw, y: y * vh, rotation: r, '--lift': 1 });
+        gsap.set(s, { x: x * vw, y: y * vh, rotation: r, scale: 0.9, '--lift': 1 });
       });
       gsap.set(stamps, { autoAlpha: 0, scale: 1.8, rotation: -24 });
       gsap.set(line, { autoAlpha: 0, y: 40 });
       if (fig) setOdo(fig, '00%', { instant: true });
       const tl = gsap.timeline({ scrollTrigger: { trigger: sec, start: 'top top', end: 'bottom bottom', scrub: 1 } });
       tl.fromTo($('.chaos__bg img', sec), { scale: 1.12 }, { scale: 1, duration: 1, ease: 'none' }, 0)
-        .to(slips, { x: 0, y: 0, rotation: 0, '--lift': 0, duration: 0.3, ease: EASE, stagger: 0.05 }, 0.1)
+        .to(slips, { x: 0, y: 0, rotation: 0, scale: 1, '--lift': 0, duration: 0.3, ease: EASE, stagger: 0.05 }, 0.1)
         .to(stamps, { autoAlpha: 1, scale: 1, rotation: -8, duration: 0.08, ease: 'power3.in', stagger: 0.035 }, 0.55)
+        // as each ticket is stamped its warning icon turns cobalt: solved
+        .to($$('.slip__ic', sec), { backgroundColor: 'rgba(14, 90, 200, .12)', color: '#0e5ac8', duration: 0.06, ease: 'none', stagger: 0.035 }, 0.58)
+        .to($$('.slip__no', sec), { color: '#0e5ac8', duration: 0.06, ease: 'none', stagger: 0.035 }, 0.58)
         .to($('.chaos__bg', sec), { opacity: 0.3, duration: 0.3, ease: 'none' }, 0.55)
         .to(line, { autoAlpha: 1, y: 0, duration: 0.12, ease: OUT }, 0.78)
         .call(() => { if (fig) setOdo(fig, tl.scrollTrigger && tl.scrollTrigger.direction < 0 ? '00%' : '40%', { dur: 1.1 }); }, null, 0.84)
         .fromTo($('.chaos__more', sec), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.05 }, 0.92);
       return () => {
-        gsap.set([...slips, ...stamps, line], { clearProps: 'all' });
+        gsap.set([...slips, ...stamps, line, ...$$('.slip__ic, .slip__no', sec)], { clearProps: 'all' });
         if (fig) setOdo(fig, '40%', { instant: true });
       };
     });
@@ -846,49 +1027,12 @@
           setOdo(num, String(i + 1).padStart(2, '0'), { dur: 0.9 });
           bars.forEach((b, k) => b.classList.toggle('is-on', k <= i));
         };
-        const n = steps.length;
-        const at = (i) => st.start + (st.end - st.start) * (i + 0.5) / n;   // scroll position of step i
-        let moving = false;
-        const glide = (i, duration = 0.8) => {
-          moving = true;
-          lenis.scrollTo(at(i), { duration, easing: (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2), lock: true, force: true,
-            onComplete: () => { moving = false; settledAt = performance.now(); } });
-        };
-        let st = null;   // null while ScrollTrigger.create runs, so a load mid-page doesn't glide
-        st = ScrollTrigger.create({
-          trigger: sec, start: 'top top', end: () => '+=' + innerHeight * (n - 0.4) * 0.75,
-          // no anticipatePin: Lenis scrolls on the main thread and updates ScrollTrigger in the same frame, so the
-          // pin lands on time; anticipating made the stage pin early and drop back (a stutter) as a swipe slowed
-          pin: stage, pinSpacing: true,
-          onUpdate: (s) => go(Math.min(n - 1, Math.floor(s.progress * n * 0.999))),
-          // arriving with momentum must not fly past the first (or, coming back up, the last) station
-          onEnter: () => { if (lenis && st) glide(0, 0.6); },
-          onEnterBack: () => { if (lenis && st) glide(n - 1, 0.6); },
+        const st = ScrollTrigger.create({
+          trigger: sec, start: 'top top', end: () => '+=' + innerHeight * (steps.length - 0.4) * 0.75,
+          pin: stage, pinSpacing: true, anticipatePin: 1,
+          onUpdate: (s) => go(Math.min(steps.length - 1, Math.floor(s.progress * steps.length * 0.999))),
         });
-        // While the scene is pinned, one wheel / trackpad gesture moves exactly one station. A gesture is a
-        // burst of events: a new one starts after a 180ms pause, or when the delta jumps up again (trackpad
-        // inertia only ever decays); a mouse wheel kept spinning advances again 0.5s after each glide.
-        let lastAt = 0, lastAbs = 0, settledAt = 0;
-        if (lenis) wheelGate = ({ deltaY, event }) => {
-          if (!event.type.includes('wheel') || event.ctrlKey || !deltaY) return true;
-          const y = lenis.scroll;
-          if (y < st.start - 1 || y > st.end + 1) return true;
-          const i = Math.min(n - 1, Math.max(0, Math.floor(st.progress * n * 0.999)));
-          const next = i + Math.sign(deltaY);
-          const now = performance.now(), abs = Math.abs(deltaY);
-          const fresh = now - lastAt > 180 || abs > lastAbs * 1.5 + 4 || (now - settledAt > 500 && abs >= 50);
-          lastAt = now; lastAbs = abs;
-          // past the first / last station a new gesture scrolls out normally; the tail of the gesture
-          // that just arrived there is swallowed so the station can be read
-          if (!moving && (next < 0 || next >= n) && (fresh || now - settledAt > 1200)) return true;
-          event.preventDefault();
-          if (!moving && fresh && next >= 0 && next < n) glide(next);
-          return false;
-        };
-        return () => {
-          st.kill(); wheelGate = null; sec.classList.remove('is-pinned-process');
-          gsap.set(steps, { clearProps: 'all' }); steps.forEach((s) => gsap.set(s.children, { clearProps: 'all' }));
-        };
+        return () => { st.kill(); sec.classList.remove('is-pinned-process'); gsap.set(steps, { clearProps: 'all' }); steps.forEach((s) => gsap.set(s.children, { clearProps: 'all' })); };
       });
     });
   }
@@ -1260,6 +1404,8 @@
     const fontsReady = d.fonts && d.fonts.ready ? Promise.race([d.fonts.ready, new Promise((r) => setTimeout(r, 1200))]) : Promise.resolve();
     await fontsReady;
     nav();
+    rotWords();
+    logoFlight();
     reveals();
     parallax();
     figures();
@@ -1267,6 +1413,7 @@
     hero();
     reel();
     abacus();
+    whySec();
     chaos();
     process();
     works();

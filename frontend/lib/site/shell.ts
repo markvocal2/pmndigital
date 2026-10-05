@@ -4,7 +4,7 @@ import type { SiteCtx } from './data';
 
 export const SITE = 'https://pmndigital.co';
 /** Bump when anything under public/assets/{css,js} changes (cache-busting query). */
-export const ASSET_V = '202610041';
+export const ASSET_V = '202610051';
 
 export type NavKey = 'home' | 'services' | 'portfolio' | 'pricing' | 'contact' | 'blog' | 'status' | null;
 
@@ -115,7 +115,7 @@ export function renderPage(o: PageOpts): string {
     address: { '@type': 'PostalAddress', addressLocality: 'Bangkok', addressCountry: 'TH' },
   };
   const lds = o.nav === 'home' ? [orgLd, ...(o.ld ?? [])] : (o.ld ?? []);
-  const hours = html`<span class="nw">จันทร์ – ศุกร์ ${ctx.home.contact.hoursWeekday}</span><span class="footer__sep"> · </span><span class="nw">เสาร์ – อาทิตย์ ${ctx.home.contact.hoursWeekend}</span>`;
+  const hours = html`จันทร์ – ศุกร์ ${ctx.home.contact.hoursWeekday} · เสาร์ – อาทิตย์ <span class="nw">${ctx.home.contact.hoursWeekend}</span>`;
 
   const doc = html`<!doctype html>
 <html lang="th" class="${o.nav === 'home' ? 'home' : ''}">
@@ -140,8 +140,8 @@ ${canonical ? html`<meta property="og:url" content="${canonical}">\n` : ''}<meta
 if(/[?&]raf=timer/.test(location.search)){window.requestAnimationFrame=function(c){return setTimeout(function(){c(performance.now())},16)};window.cancelAnimationFrame=clearTimeout;}
 var rm=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 if(!rm){h.classList.add('anim');}
-var nav=false;try{nav=sessionStorage.getItem('pmn-nav')==='1';sessionStorage.removeItem('pmn-nav');}catch(e){}
-if(!rm){if(${raw(o.loader ? 'true' : 'false')}){h.classList.add('show-loader');}else if(nav){h.classList.add('is-entering');}}
+try{if(!rm&&sessionStorage.getItem('pmn-nav')==='1'){h.classList.add('is-entering');}sessionStorage.removeItem('pmn-nav');
+if(${raw(o.loader ? 'true' : 'false')}&&!rm&&!sessionStorage.getItem('pmn-loaded')){h.classList.add('show-loader');}}catch(e){}
 setTimeout(function(){if(!window.__pmnBooted){h.classList.remove('anim','is-entering','show-loader');}},4000);})();
 </script>
 ${lds.map((l) => html`<script type="application/ld+json">${ldJson(l)}</script>\n`)}</head>
@@ -189,10 +189,10 @@ ${o.main}
     <div class="footer__col footer__col--wide"><p class="footer__k">Contact</p>
       <a class="ulink" href="mailto:${email}" data-no-transition>${email}</a>
       <p>${ctx.home.contact.office}</p>
-      <p class="mute footer__hours">${hours}</p></div>
+      <p class="mute">${hours}</p></div>
   </div>
   <div class="footer__mark" aria-hidden="true">${raw(FOOTER_MARK)}</div>
-  <div class="footer__credits"><p>© <span data-year>${new Date().getFullYear()}</span> PMN Digital Agency Co.,Ltd. — <span class="nw">All rights reserved.</span></p></div>
+  <div class="footer__credits"><p>© <span data-year>${new Date().getFullYear()}</span> PMN Digital Agency Co.,Ltd. — All rights reserved.</p></div>
 </footer>
 ${o.preview ? raw('<div class="preview" aria-hidden="true"><img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="" hidden><video muted loop playsinline hidden></video></div>\n') : ''}<div class="cursor" aria-hidden="true"><span class="cursor__in"><span class="cursor__label">อ่าน</span>${ARW}</span></div>
 <script src="/assets/vendor/gsap.min.js"></script>
@@ -205,7 +205,9 @@ ${o.preview ? raw('<div class="preview" aria-hidden="true"><img src="data:image/
 ${o.tail ?? ''}</body>
 </html>
 `;
-  return doc.value;
+  // Every local asset gets the release stamp: artwork keeps its filename across design updates,
+  // so without it browsers and the CDN would keep serving yesterday's image.
+  return doc.value.replace(/((?:src|href|poster)=")(\/assets\/[^"?#]+)(?=")/g, `$1$2?v=${ASSET_V}`);
 }
 
 /** Wrap a rendered page in a Response. */

@@ -1,7 +1,7 @@
 import type { HomeData } from '@/lib/home-content';
 import { html, raw, type Raw } from './html';
 import { ARW, ico } from './shell';
-import { nwWords, pad2, SERVICE_OPTIONS, techRails, workArt } from './data';
+import { pad2, SERVICE_OPTIONS, techRails, workArt } from './data';
 
 /** Sub-page hero: one or two title lines, lead, meta strip, and the floating objects. */
 export function phero(o: {
@@ -87,6 +87,8 @@ export function proof(items: { v: string; l: string }[], label: string, tone: 's
   return html`<section class="sec${tight ? ' sec--tight' : ''} ${tone}" aria-label="${label}"><p class="proof">${spans.map((s, i) => (i ? html` ${s}` : s))}</p></section>`;
 }
 
+export const ILLUS_NOTE = 'ภาพประกอบ 3D อธิบายระบบ ไม่ใช่ภาพหน้าจอระบบของลูกค้า';
+
 export interface WorkItem {
   cat: string;
   tag: string;
@@ -101,7 +103,7 @@ export function worksGrid(items: WorkItem[], id: string): Raw {
   <div class="work__media" data-wipe><img src="${art.src}" alt="${art.alt}" width="${art.w}" height="${art.h}" loading="lazy" decoding="async" data-parallax-img></div>
   <div class="work__meta">
     <h3 class="work__title">${w.t}</h3>
-    <p class="work__res">${ico('i-up', 'ico--fill')}<span>${nwWords(w.m)}</span></p>
+    <p class="work__res">${ico('i-up', 'ico--fill')}<span>${w.m}</span></p>
     <p class="work__desc">${w.d}</p>
     <p class="work__cat caps">${w.tag}</p>
   </div>

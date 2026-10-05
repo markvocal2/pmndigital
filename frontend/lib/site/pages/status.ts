@@ -61,7 +61,7 @@ ${phero({
   lead: 'ความพร้อมใช้งานของบริการ PMN Digital',
   caps: 'System status',
   meta: sp ? `live · ${when}` : 'live',
-  obj: 'obj-database.webp',
+  obj: 'hero-status.webp',
 })}
 <section class="sec s-light sec--tight" aria-labelledby="st-title">
   <h2 class="sr-only" id="st-title">สถานะบริการ</h2>

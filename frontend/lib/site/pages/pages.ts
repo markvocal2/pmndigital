@@ -2,16 +2,16 @@
 import { defaultHomeContent } from '@/lib/home-content';
 import { designOr, loadCtx, pad2, portfolioWorks } from '../data';
 import { html, raw } from '../html';
-import { contactForm, discountSwitch, phero, plans, processSection, proof, railsBlock, worksGrid } from '../sections';
+import { contactForm, discountSwitch, ILLUS_NOTE, phero, plans, processSection, proof, railsBlock, worksGrid } from '../sections';
 import { ico, renderPage } from '../shell';
 
 const D = defaultHomeContent;
 
 const SVC_ART = [
-  { id: 'database', src: 'obj-database.webp', alt: 'ฐานข้อมูลสามชั้นทำจากไวนิลเป่าลมสีน้ำเงิน' },
-  { id: 'erp', src: 'obj-abacus.webp', alt: 'ลูกคิดโครเมียมกับลูกเจลลี่หลากสี' },
-  { id: 'crm', src: 'obj-rolodex.webp', alt: 'แฟ้มบัตรหมุนทำจากแก้วฝ้าบนฐานสีชมพู' },
-  { id: 'custom', src: 'obj-tape.webp', alt: 'ตลับเมตรโครเมียมกับสายวัดสีส้ม' },
+  { id: 'database', src: 'svc-database.webp', alt: 'ไอคอนฐานข้อมูลทรงกระบอกกับตารางข้อมูล' },
+  { id: 'erp', src: 'svc-erp.webp', alt: 'ระบบ ERP เชื่อมคลังสินค้า การเงิน โรงงาน และบุคลากรไว้ที่ศูนย์กลางเดียว' },
+  { id: 'crm', src: 'svc-crm.webp', alt: 'การ์ดข้อมูลลูกค้ากับแชต ดาว และกรวยการขาย' },
+  { id: 'custom', src: 'svc-custom.webp', alt: 'แล็ปท็อปและมือถือที่แสดงแอปที่สร้างเฉพาะ พร้อมจิ๊กซอว์และเฟือง' },
 ];
 
 export async function renderServices(): Promise<string> {
@@ -22,7 +22,7 @@ export async function renderServices(): Promise<string> {
   const lead = designOr(
     sp.subtitle,
     D.servicesPage.subtitle,
-    'จัดข้อมูลให้เป็นระเบียบ แล้วสร้างระบบที่ทีมของคุณใช้ได้จริงทุกวัน — PMN ออกแบบ พัฒนา ติดตั้ง และดูแลให้แบบจบในทีมเดียว',
+    'PMN ยินดีช่วยวางระบบให้ธุรกิจของคุณ ตั้งแต่จัดการข้อมูลจนทั้งองค์กรใช้งานได้ง่ายทุกวัน — ออกแบบ พัฒนา ติดตั้ง และดูแลให้ครบในทีมเดียว',
   );
   const details = sp.details.map((d, i) => {
     const art = SVC_ART[i % SVC_ART.length];
@@ -48,8 +48,8 @@ ${phero({
   lead,
   caps: 'Services',
   meta: `${pad2(sp.details.length)} core · ${pad2(sp.more.length)} add-on`,
-  obj: 'obj-database.webp',
-  objB: 'obj-binder-sm.webp',
+  obj: 'svc-custom.webp',
+  objB: 'svc-database-sm.webp',
 })}
 <section class="sec s-dark" aria-label="บริการหลัก">${details}</section>
 <section class="sec s-light" aria-labelledby="addon-title">
@@ -105,15 +105,14 @@ ${phero({
   lead: pf.subtitle,
   caps: 'Portfolio',
   meta: `${pad2(all.length)} projects${industries ? ` · ${industries} industries` : ''}`,
-  obj: 'obj-calculator.webp',
-  objB: 'obj-tape-sm.webp',
+  obj: 'hero-portfolio.webp',
 })}
 <section class="sec s-dark" aria-labelledby="pf-title">
   <h2 class="sr-only" id="pf-title">ผลงานทั้งหมด</h2>
   <div class="filters" role="group" aria-label="กรองผลงานตามประเภท" data-filter-for="works-all">${filters}</div>
   <p class="sr-only" id="works-all-live" aria-live="polite"></p>
   ${worksGrid(all, 'works-all')}
-  <div class="works-foot"><p class="illus-note">ภาพประกอบเป็นงานศิลป์เชิงสัญลักษณ์ ไม่ใช่ภาพหน้าจอระบบของลูกค้า</p></div>
+  <div class="works-foot"><p class="illus-note">${ILLUS_NOTE}</p></div>
 </section>
 ${proof(pf.stats, 'ผลงานในตัวเลข', 's-light', false)}
 `;
@@ -160,8 +159,7 @@ ${phero({
   lead: pp.subtitle,
   caps: 'Pricing',
   meta: `${c.home.pricing.tiers.length} plans · ลด 20% เดือนนี้`,
-  obj: 'obj-calculator.webp',
-  objB: 'obj-receipt-sm.webp',
+  obj: 'hero-pricing.webp',
 })}
 <section class="sec s-dark" aria-labelledby="plans-title">
   <div class="sec-head"><h2 class="h2" id="plans-title" data-line>เลือกแพ็กเกจ</h2><div class="sec-head__aside">${discountSwitch('plans-page')}</div></div>
@@ -198,8 +196,7 @@ ${phero({
   lead: ct.subtitle,
   caps: 'Contact',
   meta: `ตอบกลับเฉลี่ยภายใน 24 ชม.`,
-  obj: 'obj-rolodex.webp',
-  objB: 'obj-stamp-sm.webp',
+  obj: 'hero-contact.webp',
 })}
 <section class="sec s-dark" aria-labelledby="send-title">
   <div class="contact__grid">

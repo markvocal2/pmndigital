@@ -57,8 +57,7 @@ ${phero({
   lead: 'อัปเดตแนวคิด เทคนิค และกรณีศึกษาด้านระบบฐานข้อมูล ERP, CRM และซอฟต์แวร์เฉพาะทาง',
   caps: 'Articles',
   meta: `( ${all.length} )${all[0] ? ` · อัปเดตล่าสุด ${dateFull(all[0].publishedAt)}` : ''}`,
-  obj: 'obj-receipt.webp',
-  objB: 'obj-binder-sm.webp',
+  obj: 'hero-blog.webp',
 })}
 ${
   all.length
@@ -269,7 +268,7 @@ ${phero({
   lead: 'ลิงก์อาจถูกย้ายหรือพิมพ์ผิด ลองกลับไปที่หน้าแรก หรือดูบทความทั้งหมดของเรา',
   caps: '404',
   meta: 'Page not found',
-  obj: 'obj-binder-sm.webp',
+  obj: 'hero-blog.webp',
 })}
 <section class="sec s-dark sec--tight"><div class="footer__btns"><a class="badge badge--fill" href="/">กลับหน้าแรก ${ARW}</a><a class="badge" href="/blog">บทความทั้งหมด ${ARW}</a></div></section>
 `;

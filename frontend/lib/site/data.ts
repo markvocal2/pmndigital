@@ -22,16 +22,11 @@ export interface SiteCtx {
   seo: { metaTitle?: string; metaDesc?: string; ogImage?: string };
 }
 
-/* The design hand-breaks a few default sentences into no-wrap phrases. When an editor has
-   changed the text in /admin/home we render their words plainly instead. */
-const FOOTER_DESC_CRAFTED =
-  '<span class="nw">เอเจนซี</span>​<span class="nw">ออกแบบ</span>​<span class="nw">และพัฒนา</span>​<span class="nw">ระบบฐานข้อมูล</span> <span class="nw">ERP,</span> <span class="nw">CRM</span> <span class="nw">และซอฟต์แวร์</span>​<span class="nw">เฉพาะทาง</span>​<span class="nw">แบบครบวงจร</span> <span class="nw">โดยทีมยุคใหม่</span>​<span class="nw">ที่เข้าใจธุรกิจ</span>';
-
 export async function loadCtx(): Promise<SiteCtx> {
   const [settings, homeRow] = await Promise.all([getPublicSettings(), getPublicHome()]);
   const home = mergeHome(homeRow?.data);
   const email = home.contact.email || settings?.contactEmail || 'support@pmndigital.co';
-  const footerDesc = home.footer.desc === defaultHomeContent.footer.desc ? raw(FOOTER_DESC_CRAFTED) : raw(esc(home.footer.desc));
+  const footerDesc = raw(esc(home.footer.desc));
   const loaderCount = Math.round(home.stats[0]?.target ?? 120);
   const seo = (homeRow?.seo ?? {}) as SiteCtx['seo'];
   return { home, settings, email, footerDesc, loaderCount, seo };
@@ -58,29 +53,6 @@ export const dateMid = (s?: string | number | Date | null) =>
   s ? new Date(s).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', timeZone: TZ }) : '';
 export const num = (n: number) => n.toLocaleString('en-US');
 export const pad2 = (n: number) => String(n).padStart(2, '0');
-
-const ZWSP = '​';
-/* Long Thai compounds the design allows to break once, at the phrase boundary it chose. */
-const PHRASE_BREAKS: Record<string, string[]> = {
-  ลดต้นทุนสต็อก: ['ลดต้นทุน', 'สต็อก'],
-  ลดเวลาตรวจงาน: ['ลดเวลา', 'ตรวจงาน'],
-  ลดเวลารอคิว: ['ลดเวลา', 'รอคิว'],
-};
-
-/**
- * Short display lines as no-wrap phrases, breaking only between them:
- * "ลดต้นทุนสต็อก 32%" → [ลดต้นทุน]​[สต็อก] [32%], so Thai never splits mid-word.
- */
-export function nwWords(s: string): Raw {
-  const chunk = (w: string) => (PHRASE_BREAKS[w] ?? [w]).map((p) => `<span class="nw">${esc(p)}</span>`).join(ZWSP);
-  return raw(
-    String(s ?? '')
-      .split(/\s+/)
-      .filter(Boolean)
-      .map(chunk)
-      .join(' '),
-  );
-}
 
 /** Stat value as the odometer string: 120 + "+" → "120+", 99.9 + "%" → "99.9%". */
 export const statStr = (s: { target: number; suffix: string }) => `${s.target}${s.suffix}`;
@@ -159,40 +131,48 @@ export function portfolioWorks(home: HomeData): HomeData['portfolio']['allWork']
 }
 
 /* ---------------- portfolio art ---------------- */
-/* Illustrations are symbolic (stated on the page), matched to each project by industry. */
+/* 3D illustrations explaining each kind of system (stated on the page), matched to a project by industry. */
 const WORK_ART: { re: RegExp; src: string; w: number; h: number; alt: string }[] = [
-  { re: /manufactur|ผลิต/i, src: '/assets/img/work-manufacturing.webp', w: 1800, h: 1200, alt: 'ภาพประกอบ: น็อตและเฟืองโครเมียมจัดเรียงในช่องบับเบิลบนพื้นน้ำเงิน' },
-  { re: /retail|ค้าปลีก/i, src: '/assets/img/work-retail-wide.webp', w: 1800, h: 1305, alt: 'ภาพประกอบ: ถุงช้อปปิ้งเป่าลมสีชมพูเรียงเป็นตาราง' },
-  { re: /fintech|finance|bank|การเงิน/i, src: '/assets/img/work-fintech.webp', w: 1800, h: 1350, alt: 'ภาพประกอบ: เหรียญแก้วซ้อนเป็นทรงกระบอกใต้แสงน้ำเงิน' },
-  { re: /distribut|คลัง|กระจาย/i, src: '/assets/img/work-distribution-wide.webp', w: 1800, h: 1305, alt: 'ภาพประกอบ: คลังสินค้าจิ๋วกับชั้นวางโครเมียมและกล่องเจลลี่' },
-  { re: /logistic|ขนส่ง/i, src: '/assets/img/work-logistics.webp', w: 1800, h: 1200, alt: 'ภาพประกอบ: กล่องพัสดุลอยผูกกับหมุดแผนที่สีส้ม' },
-  { re: /health|medical|แพทย์|เวช/i, src: '/assets/img/work-healthcare.webp', w: 1800, h: 1350, alt: 'ภาพประกอบ: แคปซูลยาเรียงแถวรอคิว' },
+  { re: /manufactur|ผลิต/i, src: '/assets/img/work-manufacturing.webp', w: 1800, h: 1200, alt: 'ภาพประกอบ 3D: สายการผลิตในโรงงานกับจอ dashboard การผลิตแบบเรียลไทม์' },
+  { re: /retail|ค้าปลีก/i, src: '/assets/img/work-retail.webp', w: 1200, h: 1600, alt: 'ภาพประกอบ 3D: ลูกค้าใช้แอปสมาชิกสะสมแต้มที่เคาน์เตอร์ร้านค้า' },
+  { re: /fintech|finance|bank|การเงิน|database/i, src: '/assets/img/work-fintech.webp', w: 1800, h: 1350, alt: 'ภาพประกอบ 3D: ฐานข้อมูลส่งข้อมูลเร็วขึ้นจนเข็มวัดความเร็วขึ้นสุด' },
+  { re: /distribut|คลัง|กระจาย/i, src: '/assets/img/work-distribution.webp', w: 1200, h: 1600, alt: 'ภาพประกอบ 3D: คลังสินค้าที่สแกนบาร์โค้ดและดูสต็อกทุกสาขาบนแผนที่' },
+  { re: /logistic|ขนส่ง/i, src: '/assets/img/work-logistics.webp', w: 1800, h: 1200, alt: 'ภาพประกอบ 3D: รถขนส่งบนแผนที่เมืองกับจอติดตามสถานะแบบเรียลไทม์' },
+  { re: /health|medical|แพทย์|เวช/i, src: '/assets/img/work-healthcare.webp', w: 1800, h: 1350, alt: 'ภาพประกอบ 3D: คลินิกที่ผู้ป่วยจองคิวผ่านแท็บเล็ต' },
 ];
 export function workArt(tag: string, title: string, i: number) {
   return WORK_ART.find((a) => a.re.test(tag) || a.re.test(title)) ?? WORK_ART[i % WORK_ART.length];
 }
 
 /* ---------------- client logos ---------------- */
-/* Optimised copies of the CMS logos (same artwork, sized for the grid). Unknown names fall back to the CMS URL. */
-const CLIENT_ART: { re: RegExp; src: string; alt: string }[] = [
-  { re: /worldwide/i, src: '/assets/img/clients/worldwide-trade-thai.webp', alt: 'Worldwide Trade Thai' },
-  { re: /^mwa$|ประปา/i, src: '/assets/img/clients/mwa.webp', alt: 'การประปานครหลวง (MWA)' },
-  { re: /^dga$/i, src: '/assets/img/clients/dga.webp', alt: 'สำนักงานพัฒนารัฐบาลดิจิทัล (DGA)' },
-  { re: /สสส|thaihealth/i, src: '/assets/img/clients/thaihealth.svg', alt: 'สสส.' },
-  { re: /^bde$/i, src: '/assets/img/clients/bde.webp', alt: 'BDE' },
-  { re: /ฉะเชิงเทรา/i, src: '/assets/img/clients/spm-chachoengsao.webp', alt: 'สพม.ฉะเชิงเทรา' },
-  { re: /toursure/i, src: '/assets/img/clients/toursure-onlight.webp', alt: 'Toursure' },
-  { re: /kmutnb|มจพ/i, src: '/assets/img/clients/kmutnb.webp', alt: 'มจพ. (KMUTNB)' },
-  { re: /มจร|mcu/i, src: '/assets/img/clients/mcu.webp', alt: 'มจร.' },
-  { re: /opendurian/i, src: '/assets/img/clients/opendurian.webp', alt: 'opendurian' },
-  { re: /mirai/i, src: '/assets/img/clients/mirai.webp', alt: 'mirai' },
-  { re: /toyota/i, src: '/assets/img/clients/toyota.webp', alt: 'Toyota' },
-  { re: /กรุงศรี|krungsri/i, src: '/assets/img/clients/krungsri.webp', alt: 'ธนาคารกรุงศรี' },
-  { re: /huawei/i, src: '/assets/img/clients/huawei.webp', alt: 'Huawei' },
+/* Trimmed copies of the CMS logos. `h` = height the logo gets in its cell (--h), balanced by eye in the design
+   so wide wordmarks and square seals read at the same weight. Unknown names fall back to the CMS URL. */
+interface ClientArt {
+  src: string;
+  alt: string;
+  w: number;
+  h: number;
+  hPct: string;
+}
+const CLIENT_ART: (ClientArt & { re: RegExp })[] = [
+  { re: /worldwide/i, src: '/assets/img/clients/worldwide-trade-thai.webp', alt: 'Worldwide Trade Thai', w: 476, h: 140, hPct: '35.1%' },
+  { re: /^mwa$|ประปา/i, src: '/assets/img/clients/mwa.webp', alt: 'การประปานครหลวง (MWA)', w: 240, h: 240, hPct: '64.8%' },
+  { re: /^dga$/i, src: '/assets/img/clients/dga.webp', alt: 'สำนักงานพัฒนารัฐบาลดิจิทัล (DGA)', w: 240, h: 150, hPct: '51.2%' },
+  { re: /สสส|thaihealth/i, src: '/assets/img/clients/thaihealth.svg', alt: 'สสส.', w: 240, h: 207, hPct: '60.1%' },
+  { re: /^bde$/i, src: '/assets/img/clients/bde.webp', alt: 'BDE', w: 425, h: 111, hPct: '33.1%' },
+  { re: /ฉะเชิงเทรา/i, src: '/assets/img/clients/spm-chachoengsao.webp', alt: 'สพม.ฉะเชิงเทรา', w: 200, h: 239, hPct: '68.0%' },
+  { re: /toursure/i, src: '/assets/img/clients/toursure.webp', alt: 'Toursure', w: 480, h: 101, hPct: '29.7%' },
+  { re: /kmutnb|มจพ/i, src: '/assets/img/clients/kmutnb.webp', alt: 'มจพ. (KMUTNB)', w: 480, h: 114, hPct: '31.6%' },
+  { re: /มจร|mcu/i, src: '/assets/img/clients/mcu.webp', alt: 'มจร.', w: 176, h: 232, hPct: '68.0%' },
+  { re: /opendurian/i, src: '/assets/img/clients/opendurian.webp', alt: 'opendurian', w: 435, h: 222, hPct: '46.3%' },
+  { re: /mirai/i, src: '/assets/img/clients/mirai.webp', alt: 'mirai', w: 198, h: 198, hPct: '64.8%' },
+  { re: /toyota/i, src: '/assets/img/clients/toyota.webp', alt: 'Toyota', w: 427, h: 104, hPct: '32.0%' },
+  { re: /กรุงศรี|krungsri/i, src: '/assets/img/clients/krungsri.webp', alt: 'ธนาคารกรุงศรี', w: 480, h: 181, hPct: '39.8%' },
+  { re: /huawei/i, src: '/assets/img/clients/huawei.webp', alt: 'Huawei', w: 236, h: 240, hPct: '65.4%' },
 ];
-export function clientArt(l: { name: string; logoUrl: string }) {
+export function clientArt(l: { name: string; logoUrl: string }): ClientArt {
   const hit = CLIENT_ART.find((c) => c.re.test(l.name.trim()));
-  return hit ?? { src: l.logoUrl, alt: l.name };
+  return hit ?? { src: l.logoUrl, alt: l.name, w: 240, h: 120, hPct: '40%' };
 }
 
 /* ---------------- tech icons ---------------- */
