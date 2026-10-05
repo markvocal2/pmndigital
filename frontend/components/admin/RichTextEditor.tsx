@@ -7,7 +7,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import Image from '@tiptap/extension-image';
 import { Video } from './tiptapVideo';
 import { isVideoUrl } from '@/lib/cms';
-import { uploadMediaAction } from '@/lib/cms-actions';
+import { tooLargeMessage, uploadMedia } from '@/lib/media-upload';
 import { MediaPicker } from './MediaPicker';
 import { ARTICLE_BODY_CLASS } from '@/lib/articleBodyClass';
 
@@ -42,6 +42,7 @@ function Sep() {
 function Toolbar({ editor }: { editor: Editor }) {
   const [pick, setPick] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [pct, setPct] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Uploads and the media library both land here: a clip has to become a <video> node,
@@ -59,14 +60,14 @@ function Toolbar({ editor }: { editor: Editor }) {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    if (file.size > 200 * 1024 * 1024) { alert('ไฟล์ใหญ่เกินไป — สูงสุด 200MB'); return; }
+    const big = tooLargeMessage(file);
+    if (big) { alert(big); return; }
     setBusy(true);
+    setPct(0);
     try {
-      const fd = new FormData();
-      fd.set('file', file);
-      const res = await uploadMediaAction(fd);
-      if (res.ok) insertMedia(res.data.url);
-      else alert(res.error);
+      insertMedia(await uploadMedia(file, setPct));
+    } catch (ex) {
+      alert(ex instanceof Error && ex.message ? ex.message : 'อัปโหลดไม่สำเร็จ — การเชื่อมต่อมีปัญหา');
     } finally {
       setBusy(false);
     }
@@ -140,7 +141,7 @@ function Toolbar({ editor }: { editor: Editor }) {
       {/* link + image */}
       <Btn title="ลิงก์" active={editor.isActive('link')} onClick={setLink}>🔗</Btn>
       <input ref={fileRef} type="file" accept="image/*,video/mp4,video/webm,video/quicktime" className="hidden" onChange={onFile} />
-      <Btn title="แทรกรูป/วิดีโอ (อัปโหลด)" disabled={busy} onClick={() => fileRef.current?.click()}>{busy ? '…' : '🖼️'}</Btn>
+      <Btn title="แทรกรูป/วิดีโอ (อัปโหลด)" disabled={busy} onClick={() => fileRef.current?.click()}>{busy ? `${pct}%` : '🖼️'}</Btn>
       <Btn title="แทรกจากคลังสื่อ" onClick={() => setPick(true)}>คลัง</Btn>
 
       <MediaPicker open={pick} onClose={() => setPick(false)} onPick={insertMedia} />

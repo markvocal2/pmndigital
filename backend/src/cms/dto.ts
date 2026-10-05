@@ -99,6 +99,16 @@ export class CategoryDto {
   @IsOptional() @IsString() @MaxLength(120) nameEn?: string;
 }
 
+/** Multipart fields that travel with each piece of a chunked media upload (all strings on the wire). */
+export class MediaChunkDto {
+  @IsString() @Matches(/^[A-Za-z0-9-]{8,64}$/) uploadId: string;
+  @IsString() @Matches(/^\d{1,12}$/) offset: string;
+  @IsString() @Matches(/^\d{1,12}$/) size: string;
+  @IsIn(['0', '1']) last: string;
+  @IsOptional() @IsString() @MaxLength(255) name?: string;
+  @IsOptional() @IsString() @MaxLength(120) type?: string;
+}
+
 export class CreateLeadDto {
   @IsIn(['REGISTER', 'CONTACT']) type: string;
   @IsString() @MinLength(1) @MaxLength(120) name: string;

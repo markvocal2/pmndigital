@@ -29,6 +29,7 @@ import {
   CategoryDto,
   CommentStatusDto,
   LeadStatusDto,
+  MediaChunkDto,
   TestMailDto,
   UpdateHomeDto,
   UpdateSettingsDto,
@@ -195,6 +196,23 @@ export class CmsAdminController {
       size: file.size,
       originalname: file.originalname,
     });
+  }
+  /** Chunked upload for large files (video): the browser sends 8 MB pieces in order. */
+  @Post('media/chunk')
+  @UseInterceptors(FileInterceptor('chunk'))
+  uploadMediaChunk(@UploadedFile() file: Express.Multer.File | undefined, @Body() dto: MediaChunkDto) {
+    if (!file) throw new BadRequestException('chunk missing');
+    return this.cms.saveChunk(
+      {
+        uploadId: dto.uploadId,
+        offset: Number(dto.offset),
+        size: Number(dto.size),
+        last: dto.last === '1',
+        name: dto.name,
+        type: dto.type,
+      },
+      file.buffer,
+    );
   }
   @Get('media/list')
   listMedia() {

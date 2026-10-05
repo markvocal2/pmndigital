@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import type { MediaItem } from '@/lib/cms';
 import { isVideoUrl } from '@/lib/cms';
 import { MediaImg } from '@/components/ui/Skeleton';
-import { listMediaAction, deleteMediaAction, uploadMediaAction } from '@/lib/cms-actions';
+import { listMediaAction, deleteMediaAction } from '@/lib/cms-actions';
+import { tooLargeMessage, uploadMedia } from '@/lib/media-upload';
 
 function fmtSize(b: number) {
   return b < 1024 ? b + ' B' : b < 1048576 ? (b / 1024).toFixed(0) + ' KB' : (b / 1048576).toFixed(1) + ' MB';
@@ -20,6 +21,7 @@ export function MediaBrowser({ onPick }: { onPick?: (url: string) => void }) {
   const [items, setItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [pct, setPct] = useState(0);
   const [q, setQ] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -39,23 +41,19 @@ export function MediaBrowser({ onPick }: { onPick?: (url: string) => void }) {
     e.target.value = '';
     if (!f) return;
     setMsg(null);
-    if (f.size > 50 * 1024 * 1024) {
-      setMsg(`ไฟล์ใหญ่เกินไป (${(f.size / 1048576).toFixed(1)}MB) — สูงสุด 50MB`);
+    const big = tooLargeMessage(f);
+    if (big) {
+      setMsg(big);
       return;
     }
     setBusy(true);
+    setPct(0);
     try {
-      const fd = new FormData();
-      fd.set('file', f);
-      const r = await uploadMediaAction(fd);
-      if (!r.ok) {
-        setMsg(r.error);
-        return;
-      }
+      const url = await uploadMedia(f, setPct);
       await load();
-      if (onPick) onPick(r.data.url);
-    } catch {
-      setMsg('อัปโหลดไม่สำเร็จ — ไฟล์อาจใหญ่เกินไปหรือการเชื่อมต่อมีปัญหา');
+      if (onPick) onPick(url);
+    } catch (ex) {
+      setMsg(ex instanceof Error && ex.message ? ex.message : 'อัปโหลดไม่สำเร็จ — การเชื่อมต่อมีปัญหา');
     } finally {
       setBusy(false);
     }
@@ -84,7 +82,7 @@ export function MediaBrowser({ onPick }: { onPick?: (url: string) => void }) {
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <label className="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500">
-          {busy ? 'กำลังอัปโหลด…' : '+ อัปโหลดไฟล์'}
+          {busy ? `กำลังอัปโหลด ${pct}%` : '+ อัปโหลดไฟล์'}
           <input type="file" className="hidden" onChange={onFile} disabled={busy} />
         </label>
         <input

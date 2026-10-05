@@ -1,4 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { createReadStream } from 'node:fs';
+import { Readable } from 'node:stream';
 
 /**
  * PMN Drive (FileBrowser REST) client — per https://drive.pmndigital.co/docs/api.md.
@@ -49,6 +51,22 @@ export class DriveService {
       // and a cast to force it through is not worth the memory saved.
       body: new Uint8Array(data),
     });
+    if (!r.ok) throw new Error(`drive upload failed: ${r.status}`);
+  }
+
+  /**
+   * Stream a file from local disk to the Drive — used for large uploads that were assembled
+   * from chunks, so a 1 GB clip never has to sit in memory.
+   */
+  async uploadFile(path: string, localPath: string): Promise<void> {
+    if (path.includes('/')) await this.mkdir(path.slice(0, path.lastIndexOf('/')));
+    const r = await fetch(`${this.base}/api/resources/${this.p(path)}?override=true`, {
+      method: 'POST',
+      headers: { 'X-Auth': await this.token() },
+      body: Readable.toWeb(createReadStream(localPath)) as unknown as BodyInit,
+      // required by undici for a streamed request body
+      duplex: 'half',
+    } as RequestInit & { duplex: 'half' });
     if (!r.ok) throw new Error(`drive upload failed: ${r.status}`);
   }
 

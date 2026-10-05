@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, type ReactNode } from 'react';
-import { uploadMediaAction } from '@/lib/cms-actions';
+import { tooLargeMessage, uploadMedia } from '@/lib/media-upload';
 import { MediaPicker } from './MediaPicker';
 import { isVideoUrl } from '@/lib/cms';
 
@@ -149,6 +149,7 @@ export function ImageUpload({
   allowVideo?: boolean;
 }) {
   const [busy, setBusy] = useState(false);
+  const [pct, setPct] = useState(0);
   const [err, setErr] = useState<string | null>(null);
   const [pick, setPick] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -158,22 +159,17 @@ export function ImageUpload({
     e.target.value = '';
     if (!file) return;
     setErr(null);
-    if (file.size > 200 * 1024 * 1024) {
-      setErr(`ไฟล์ใหญ่เกินไป (${(file.size / 1048576).toFixed(1)}MB) — สูงสุด 200MB`);
+    const big = tooLargeMessage(file);
+    if (big) {
+      setErr(big);
       return;
     }
     setBusy(true);
+    setPct(0);
     try {
-      const fd = new FormData();
-      fd.set('file', file);
-      const res = await uploadMediaAction(fd);
-      if (!res.ok) {
-        setErr(res.error);
-        return;
-      }
-      onChange(res.data.url);
-    } catch {
-      setErr('อัปโหลดไม่สำเร็จ — ไฟล์อาจใหญ่เกินไปหรือการเชื่อมต่อมีปัญหา');
+      onChange(await uploadMedia(file, setPct));
+    } catch (ex) {
+      setErr(ex instanceof Error && ex.message ? ex.message : 'อัปโหลดไม่สำเร็จ — การเชื่อมต่อมีปัญหา');
     } finally {
       setBusy(false);
     }
@@ -205,13 +201,13 @@ export function ImageUpload({
             <span className="text-[10px] text-slate-400">＋ อัปโหลด</span>
           )}
           <span className="pointer-events-none absolute inset-0 hidden items-center justify-center bg-black/55 text-[10px] font-medium text-white group-hover:flex">
-            {busy ? 'กำลังอัปโหลด…' : value ? 'เปลี่ยนรูป' : 'คลิกเพื่ออัปโหลด'}
+            {busy ? `กำลังอัปโหลด ${pct}%` : value ? 'เปลี่ยนรูป' : 'คลิกเพื่ออัปโหลด'}
           </span>
         </button>
         <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={() => fileRef.current?.click()} disabled={busy} className="rounded-md border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-200 transition hover:border-blue-400/40 disabled:opacity-50">
-              {busy ? 'กำลังอัปโหลด…' : 'อัปโหลดรูป'}
+              {busy ? `กำลังอัปโหลด ${pct}%` : allowVideo ? 'อัปโหลดรูป/วิดีโอ' : 'อัปโหลดรูป'}
             </button>
             <button type="button" onClick={() => setPick(true)} className="rounded-md border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-blue-200 transition hover:border-blue-400/40">
               เลือกจากคลัง

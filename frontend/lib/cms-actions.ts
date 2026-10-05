@@ -49,11 +49,12 @@ export async function updateHomeAction(
 }
 
 /* ---------------- media upload ---------------- */
-export async function uploadMediaAction(
+/** One piece of a chunked upload (see lib/media-upload.ts); the last piece answers with the url. */
+export async function uploadMediaChunkAction(
   formData: FormData,
-): Promise<ActionResult<{ url: string }>> {
+): Promise<ActionResult<{ received: number; url?: string }>> {
   try {
-    const d = await backendFetch<{ url: string }>('/admin/media', {
+    const d = await backendFetch<{ received: number; url?: string }>('/admin/media/chunk', {
       method: 'POST',
       formData,
     });
