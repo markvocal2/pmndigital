@@ -128,14 +128,15 @@ export function portfolioWorks(home: HomeData): HomeData['portfolio']['allWork']
 }
 
 /* ---------------- portfolio art ---------------- */
-/* 3D illustrations explaining each kind of system (stated on the page), matched to a project by industry. */
-const WORK_ART: { re: RegExp; src: string; w: number; h: number; alt: string }[] = [
-  { re: /manufactur|ผลิต/i, src: '/assets/img/work-manufacturing.webp', w: 1800, h: 1200, alt: 'ภาพประกอบ 3D: สายการผลิตในโรงงานกับจอ dashboard การผลิตแบบเรียลไทม์' },
-  { re: /retail|ค้าปลีก/i, src: '/assets/img/work-retail.webp', w: 1200, h: 1600, alt: 'ภาพประกอบ 3D: ลูกค้าใช้แอปสมาชิกสะสมแต้มที่เคาน์เตอร์ร้านค้า' },
-  { re: /fintech|finance|bank|การเงิน|database/i, src: '/assets/img/work-fintech.webp', w: 1800, h: 1350, alt: 'ภาพประกอบ 3D: ฐานข้อมูลส่งข้อมูลเร็วขึ้นจนเข็มวัดความเร็วขึ้นสุด' },
-  { re: /distribut|คลัง|กระจาย/i, src: '/assets/img/work-distribution.webp', w: 1200, h: 1600, alt: 'ภาพประกอบ 3D: คลังสินค้าที่สแกนบาร์โค้ดและดูสต็อกทุกสาขาบนแผนที่' },
-  { re: /logistic|ขนส่ง/i, src: '/assets/img/work-logistics.webp', w: 1800, h: 1200, alt: 'ภาพประกอบ 3D: รถขนส่งบนแผนที่เมืองกับจอติดตามสถานะแบบเรียลไทม์' },
-  { re: /health|medical|แพทย์|เวช/i, src: '/assets/img/work-healthcare.webp', w: 1800, h: 1350, alt: 'ภาพประกอบ 3D: คลินิกที่ผู้ป่วยจองคิวผ่านแท็บเล็ต' },
+/* Illustrations explaining each kind of system (stated on the page), matched to a project by industry.
+   `pos` keeps the subject in frame where a portrait picture is cropped to the landscape slot. */
+const WORK_ART: { re: RegExp; src: string; w: number; h: number; alt: string; pos?: string }[] = [
+  { re: /manufactur|ผลิต/i, src: '/assets/img/work-manufacturing.webp', w: 1800, h: 1200, alt: 'ภาพประกอบ: หุ่นยนต์บนสายการผลิตโรงงาน วิศวกรถือแท็บเล็ต และแดชบอร์ดการผลิตแบบโฮโลแกรม' },
+  { re: /retail|ค้าปลีก/i, src: '/assets/img/work-retail.webp', w: 1200, h: 1600, alt: 'ภาพประกอบ: ลูกค้าจ่ายเงินด้วยมือถือที่เคาน์เตอร์ร้าน มีบัตรสมาชิกสะสมแต้มและกราฟยอดซื้อซ้ำลอยอยู่', pos: '50% 14%' },
+  { re: /fintech|finance|bank|การเงิน|database/i, src: '/assets/img/work-fintech.webp', w: 1800, h: 1350, alt: 'ภาพประกอบ: ห้องเซิร์ฟเวอร์ ข้อมูลวิ่งผ่านฐานข้อมูลอย่างรวดเร็ว กราฟความเร็วพุ่งขึ้น' },
+  { re: /distribut|คลัง|กระจาย/i, src: '/assets/img/work-distribution.webp', w: 1200, h: 1600, alt: 'ภาพประกอบ: พนักงานสแกนบาร์โค้ดในคลังสินค้า ข้างแผนที่เชื่อมหลายคลังและสต็อกแบบเรียลไทม์', pos: '50% 38%' },
+  { re: /logistic|ขนส่ง/i, src: '/assets/img/work-logistics.webp', w: 1800, h: 1200, alt: 'ภาพประกอบ: รถขนส่งบนทางด่วนยามค่ำ ใต้แผนที่เส้นทางพร้อมตำแหน่งรถแบบเรียลไทม์' },
+  { re: /health|medical|แพทย์|เวช/i, src: '/assets/img/work-healthcare.webp', w: 1800, h: 1350, alt: 'ภาพประกอบ: ผู้ป่วยจองคิวผ่านตู้แท็บเล็ตที่คลินิก ข้างตารางคิวนัดหมาย' },
 ];
 export function workArt(tag: string, title: string, i: number) {
   return WORK_ART.find((a) => a.re.test(tag) || a.re.test(title)) ?? WORK_ART[i % WORK_ART.length];

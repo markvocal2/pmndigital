@@ -4,7 +4,7 @@ import type { SiteCtx } from './data';
 
 export const SITE = 'https://pmndigital.co';
 /** Bump when anything under public/assets/{css,js} changes (cache-busting query). */
-export const ASSET_V = '202610052';
+export const ASSET_V = '202610061';
 
 export type NavKey = 'home' | 'services' | 'portfolio' | 'pricing' | 'contact' | 'blog' | 'status' | null;
 

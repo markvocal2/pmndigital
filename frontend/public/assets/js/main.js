@@ -318,6 +318,7 @@
         let n = el; let v = null;
         while (n && n !== html && v === null) { v = lum(getComputedStyle(n).backgroundColor); n = n.parentElement; }
         html.classList.toggle('nav-on-dark', v === null || v < 140);
+        html.classList.toggle('is-scrolled', scrollY > 24);
       };
       const ask = () => { if (!queued) { queued = true; requestAnimationFrame(probe); } };
       if (lenis) lenis.on('scroll', ask);
@@ -424,12 +425,11 @@
 
 
   /* ------------------------------------------------------------------------
-     Hero: the PMN wordmark is a glass of water over the IT city. The page
-     opens on a white veil (the city film shows through it at 25%) with the
-     letters as faint empty glass; water then rises inside them to near the
-     brim, its surface rolling in soft, slow swells, the city clear beneath.
-     Scrolling down lets the water go down little by little.
-     Canvas 2D: the veil, minus the letters faintly, minus the water fully.
+     Hero: the PMN wordmark lights up. The page opens on a white veil (the
+     city film shows through it at 25%) with the letters as faint glass; P,
+     M and N fade up in turn, the city clear inside them and each outline
+     left as a soft cobalt glow. Scrolling down dims them again, N first.
+     Canvas 2D for the glass and the light; SVG for the soft outline glow.
      ------------------------------------------------------------------------ */
   function hero() {
     const sec = $('[data-hero]');
@@ -448,98 +448,159 @@
     if (!ctx) return;
     html.classList.add('has-paper');
 
-    const water = { level: 0, amp: 0 }; // level: share of the letters' height under water
+    const L = [0, 1, 2].map(() => ({ charge: 0, lit: 0, flash: 0, glow: 0 })); // P, M, N; glow = the trace's brightness
     let dpr = 1; let visible = true; let out = 0; let drain = 0;
     const vessel = $('.glass-wm', sec);
-    const shapes = vessel ? $$('.wm-rim', vessel).map((p) => new Path2D(p.getAttribute('d'))) : [];
-    let letters = null; let lx = 0; let ly = 0; let lw = 0; let lh = 0;
+    const rims = vessel ? $$('.wm-rim', vessel) : [];
+    const shapes = rims.map((p) => new Path2D(p.getAttribute('d')));
+    let glyphs = [];
     const size = () => {
       dpr = Math.min(devicePixelRatio || 1, 1.5);
-      canvas.width = Math.round(sec.clientWidth * dpr); canvas.height = Math.round(sec.clientHeight * dpr);
+      const cw = Math.round(sec.clientWidth * dpr); const ch = Math.round(sec.clientHeight * dpr);
+      if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; }
+      last = '';
       if (vessel && shapes.length) {
-        // the vessel box is exactly the letters' box, so the outlines map onto the canvas one to one
+        // the vessel box is exactly the letters' box, so the outlines map onto the canvas one to one. Measured in
+        // layout px: the section may be scaled back at this moment (the sheet that rises over it), which a bounding
+        // box would include and the canvas, inside the same section, must not
         const s = sec.getBoundingClientRect(); const r = vessel.getBoundingClientRect();
-        lx = r.left - s.left; ly = r.top - s.top; lw = r.width; lh = r.height;
-        const k = lw / 1612;
-        const m = new DOMMatrix([k, 0, 0, k, lx - 243 * k, ly - 139 * k]);
-        letters = new Path2D();
-        shapes.forEach((p) => letters.addPath(p, m));
+        const z = s.width / sec.offsetWidth || 1;
+        const k = vessel.offsetWidth / 1612; const ox = (r.left - s.left) / z - 243 * k; const oy = (r.top - s.top) / z - 139 * k;
+        const m = new DOMMatrix([k, 0, 0, k, ox, oy]);
+        glyphs = shapes.map((sh) => { const path = new Path2D(); path.addPath(sh, m); return path; });
       }
+      if (runs.length) runWidth();
     };
+    // the veil is frosted glass: the film drawn small (40% of the size, softened when the browser can blur a
+    // canvas), stretched back over the hero so it reads as a blur, then a milky tint for the headline to sit on
+    const fog = d.createElement('canvas'); const fx = fog.getContext('2d');
+    const soft = 'filter' in fx;
+    // fogA eases the frost in from the plain white veil once the film has a frame, and the last frame is kept while
+    // the film seeks back to its start on each loop, so the glass never blinks white
+    let fogA = 0; let hasFog = false; let fogT = -1;
+    // a counter that steps once per decoded film frame (currentTime alone moves on every screen refresh)
+    let vframe = 0;
+    if (video && 'requestVideoFrameCallback' in video) {
+      const onFrame = () => { vframe++; video.requestVideoFrameCallback(onFrame); };
+      video.requestVideoFrameCallback(onFrame);
+    }
+    const filmAt = () => (video ? vframe || video.currentTime : 0);
+    const frost = () => {
+      const W = canvas.width; const H = canvas.height;
+      if (video && video.readyState >= 2 && video.videoWidth && filmAt() !== fogT) {
+        fogT = filmAt();
+        const fw = Math.max(32, Math.round(W / dpr / 2.5)); const fh = Math.max(18, Math.round(H / dpr / 2.5));
+        if (fog.width !== fw || fog.height !== fh) { fog.width = fw; fog.height = fh; }
+        const sc = Math.max(fw / video.videoWidth, fh / video.videoHeight);
+        const dw = video.videoWidth * sc; const dh = video.videoHeight * sc;
+        if (soft) fx.filter = 'blur(1px)';
+        // drawn a little oversized so the blur has no pale rim at the edges
+        fx.drawImage(video, (fw - dw) / 2 - 4, (fh - dh) / 2 - 4, dw + 8, dh + 8);
+        hasFog = true;
+      }
+      if (hasFog) {
+        fogA = Math.min(1, fogA + 0.025);
+        ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+        ctx.globalAlpha = fogA; ctx.drawImage(fog, 0, 0, W, H); ctx.globalAlpha = 1;
+      }
+      ctx.fillStyle = `rgba(255, 255, 255, ${(0.75 - 0.25 * fogA).toFixed(3)})`;
+      ctx.fillRect(0, 0, W, H);
+    };
+    // power per letter after scrolling: the letters go dark in reverse, N first
+    const power = (i) => 1 - gsap.utils.clamp(0, 1, drain * 1.6 - (glyphs.length - 1 - i) * 0.3);
 
-    const TAU = Math.PI * 2;
-    const wave = (base, A, t) => {
-      // a soft surface: three long, slow sine swells (1.6, 3.5 and 6.8 across the word), no sharp crests
-      ctx.beginPath();
-      ctx.moveTo(lx - 16, ly + lh + 4);
-      for (let x = lx - 16; x <= lx + lw + 16; x += 8) {
-        const u = (x - lx) / lw;
-        ctx.lineTo(x, base - A * (Math.sin(u * TAU * 1.6 + t * 0.9) * 0.6 + Math.sin(u * TAU * 3.5 - t * 1.3 + 1.3) * 0.28 + Math.sin(u * TAU * 6.8 + t * 1.8 + 2.7) * 0.12));
-      }
-      ctx.lineTo(lx + lw + 16, ly + lh + 4);
-      ctx.closePath();
-      ctx.fill();
-    };
+    // the wordmark can move without the section resizing (a phone centres it in the space the headline leaves,
+    // and the headline rewraps when its font arrives): re-measure whenever its layout box changes
+    let place = ''; let frame = 0; let last = '';
+    const where = () => `${vessel.offsetLeft},${vessel.offsetTop},${vessel.offsetWidth},${vessel.offsetParent ? vessel.offsetParent.offsetTop : 0},${sec.clientHeight}`;
     const tick = () => {
       if (!visible) return;
-      const t = performance.now() / 1000;
-      drain += (out - drain) * 0.08; // the water follows the scroll a little behind, so it settles rather than jumps
+      if (frame++ % 15 === 0) { const w = where(); if (w !== place) { place = w; size(); } }
+      drain += (out - drain) * 0.08;
+      if (Math.abs(out - drain) < 0.0005) drain = out;
+      const hid = vessel.style.opacity === '0';
+      const sig = `${filmAt()}|${fogA < 1 && hasFog ? fogA : 1}|${drain.toFixed(4)}|${hid}|${L.map((l) => `${l.lit.toFixed(3)},${l.glow.toFixed(3)},${l.charge}`).join(';')}|${runs.map((r) => r.pulse).join(',')}`;
+      if (sig === last) return;
+      last = sig;
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
       ctx.clearRect(0, 0, canvas.width, canvas.height); // the veil is translucent, so each frame starts clean
-      ctx.fillStyle = 'rgba(255, 255, 255, .75)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      // the logo flight hides the wordmark while it travels: the glass leaves with it
-      if (!letters || vessel.style.opacity === '0') return;
+      frost();
+      const hidden = vessel.style.opacity === '0'; // the logo flight has lifted the wordmark off
+      runSvg.style.opacity = hidden ? '0' : '';
+      if (hidden) return;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.fillStyle = '#000';
-      ctx.save();
-      ctx.clip(letters, 'evenodd');
-      // the empty glass: the letters read faintly even above the water
-      ctx.globalAlpha = 0.22;
-      ctx.fillRect(lx - 16, ly - 16, lw + 32, lh + 32);
-      const fill = water.level * (1 - drain);
-      if (fill > 0.002) {
-        const base = ly + lh - fill * lh;
-        const A = lh * 0.04 * water.amp * Math.min(1, fill * 4); // calmer as the glass runs dry
-        ctx.globalAlpha = 0.5; // a softer swell just behind the surface
-        wave(base - A * 0.6, A, t + 1.9);
-        ctx.globalAlpha = 1;
-        wave(base, A, t);
-        // the water itself: a pale blue just under the surface, fading with depth
-        ctx.globalCompositeOperation = 'source-over';
-        const tint = ctx.createLinearGradient(0, base - A, 0, base + lh * 0.4);
-        tint.addColorStop(0, 'rgba(160, 215, 255, .32)');
-        tint.addColorStop(1, 'rgba(160, 215, 255, 0)');
-        ctx.fillStyle = tint;
-        wave(base, A, t);
-      }
-      ctx.restore();
-      ctx.globalAlpha = 1;
-      ctx.globalCompositeOperation = 'source-over';
+      glyphs.forEach((g, i) => {
+        const lit = L[i].lit * power(i);
+        ctx.save();
+        ctx.clip(g, 'evenodd');
+        // faint glass while dark, the clear city once powered
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.fillStyle = '#000';
+        ctx.globalAlpha = 0.22 + 0.78 * lit;
+        ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+        ctx.restore();
+      });
+      ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+      drawRuns();
+    };
+
+    // the current: per contour a cobalt trace that grows round the outline and a short bright head at its tip
+    const runSvg = $('.glass-wm__run', vessel);
+    const runs = runSvg ? $$('.wm-run', runSvg).map((base) => {
+      const len = base.getTotalLength(); const l = +base.dataset.l;
+      const trace = base; trace.style.stroke = '#3d8bff';
+      const tail = runSvg.appendChild(base.cloneNode()); tail.style.stroke = '#7cc4ff';
+      const head = runSvg.appendChild(base.cloneNode()); head.style.stroke = '#f2fbff';
+      return { l, len, trace, tail, head, pulse: -1 };
+    }) : [];
+    const runWidth = () => {
+      const k = vessel.offsetWidth / 1612; // layout px per outline unit (unaffected by the sheet's scale)
+      if (k) runs.forEach((r) => { r.trace.style.strokeWidth = `${2.6 / k}px`; r.tail.style.strokeWidth = `${3.4 / k}px`; r.head.style.strokeWidth = `${4.2 / k}px`; });
+    };
+    // style writes only when a value changes: each write re-renders the glow's stacked shadows
+    const put = (el, k, v) => { if (el.style[k] !== v) el.style[k] = v; };
+    const drawRuns = () => {
+      runs.forEach((r) => {
+        const st = L[r.l]; const p = power(r.l); const c = st.charge;
+        // the trace: as long as the charge has run, bright while charging, a dim powered edge once lit
+        put(r.trace, 'strokeDasharray', `${c * r.len} ${r.len}`);
+        put(r.trace, 'strokeOpacity', String(+(st.glow * p).toFixed(3)));
+        // the head: a bright spark with a long soft comet tail at the tip while charging, or a passing idle pulse
+        const charging = c > 0 && c < 1; const at = charging ? c : r.pulse;
+        if (at > 0 && at < 1 && p > 0.05) {
+          const h = r.len * 0.05; const t = r.len * 0.2;
+          const fade = Math.min(1, at * 8, (1 - at) * 8); // eases the spark in and out at the ends of the lap
+          const k = (charging ? 1 : 0.6) * p * fade;
+          r.head.style.strokeDasharray = `${h} ${r.len}`; r.head.style.strokeDashoffset = String(h - at * r.len); r.head.style.strokeOpacity = String(k);
+          r.tail.style.strokeDasharray = `${t} ${r.len}`; r.tail.style.strokeDashoffset = String(t - at * r.len); r.tail.style.strokeOpacity = String(0.55 * k);
+        } else { put(r.head, 'strokeOpacity', '0'); put(r.tail, 'strokeOpacity', '0'); }
+      });
     };
 
     size();
     new ResizeObserver(size).observe(sec); // the hero grows when the full-width wordmark needs the room
+    if (d.fonts && d.fonts.ready) d.fonts.ready.then(size);
     ScrollTrigger.addEventListener('refresh', size);
     gsap.ticker.add(tick);
     new IntersectionObserver(([en]) => {
       visible = en.isIntersecting;
       if (video) { if (visible) video.play().catch(() => {}); else video.pause(); }
     }).observe(sec);
-    // the water is all gone by the time the logo flight lifts the wordmark off (or once the hero has mostly gone)
+    // the letters are dark again by the time the logo flight lifts the wordmark off (or once the hero has mostly gone)
     const lift = $('.reel-sec__statement');
     ScrollTrigger.create({ trigger: sec, start: 'top top', ...(lift ? { endTrigger: lift, end: 'top 92%' } : { end: 'bottom 35%' }),
       onUpdate: (st) => { out = st.progress; } });
 
-    // the opening: the water rises inside the letters to near the brim, then its swells settle
+    // the opening: the current runs round P, P powers on, the current jumps to M, then N
     whenReady(() => {
-      gsap.timeline({ delay: 0.9, onStart: size })
-        .to(water, { amp: 1, duration: 1, ease: 'power1.out' }, 0)
-        .to(water, { level: 0.8, duration: 2.4, ease: 'power2.inOut' }, 0)
-        .to(water, { amp: 0.75, duration: 1.2, ease: 'power1.inOut' }, 2.2);
+      // no running current: each letter fades up in turn, its outline left as a soft glow
+      const tl = gsap.timeline({ delay: 0.9, onStart: size });
+      L.forEach((st, i) => {
+        tl.set(st, { charge: 1 }, 0)
+          .to(st, { lit: 1, duration: 1.1, ease: 'power2.inOut' }, i * 0.35)
+          .to(st, { glow: 0.4, duration: 1.4, ease: 'sine.inOut' }, i * 0.35 + 0.2);
+      });
     });
   }
 
@@ -568,6 +629,27 @@
     }
     sec.classList.add('is-scrub');
     video.pause();
+    // a phone held upright gets the portrait cut of the film (the same story composed 9:16), so it fills the screen
+    const tall = !!video.dataset.portraitSrc && innerWidth / innerHeight < 0.9;
+    if (tall) {
+      video.src = video.dataset.portraitSrc;
+      if (video.dataset.portraitPoster) video.poster = video.dataset.portraitPoster;
+      video.dataset.frames = video.dataset.portraitFrames;
+      video.dataset.frameCount = video.dataset.portraitCount;
+    }
+    // touch devices (iOS Safari above all, iPadOS included) scrub a still-frame sequence drawn on a canvas:
+    // seeking a <video> there is unreliable, a drawn frame never is. The film stays underneath as the poster
+    const touch = !FINE || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
+    const seq = touch && video.dataset.frames && +video.dataset.frameCount
+      ? { n: +video.dataset.frameCount, pat: video.dataset.frames, imgs: [], at: -1 } : null;
+    let canvas = null; let cx = null;
+    if (seq) {
+      canvas = mk('canvas', 'reel__seq');
+      canvas.setAttribute('aria-hidden', 'true');
+      video.after(canvas);
+      cx = canvas.getContext('2d');
+      video.preload = 'none';
+    }
     let dur = video.duration || 5;
     let want = 0; let applied = -1; let shown = -1; let lastT = -1;
     const seek = () => {
@@ -577,20 +659,61 @@
     };
     video.addEventListener('seeked', seek);
     video.addEventListener('loadedmetadata', () => { dur = video.duration || dur; applied = -1; lastT = -1; });
-    // a streamed film is only seekable when the server honours byte ranges (the local preview does not);
-    // a copy in memory can always be scrubbed, so fetch it once the section is near
+    // touch browsers (iOS Safari above all) neither buffer a film nor paint its seeked frames until it has
+    // played once: play and pause it as soon as it is loading, and again on the first tap if the browser
+    // refused (Low Power Mode blocks even muted autoplay)
+    let unlocked = false;
+    const unlock = () => {
+      if (unlocked) return;
+      video.muted = true;
+      const p = video.play();
+      if (p && p.then) p.then(() => { video.pause(); unlocked = true; applied = -1; lastT = -1; }).catch(() => {});
+    };
+    // the film must be seekable: a server that honours byte ranges (the live site) streams it; one that does
+    // not (the local preview) cannot, so a copy is fetched into memory. The server is asked directly: a
+    // browser can answer a range request from its own cache even when the server never would
     let fetched = false;
     const load = () => {
       if (fetched || !window.fetch || !window.URL) return;
       fetched = true;
-      fetch(video.currentSrc || video.src).then((r) => (r.ok ? r.blob() : Promise.reject(r.status))).then((blob) => {
-        video.src = URL.createObjectURL(blob);
-        video.load();
-        // touch browsers only paint seeked frames of a film that has played once
-        if (!FINE) video.addEventListener('loadeddata', () => { video.play().then(() => { video.pause(); applied = -1; lastT = -1; }).catch(() => {}); }, { once: true });
-      }).catch(() => { fetched = false; });
+      const src = video.currentSrc || video.src;
+      fetch(src, { method: 'HEAD', cache: 'no-store' }).then((r) => (/bytes/i.test(r.headers.get('accept-ranges') || '') ? null
+        : fetch(src).then((f) => (f.ok ? f.blob() : Promise.reject(f.status))).then((blob) => { video.src = URL.createObjectURL(blob); })))
+        .then(() => {
+          video.preload = 'auto';
+          video.load();
+          unlock();
+          if (!FINE) ['touchend', 'click'].forEach((ev) => addEventListener(ev, unlock, { once: true, passive: true }));
+        })
+        .catch(() => { fetched = false; });
     };
-    ScrollTrigger.create({ trigger: sec, start: 'top bottom+=150%', once: true, onEnter: load });
+    // the frames load every tenth first, so the whole story scrubs coarsely at once, then the ones in between
+    const loadSeq = () => {
+      const order = []; const seen = new Set();
+      [10, 5, 1].forEach((step) => { for (let i = 0; i < seq.n; i += step) if (!seen.has(i)) { seen.add(i); order.push(i); } });
+      let k = 0;
+      const next = () => {
+        if (k >= order.length) return;
+        const i = order[k++]; const img = new Image();
+        img.decoding = 'async';
+        img.onload = () => { seq.imgs[i] = img; next(); };
+        img.onerror = next;
+        img.src = seq.pat.replace('{n}', String(i + 1).padStart(3, '0'));
+      };
+      for (let c = 0; c < 6; c++) next();
+    };
+    const drawSeq = () => {
+      // the frame for this point of the scroll, or the nearest one already in hand
+      const want = Math.round(proxy.t * (seq.n - 1));
+      let best = -1;
+      for (let dd = 0; dd < seq.n && best < 0; dd++) {
+        if (seq.imgs[want - dd]) best = want - dd; else if (seq.imgs[want + dd]) best = want + dd;
+      }
+      if (best < 0 || best === seq.at || !canvas.width) return;
+      seq.at = best;
+      cx.drawImage(seq.imgs[best], 0, 0, canvas.width, canvas.height);
+    };
+    ScrollTrigger.create({ trigger: sec, start: 'top bottom+=150%', once: true, onEnter: seq ? loadSeq : load });
 
     // the film is full-bleed behind the grid: it covers a landscape screen; on a portrait screen it is a band
     // just wider than the screen (the whole cast and the dashboard stay in view), framed by data-focus
@@ -598,8 +721,8 @@
     const film = { top: 0, h: 0, band: false };
     const focus = parseFloat(video.dataset.focus) || 0.5;
     const fit = () => {
-      const W = sticky.clientWidth; const H = sticky.clientHeight; const ar = 16 / 9;
-      film.band = W / H < 0.9;
+      const W = sticky.clientWidth; const H = sticky.clientHeight; const ar = tall ? 9 / 16 : 16 / 9;
+      film.band = !tall && W / H < 0.9;
       let w; let h; let left;
       if (film.band) {
         w = W * 1.12; h = w / ar;
@@ -610,7 +733,14 @@
       // a phone's band sits just under the nav, so the statement above runs straight into the film (no dead black gap)
       film.top = film.band ? parseFloat(getComputedStyle(sticky).paddingTop) || 0 : (H - h) * 0.46; film.h = h;
       Object.assign(video.style, { left: `${left}px`, top: `${film.top}px`, width: `${w}px`, height: `${h}px` });
+      if (canvas) {
+        Object.assign(canvas.style, { left: `${left}px`, top: `${film.top}px`, width: `${w}px`, height: `${h}px` });
+        const r = Math.min(devicePixelRatio || 1, 2);
+        canvas.width = Math.round(w * r); canvas.height = Math.round(h * r);
+        seq.at = -1; // resizing clears the canvas: draw the frame again
+      }
       box.classList.toggle('is-band', film.band);
+      box.classList.toggle('is-tall', tall);
       // on a phone the caption follows straight under the band, so film and words read as one block
       if (caption) Object.assign(caption.style, film.band ? { top: `${film.top + h + 20}px`, bottom: 'auto' } : { top: '', bottom: '' });
     };
@@ -642,7 +772,7 @@
     const proxy = { t: 0 };
     const tl = gsap.timeline({ scrollTrigger: { trigger: $('.reel-sec__track', sec), start: 'top top', end: 'bottom bottom', scrub: 0.6, invalidateOnRefresh: true } });
     tl.fromTo(box, { clipPath: framed }, { clipPath: opened, ease: 'power2.inOut', duration: 0.62 }, 0.06)
-      .fromTo(video, { scale: 1.12 }, { scale: 1, ease: 'power1.out', duration: 0.62 }, 0.06)
+      .fromTo(canvas ? [video, canvas] : video, { scale: 1.12 }, { scale: 1, ease: 'power1.out', duration: 0.62 }, 0.06)
       .to(proxy, { t: 1, ease: 'none', duration: 0.76 }, 0.1)
       // the caption ends up over the cobalt film, so its quiet greys turn white
       .to(quiet, { color: '#fff', ease: 'none', duration: 0.16 }, 0.16)
@@ -652,20 +782,20 @@
     const stamp = $('.reel__stamp', sec);
     if (stamp) {
       const tool = $('.reel__stamp-tool', stamp); const print = $('.reel__stamp-print', stamp);
-      // the engineers walk in about a quarter of the way through the film; the stamp lands with them
-      tl.fromTo(tool, { autoAlpha: 0, yPercent: -160 }, { autoAlpha: 1, yPercent: 0, ease: 'power2.in', duration: 0.07 }, 0.22)
-        .fromTo(print, { autoAlpha: 0, scale: 1.3, rotate: -12 }, { autoAlpha: 1, scale: 1, rotate: -6, ease: EASE, duration: 0.035 }, 0.29)
-        .to(tool, { yPercent: -180, autoAlpha: 0, ease: 'power2.out', duration: 0.08 }, 0.32)
+      // the order reaches the warehouse about a third of the way through the film; the stamp lands as it connects
+      tl.fromTo(tool, { autoAlpha: 0, yPercent: -160 }, { autoAlpha: 1, yPercent: 0, ease: 'power2.in', duration: 0.07 }, 0.26)
+        .fromTo(print, { autoAlpha: 0, scale: 1.3, rotate: -12 }, { autoAlpha: 1, scale: 1, rotate: -6, ease: EASE, duration: 0.035 }, 0.33)
+        .to(tool, { yPercent: -180, autoAlpha: 0, ease: 'power2.out', duration: 0.08 }, 0.36)
         // the mark lifts away before the camera pushes into the dashboard, so it never covers the system it introduced
         .to(print, { autoAlpha: 0, scale: 0.92, ease: 'power1.in', duration: 0.05 }, 0.54);
     }
     // the film follows the proxy every frame rather than from tween callbacks, because a ScrollTrigger
     // refresh (fonts, images) restores the timeline silently and would leave the film on its first frame
     gsap.ticker.add(() => {
+      if (seq) drawSeq(); // every tick: a frame that has just arrived may be nearer than the one on show
       if (proxy.t === lastT) return;
       lastT = proxy.t;
-      want = Math.min(dur - 0.04, proxy.t * dur);
-      seek();
+      if (!seq) { want = Math.min(dur - 0.04, proxy.t * dur); seek(); }
       const pc = Math.round(proxy.t * 100);
       if (meter && pc !== shown) { shown = pc; setOdo(meter, String(pc).padStart(3, '0'), { dur: 0.25, stagger: 0.02, ease: 'power2.out' }); }
     });
@@ -752,8 +882,11 @@
       // ink follows the ground under it: black while over the white paper, white once over the dark statement
       const y = a.top + (b.top - a.top) * e; const heroEdge = big.closest('[data-hero]').getBoundingClientRect().bottom;
       flyer.style.color = y + h / 2 < heroEdge ? getComputedStyle(big).color : getComputedStyle(host).color;
-      flyer.style.width = `${b.width}px`; flyer.style.height = `${b.height}px`;
-      flyer.style.transform = `translate(${a.left + (b.left - a.left) * e}px, ${y}px) scale(${h / b.height})`;
+      // the slot's box is wider than its letters while the statement line still leans in on its slanted reveal:
+      // size the flyer by the wordmark's own proportions and centre it on that box, so no letter is pushed off screen
+      const bw = b.height * AR; const bl = b.left + (b.width - bw) / 2;
+      flyer.style.width = `${bw}px`; flyer.style.height = `${b.height}px`;
+      flyer.style.transform = `translate(${a.left + (bl - a.left) * e}px, ${y}px) scale(${h / b.height})`;
     };
     ScrollTrigger.create({ trigger: host, start: 'top 92%', end: 'top 36%', onUpdate: (st) => { p = st.progress; render(); }, onRefresh: (st) => { p = st.progress; render(); } });
     ScrollTrigger.create({ trigger: host, start: 'bottom top', end: 'max', onToggle: (st) => { past = st.isActive; render(); }, onRefresh: (st) => { past = st.isActive; render(); } });
@@ -841,6 +974,161 @@
   }
 
   /* ------------------------------------------------------------------------
+     Testimonials chat: as each message scrolls in it joins a queue; one at a
+     time, its typing dots show for a moment, then the message pops up from
+     its sender's side. Messages keep their space, so nothing shifts.
+     ------------------------------------------------------------------------ */
+  function chat() {
+    const log = $('[data-chat]');
+    if (!log || !MOTION) return;
+    const msgs = $$('[data-msg]', log);
+    const parts = msgs.map((m) => [...m.children].filter((ch) => !ch.classList.contains('msg__dots')));
+    gsap.set(parts.flat(), { autoAlpha: 0 });
+    const queue = []; let busy = false;
+    const run = () => {
+      if (busy || !queue.length) return;
+      busy = true;
+      const i = queue.shift(); const m = msgs[i]; const dots = $('.msg__dots', m);
+      const out = m.classList.contains('msg--out');
+      gsap.timeline({ onComplete: () => { busy = false; run(); } })
+        .to(dots, { autoAlpha: 1, duration: 0.2, ease: 'power1.out' })
+        .to(dots, { autoAlpha: 0, duration: 0.15, ease: 'power1.in' }, out ? 0.6 : 0.75)
+        .fromTo(parts[i], { autoAlpha: 0, y: 14, scale: 0.96, transformOrigin: out ? '100% 100%' : '0% 100%' },
+          { autoAlpha: 1, y: 0, scale: 1, duration: 0.5, ease: EASE, stagger: 0.04 }, '>-0.05')
+        .to({}, { duration: 0.2 });
+    };
+    msgs.forEach((m, i) => ScrollTrigger.create({ trigger: m, start: 'top 88%', once: true, onEnter: () => whenReady(() => { queue.push(i); run(); }) }));
+  }
+
+  /* ------------------------------------------------------------------------
+     Section sheets: where the ground changes tone (white to black or back),
+     the next section rises over the last like a sheet, its top corners
+     rounded and a soft shadow above it. As it climbs to the top of the
+     screen its corners flatten, and the section underneath sinks back a
+     little and dims (the black page shows through). Nothing moves in the
+     layout: a zero-height strip before the sheet carries the colour
+     underneath into its rounded corners.
+     ------------------------------------------------------------------------ */
+  function sheets() {
+    const tone = (el) => {
+      const c = (getComputedStyle(el).backgroundColor.match(/[\d.]+/g) || []).map(Number);
+      if (c.length < 3 || c[3] === 0) return null;
+      return 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2] > 128 ? 'light' : 'dark';
+    };
+    let last = null; let prev = null;
+    [...$$('#main > *'), $('.footer')].forEach((el) => {
+      const t = el && el.offsetHeight ? tone(el) : null;
+      if (!t) return;
+      if (last && t !== last) sheet(el, prev);
+      last = t; prev = el;
+    });
+  }
+  function sheet(el, below) {
+    const under = mk('div', 'sheet-under');
+    under.setAttribute('aria-hidden', 'true');
+    under.style.setProperty('--under', getComputedStyle(below).backgroundColor);
+    el.before(under);
+    el.classList.add('sheet');
+    if (!MOTION) return;
+    // the reading frame's side margin (--pad) and the corner radius (--sheet-r), in px for this screen
+    const pad = () => (innerWidth <= 991 ? 16 : Math.max(20, (innerWidth - 1280) / 2));
+    const rad = () => Math.min(72, Math.max(28, innerWidth * 0.045));
+    const apply = (p) => {
+      // a card inset to the frame, opening to the full width as it climbs to the top of the screen
+      const q = 1 - gsap.parseEase('power2.out')(p); const x = (pad() * q).toFixed(1); const r = (rad() * q).toFixed(1);
+      el.style.clipPath = `inset(0 ${x}px 0 ${x}px round ${r}px ${r}px 0 0)`;
+      // the colour in the corners leaves with the section it belongs to: as that sinks back and pulls in from the
+      // edges, the corners fall to the black page behind, so no bright wedge is left hanging there
+      under.style.opacity = Math.max(0, 1 - p * 2.5).toFixed(3);
+      // on a phone a section can be shorter than the screen, so it waits until the next one covers half the screen
+      // before it sinks (otherwise it shrinks while still being read and the black page shows down its sides)
+      const s = innerWidth <= 991 ? Math.max(0, (p - 0.5) / 0.5) : p;
+      if (s <= 0.001) { gsap.set(below, { clearProps: 'transform,opacity' }); return; }
+      // the part of the section still in view is its last screen: it sinks back about that screen's centre
+      gsap.set(below, { scale: 1 - 0.05 * s, opacity: 1 - 0.4 * s, transformOrigin: `50% ${below.offsetHeight - innerHeight / 2}px` });
+    };
+    // measured after every pinned section above has added its spacing (these triggers are created first, at boot)
+    ScrollTrigger.create({ trigger: el, start: 'top bottom', end: 'top top', refreshPriority: -1, onUpdate: (st) => apply(st.progress), onRefresh: (st) => apply(st.progress) });
+  }
+
+  /* ------------------------------------------------------------------------
+     Page minimap: the whole page in miniature on the right edge (wide
+     screens). One bar per section, as tall as the section and in its tone;
+     a glowing window rides over it showing what is on screen; the current
+     section lights cobalt and its name slides out beside the pill whenever
+     it changes (or on hover); no counters, only the name. Bars are links: a click glides there.
+     ------------------------------------------------------------------------ */
+  function minimap() {
+    const blocks = [...$$('#main > section, #main > article'), $('.footer')].filter((el) => el && el.offsetHeight > 40);
+    if (blocks.length < 3) return;
+    const tone = (el) => {
+      const c = (getComputedStyle(el).backgroundColor.match(/[\d.]+/g) || []).map(Number);
+      return c.length >= 3 && c[3] !== 0 && 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2] > 128 ? 'light' : 'dark';
+    };
+    const name = (el, i) => {
+      const lab = el.getAttribute('aria-labelledby');
+      const t = (lab && d.getElementById(lab)?.textContent) || el.getAttribute('aria-label') || (el.matches('.footer') ? 'ติดต่อเรา' : '');
+      if (i === 0 && el.matches('[data-hero], .phero')) return el.matches('[data-hero]') ? 'หน้าแรก' : (t || 'เริ่มต้น');
+      // a short label: an explicit data-nav, else the heading without its "( 04 )" count, cut at a word near 26 characters
+      if (el.dataset.nav) return el.dataset.nav;
+      const s = (t || 'ส่วนที่ ' + (i + 1)).replace(/\(\s*\d+\s*\)/g, '').replace(/\s+/g, ' ').trim();
+      if (s.length <= 26) return s;
+      const cut = s.lastIndexOf(' ', 26);
+      return s.slice(0, cut > 10 ? cut : 26) + '…';
+    };
+    const nav = mk('nav', 'minimap'); nav.setAttribute('aria-label', 'ตำแหน่งในหน้านี้');
+    const pill = mk('div', 'minimap__pill'); const track = mk('div', 'minimap__track');
+    const view = mk('span', 'minimap__view'); view.setAttribute('aria-hidden', 'true');
+    const tip = mk('span', 'minimap__tip'); tip.setAttribute('aria-hidden', 'true');
+    const segs = blocks.map((el, i) => {
+      const a = mk('a', 'minimap__seg');
+      if (!el.id) el.id = 'sec-' + (i + 1);
+      a.href = '#' + el.id; a.dataset.tone = tone(el); a.dataset.name = name(el, i);
+      a.setAttribute('aria-label', a.dataset.name);
+      a.addEventListener('click', (e) => { e.preventDefault(); if (lenis) lenis.scrollTo(el, { duration: 1.4 }); else el.scrollIntoView({ behavior: 'smooth' }); });
+      track.appendChild(a);
+      return a;
+    });
+    track.appendChild(view); pill.append(track, tip); nav.appendChild(pill); d.body.appendChild(nav);
+
+    // section extents on the page, pin spacing included (re-measured on every refresh)
+    let spans = []; let total = 1;
+    const measure = () => {
+      spans = blocks.map((el) => { const box = el.parentElement.classList.contains('pin-spacer') ? el.parentElement : el; const r = box.getBoundingClientRect(); return [r.top + scrollY, r.height]; });
+      total = Math.max(1, d.documentElement.scrollHeight);
+      segs.forEach((s, i) => { s.style.flex = `${Math.max(spans[i][1], 1)} 1 0`; });
+    };
+    measure();
+    ScrollTrigger.addEventListener('refresh', measure);
+    if (MOTION) gsap.from(segs, { scaleY: 0, duration: 0.8, ease: EASE, stagger: 0.04, delay: 0.8 });
+
+    let cur = -1; let hideT = null;
+    const showTip = (i, hold) => {
+      tip.textContent = segs[i].dataset.name;
+      const tr = track.getBoundingClientRect(); const sr = segs[i].getBoundingClientRect();
+      tip.style.top = `${sr.top - tr.top + sr.height / 2 - tip.offsetHeight / 2 + 9}px`;
+      nav.classList.add('is-tip');
+      clearTimeout(hideT);
+      if (!hold) hideT = setTimeout(() => nav.classList.remove('is-tip'), 1800);
+    };
+    segs.forEach((s, i) => {
+      s.addEventListener('pointerenter', () => showTip(i, true));
+      s.addEventListener('pointerleave', () => { hideT = setTimeout(() => nav.classList.remove('is-tip'), 400); });
+    });
+    const update = () => {
+      const y = scrollY; const vh = innerHeight; const H = track.clientHeight;
+      view.style.transform = `translateY(${(y / total) * H}px)`;
+      view.style.height = `${Math.max(8, (vh / total) * H)}px`;
+      const mid = y + vh * 0.4;
+      let i = spans.findIndex(([t, h]) => mid >= t && mid < t + h); if (i < 0) i = mid < spans[0][0] ? 0 : spans.length - 1;
+      if (i !== cur) { if (cur >= 0) { segs[cur].classList.remove('is-on'); segs[cur].removeAttribute('aria-current'); } cur = i; segs[i].classList.add('is-on'); segs[i].setAttribute('aria-current', 'location'); if (y > 40) showTip(i, false); }
+    };
+    update();
+    if (lenis) lenis.on('scroll', update); else addEventListener('scroll', update, { passive: true });
+    addEventListener('resize', update);
+  }
+
+  /* ------------------------------------------------------------------------
      Tech stack as abacus rails: hovering a rail counts its beads across.
      ------------------------------------------------------------------------ */
   function abacus() {
@@ -919,6 +1207,23 @@
         if (fig) setOdo(fig, '40%', { instant: true });
       };
     });
+    // phone: each ticket slides in a little crooked, settles, then gets stamped and its icon turns cobalt
+    mm.add('(max-width: 991px)', () => {
+      const slips = $$('.slip', sec);
+      slips.forEach((s, i) => {
+        const stamp = $('.slip__stamp', s);
+        gsap.set(s, { autoAlpha: 0, y: 28, rotation: i % 2 ? 2.2 : -2.2 });
+        gsap.set(stamp, { autoAlpha: 0, scale: 1.9, rotation: -26 });
+        const tl = gsap.timeline({ paused: true })
+          .to(s, { autoAlpha: 1, y: 0, rotation: 0, duration: 0.7, ease: OUT })
+          .to(stamp, { autoAlpha: 0.94, scale: 1, rotation: -8, duration: 0.22, ease: 'power3.in' }, 0.45)
+          .to(s, { scale: 0.985, duration: 0.08, yoyo: true, repeat: 1, ease: 'power1.out' }, 0.67)
+          .to($('.slip__ic', s), { backgroundColor: 'rgba(14, 90, 200, .12)', color: '#0e5ac8', duration: 0.3, ease: 'none' }, 0.67)
+          .to($('.slip__no', s), { color: '#0e5ac8', duration: 0.3, ease: 'none' }, 0.67);
+        ScrollTrigger.create({ trigger: s, start: 'top 88%', once: true, onEnter: () => tl.play() });
+      });
+      return () => gsap.set([...slips, ...$$('.slip__stamp, .slip__ic, .slip__no', sec)], { clearProps: 'all' });
+    });
   }
 
   /* ------------------------------------------------------------------------
@@ -932,12 +1237,41 @@
         onEnter(sec, () => gsap.to(lines, { scaleY: 1, duration: 1.6, ease: EASE, stagger: { each: 0.05, from: 'start' } }), 'top 70%');
       }
       if (!MOTION) return;
+      // phone: swipe cards; the bar lights up to the card in view and a tap on a bar glides to its card
+      mm.add('(max-width: 991px)', () => {
+        const list = $('.process__steps', sec);
+        const steps = $$('.step', sec);
+        const bars = $$('.process__bar span', sec);
+        if (!list || !bars.length) return undefined;
+        const mark = () => {
+          const w = steps[1] ? steps[1].offsetLeft - steps[0].offsetLeft : 1;
+          const i = list.scrollLeft + list.clientWidth >= list.scrollWidth - 4 ? steps.length - 1 : Math.round(list.scrollLeft / w);
+          bars.forEach((b, k) => b.classList.toggle('is-on', k <= i));
+        };
+        const taps = bars.map((b, i) => {
+          const f = () => list.scrollTo({ left: steps[i].offsetLeft - steps[0].offsetLeft, behavior: 'smooth' });
+          b.addEventListener('click', f);
+          return f;
+        });
+        list.addEventListener('scroll', mark, { passive: true });
+        mark();
+        gsap.from(steps, { autoAlpha: 0, x: 40, duration: 0.8, ease: OUT, stagger: 0.08, scrollTrigger: { trigger: list, start: 'top 85%', once: true } });
+        return () => {
+          list.removeEventListener('scroll', mark);
+          bars.forEach((b, i) => { b.removeEventListener('click', taps[i]); b.classList.remove('is-on'); });
+        };
+      });
       mm.add('(min-width: 992px)', () => {
         const stage = $('.process__stage', sec);
         const steps = $$('.step', sec);
         const num = $('.process__num', sec);
         const bars = $$('.process__bar span', sec);
+        const pics = $$('.process__pic', sec);
         sec.classList.add('is-pinned-process');
+        // the desk pictures: the first shows, the rest wait; the shown one floats gently
+        gsap.set(pics, { autoAlpha: 0 });
+        gsap.set(pics[0], { autoAlpha: 1, visibility: 'visible' });
+        const float = gsap.to($('.process__art', sec), { y: -6, duration: 2.6, ease: 'sine.inOut', yoyo: true, repeat: -1 });
         let cur = 0;
         setOdo(num, '01', { instant: true });
         gsap.set(steps, { autoAlpha: 0 });
@@ -953,13 +1287,20 @@
           gsap.fromTo(steps[i].children, { yPercent: 70 * dir, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.85, ease: OUT, stagger: 0.06, delay: 0.2, overwrite: true });
           setOdo(num, String(i + 1).padStart(2, '0'), { dur: 0.9 });
           bars.forEach((b, k) => b.classList.toggle('is-on', k <= i));
+          // the desk moves on: the old picture leaves on the 14° slant while the next sweeps in and settles
+          if (pics.length) {
+            const was = pics[steps.indexOf(prev)];
+            if (was) gsap.to(was, { clipPath: slantFrom(-dir), scale: 0.96, autoAlpha: 0, duration: 0.6, ease: 'power3.in', overwrite: true });
+            gsap.fromTo(pics[i], { clipPath: slantFrom(dir), scale: 1.04, autoAlpha: 1 },
+              { clipPath: SLANT_OPEN, scale: 1, autoAlpha: 1, duration: 0.85, ease: EASE, delay: 0.1, overwrite: true });
+          }
         };
         const st = ScrollTrigger.create({
           trigger: sec, start: 'top top', end: () => '+=' + innerHeight * (steps.length - 0.4) * 0.75,
           pin: stage, pinSpacing: true, anticipatePin: 1,
           onUpdate: (s) => go(Math.min(steps.length - 1, Math.floor(s.progress * steps.length * 0.999))),
         });
-        return () => { st.kill(); sec.classList.remove('is-pinned-process'); gsap.set(steps, { clearProps: 'all' }); steps.forEach((s) => gsap.set(s.children, { clearProps: 'all' })); };
+        return () => { st.kill(); float.kill(); gsap.set(pics, { clearProps: 'all' }); sec.classList.remove('is-pinned-process'); gsap.set(steps, { clearProps: 'all' }); steps.forEach((s) => gsap.set(s.children, { clearProps: 'all' })); };
       });
     });
   }
@@ -1306,11 +1647,13 @@
       if (!FINE || !MOTION) return;
       letters.forEach((p) => {
         let busy = false;
+        // each letter leans from its foot; the svg does not clip, so N's head may swing out past the screen edge
+        const origin = '50% 100%';
         p.addEventListener('pointerenter', () => {
           if (busy) return;
           busy = true;
           gsap.timeline({ onComplete: () => { busy = false; } })
-            .to(p, { skewX: -12, transformOrigin: '50% 100%', duration: 0.35, ease: OUT })
+            .to(p, { skewX: -12, transformOrigin: origin, duration: 0.35, ease: OUT })
             .to(p, { skewX: 0, duration: 0.7, ease: EASE });
         });
       });
@@ -1331,6 +1674,7 @@
     const fontsReady = d.fonts && d.fonts.ready ? Promise.race([d.fonts.ready, new Promise((r) => setTimeout(r, 1200))]) : Promise.resolve();
     await fontsReady;
     nav();
+    sheets();
     rotWords();
     logoFlight();
     reveals();
@@ -1341,6 +1685,7 @@
     reel();
     abacus();
     whySec();
+    chat();
     chaos();
     process();
     works();
@@ -1355,6 +1700,7 @@
     statusBars();
     footerMark();
     misc();
+    minimap();
     html.classList.remove('anim');
     ScrollTrigger.refresh();
 

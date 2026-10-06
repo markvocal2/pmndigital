@@ -1,6 +1,6 @@
 import { getPublicPromotions, getServerStatus, type ServerStatus, type Promotion } from '@/lib/cms';
 import { defaultHomeContent } from '@/lib/home-content';
-import { GLASS_WM, PMN_SLOT, REEL_INK } from '../brand';
+import { CHAT_MARK, GLASS_WM, PMN_SLOT, REEL_INK } from '../brand';
 import {
   clientArt,
   dateMid,
@@ -17,8 +17,8 @@ import {
   type SiteCtx,
 } from '../data';
 import { html, noBreaks, raw, withBreaks, type Raw } from '../html';
-import { discountSwitch, ILLUS_NOTE, plans, processSection, proof, railsBlock, registerForm, worksGrid } from '../sections';
-import { ARW, ico, renderPage } from '../shell';
+import { discountSwitch, ILLUS_NOTE, plans, processSection, railsBlock, registerForm, worksGrid } from '../sections';
+import { ARW, ASSET_V, ico, renderPage } from '../shell';
 
 const SVC_OBJ: Record<string, string> = { db: 'svc-database-sm.webp', erp: 'svc-erp-sm.webp', crm: 'svc-crm-sm.webp', code: 'svc-custom-sm.webp' };
 /* Why-PMN card icons, in the order of the default four reasons (more reasons reuse them). */
@@ -51,16 +51,16 @@ function hero(c: SiteCtx): Raw {
 
 /* "[PMN] ยินดีช่วยวางระบบให้ธุรกิจของคุณ…" — the wordmark sits in the sentence, "คุณ" rotates through
    you/您/당신/Sie, and the PMN stamp presses onto the story reel. */
-const REEL = raw(`<section class="reel-sec s-dark" data-reel-sec aria-labelledby="reel-title">
+const REEL = raw(`<section class="reel-sec s-dark" data-nav="เราช่วยอะไรได้" data-reel-sec aria-labelledby="reel-title">
   <div class="reel-sec__head"><h2 class="display reel-sec__statement" id="reel-title" data-line aria-label="PMN ยินดีช่วยวางระบบให้ธุรกิจของคุณ ตั้งแต่จัดการข้อมูล จนทั้งองค์กรใช้งานได้ง่ายทุกวัน"><span class="pmn-slot" aria-hidden="true">${PMN_SLOT}</span>ยินดีช่วย<span class="nw">วางระบบ</span>ให้<span class="nw">ธุรกิจของ<span class="rotword" data-rotate="you|您|당신|Sie">คุณ</span></span> ตั้งแต่<span class="nw">จัดการข้อมูล</span> <span class="nw">จนทั้ง</span><span class="nw">องค์กรใช้งาน</span><span class="nw">ได้ง่ายทุกวัน</span></h2></div>
   <div class="reel-sec__track">
     <div class="reel-sec__sticky">
-      <div class="reel"><video src="/assets/video/reel-pmn-story.mp4" poster="/assets/img/scene-story-start.webp" data-focus=".5" muted playsinline preload="metadata" aria-hidden="true"></video></div>
+      <div class="reel"><video src="/assets/video/reel-pmn-story.mp4" poster="/assets/img/scene-story-start.webp" data-focus=".5" data-frames="/assets/video/reel-frames/f{n}.webp?v=${ASSET_V}" data-frame-count="152" data-portrait-src="/assets/video/reel-pmn-story-portrait.mp4?v=${ASSET_V}" data-portrait-poster="/assets/img/scene-story-start-portrait.webp?v=${ASSET_V}" data-portrait-frames="/assets/video/reel-frames-portrait/f{n}.webp?v=${ASSET_V}" data-portrait-count="152" muted playsinline preload="metadata" aria-hidden="true"></video></div>
       <div class="reel__stamp" aria-hidden="true">
         <img class="reel__stamp-tool" src="/assets/img/obj-stamp-sm.webp" alt="" width="560" height="560" loading="lazy" decoding="async">
         <div class="reel__stamp-print">
           ${REEL_INK}
-          <span class="reel__stamp-label caps">เข้ามาจัดการระบบ</span>
+          <span class="reel__stamp-label caps">เชื่อมทุกระบบ</span>
         </div>
       </div>
       <div class="reel-sec__caption"><p class="mute">PMN ออกแบบ พัฒนา ติดตั้ง และดูแลให้แบบจบในทีมเดียว</p><div class="reel__meter" aria-hidden="true"><span class="caps mute">ระบบพร้อมใช้งาน</span><span class="odo-n">100</span></div></div>
@@ -71,7 +71,7 @@ const REEL = raw(`<section class="reel-sec s-dark" data-reel-sec aria-labelledby
 function clients(c: SiteCtx): Raw {
   const logos = c.home.trustedLogos.filter((l) => l.logoUrl);
   if (!logos.length) return raw('');
-  const [th, en] = c.home.trustedLabel.split(/\s+—\s+/);
+  const [th] = c.home.trustedLabel.split(/\s+—\s+/);
   // each logo twice: a grey "ink" print, and the colour original revealed on hover
   const items = logos.map((l) => {
     const a = clientArt(l);
@@ -79,7 +79,7 @@ function clients(c: SiteCtx): Raw {
     return l.url ? html`<li class="client"><a href="${l.url}" target="_blank" rel="noopener" data-no-transition>${imgs}</a></li>` : html`<li class="client">${imgs}</li>`;
   });
   return html`<section class="sec sec--tight s-dark clients" aria-labelledby="clients-title">
-  <div class="clients__head"><h2 class="h3" id="clients-title" data-line>${th}</h2><p class="caps mute">${en ? en.charAt(0) + en.slice(1).toLowerCase() : 'Trusted by our clients'} <span class="data">( ${pad2(logos.length)} )</span></p></div>
+  <div class="clients__head"><h2 class="h3" id="clients-title" data-line>${th}</h2></div>
   <ul class="clients__grid">${items}</ul>
   ${raw('<svg class="sr-only" aria-hidden="true" focusable="false"><filter id="ink-grey" color-interpolation-filters="sRGB"><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncR type="gamma" exponent="2"/><feFuncG type="gamma" exponent="2"/><feFuncB type="gamma" exponent="2"/></feComponentTransfer></filter></svg>')}
 </section>`;
@@ -102,6 +102,36 @@ function services(c: SiteCtx): Raw {
 </section>`;
 }
 
+/* "PMN in numbers" as four bento cards; each card illustrates its figure. Labels and figures come
+   from the CMS stats (in their order); the small notes and pictures are design copy. */
+const BENTO_NOTES = ['ERP · CRM · ฐานข้อมูล · ซอฟต์แวร์สั่งทำ', 'ทั้งภาครัฐและเอกชน', 'ออกแบบ พัฒนา และดูแลระบบ', 'ระบบที่ดูแล ทำงานต่อเนื่องตลอด 24 ชม.'];
+const BENTO_THUMBS = ['work-manufacturing.webp', 'work-fintech.webp', 'work-logistics.webp'];
+const BENTO_LOGOS = [/worldwide/i, /^dga$/i, /kmutnb|มจพ/i, /toyota/i, /กรุงศรี|krungsri/i, /huawei/i];
+
+function bento(c: SiteCtx): Raw {
+  const stats = c.home.stats;
+  const logos = (() => {
+    const all = c.home.trustedLogos.filter((l) => l.logoUrl);
+    const picked = BENTO_LOGOS.map((re) => all.find((l) => re.test(l.name.trim()))).filter((l): l is (typeof all)[number] => !!l);
+    return (picked.length >= 3 ? picked : all).slice(0, 6);
+  })();
+  const years = Math.max(1, Math.min(12, Math.round(stats[2]?.target ?? 8)));
+  const visuals: (Raw | string)[] = [
+    html`<div class="bento__thumbs" aria-hidden="true">${BENTO_THUMBS.map((f) => html`<span class="bento__thumb"><img src="/assets/img/${f}" alt="" width="1800" height="1200" loading="lazy" decoding="async"></span>`)}</div>`,
+    html`<div class="bento__logos">${logos.map((l) => {
+      const a = clientArt(l);
+      return html`<span class="bento__logo"><img src="${a.src}" alt="${a.alt}" width="240" height="120" loading="lazy" decoding="async"></span>`;
+    })}</div>`,
+    html`<div class="bento__ticks" aria-hidden="true">${Array.from({ length: years }, (_v, i) => (i === years - 1 ? raw('<i class="is-now"></i>') : raw('<i></i>')))}</div>`,
+    raw(`<div class="bento__bars" aria-hidden="true">${'<i></i>'.repeat(60)}</div>`),
+  ];
+  const cards = stats.slice(0, 4).map((s, i) => {
+    const wide = i === 0 || i === 3;
+    return html`<article class="bento__card ${wide ? 'bento__card--wide' : ''}" data-fade><p class="bento__label">${s.label}</p><p class="bento__num"><span data-odo="${statStr(s)}">${statStr(s)}</span></p><p class="bento__note">${BENTO_NOTES[i]}</p>${visuals[i]}</article>`;
+  });
+  return html`<section class="sec sec--tight s-dark" aria-label="PMN Digital ในตัวเลข"><div class="bento">${cards}</div></section>`;
+}
+
 function why(c: SiteCtx): Raw {
   const w = c.home.why;
   const cards = w.bento.map(
@@ -120,10 +150,11 @@ function why(c: SiteCtx): Raw {
 }
 
 /* The steel-factory case study, told as paperwork being stamped "solved". */
-const CHAOS = raw(`<section class="chaos" data-chaos aria-labelledby="chaos-title">
+const CHAOS = raw(`<section class="chaos" data-nav="ก่อน–หลังมีระบบ" data-chaos aria-labelledby="chaos-title">
   <div class="chaos__stage">
     <div class="chaos__bg" aria-hidden="true"><img src="/assets/img/scene-paper.webp" alt="" width="2200" height="1238" loading="lazy" decoding="async"></div>
     <h2 class="sr-only" id="chaos-title">จากเอกสารกระดาษ สู่ระบบดิจิทัล — กรณีศึกษาโรงงานเหล็ก</h2>
+    <div class="chaos__head" aria-hidden="true"><p class="caps">กรณีศึกษา · โรงงานเหล็ก</p><p class="chaos__title">จากเอกสารกระดาษ<br>สู่ระบบดิจิทัล</p></div>
     <ol class="chaos__table" aria-label="ปัญหาเดิม ที่ระบบแก้แล้ว"><li class="slip"><div class="slip__head"><span class="slip__no">ปัญหา 01</span><span class="slip__ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M10 12.2a2 2 0 1 1 2.8 1.9c-.5.3-.8.6-.8 1.1v.4"/><path d="M12 18.3h.01"/></svg></span></div><span class="slip__t">ใบงานกระดาษหายบ่อย</span><span class="slip__stamp">แก้แล้ว</span></li><li class="slip"><div class="slip__head"><span class="slip__no">ปัญหา 02</span><span class="slip__ic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></span></div><span class="slip__t">คีย์ข้อมูลซ้ำหลายรอบ</span><span class="slip__stamp">แก้แล้ว</span></li><li class="slip"><div class="slip__head"><span class="slip__no">ปัญหา 03</span><span class="slip__ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span></div><span class="slip__t">รายงานล่าช้าหลายวัน</span><span class="slip__stamp">แก้แล้ว</span></li><li class="slip"><div class="slip__head"><span class="slip__no">ปัญหา 04</span><span class="slip__ic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 10h8M8 14h8M14 7l-4 10"/></svg></span></div><span class="slip__t">ตัวเลขไม่ตรง</span><span class="slip__stamp">แก้แล้ว</span></li><li class="slip"><div class="slip__head"><span class="slip__no">ปัญหา 05</span><span class="slip__ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M10.6 6.1A9.8 9.8 0 0 1 12 6c5 0 8.5 4 9.5 6a12 12 0 0 1-2.4 3.2M6.6 7.6C4.6 8.9 3.2 10.7 2.5 12c1 2 4.5 6 9.5 6 1.6 0 3-.4 4.3-1"/><path d="M9.9 10a3 3 0 0 0 4.1 4.2"/></svg></span></div><span class="slip__t">ผู้บริหารไม่เห็นภาพรวมการผลิต</span><span class="slip__stamp">แก้แล้ว</span></li><li class="slip"><div class="slip__head"><span class="slip__no">ปัญหา 06</span><span class="slip__ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l9 4.5-9 4.5-9-4.5z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 16.5l9 4.5 9-4.5"/></svg></span></div><span class="slip__t">เอกสารกระดาษนับพันใบต่อเดือน</span><span class="slip__stamp">แก้แล้ว</span></li></ol>
     <div class="chaos__final">
       <p class="chaos__line">หลังใช้ระบบ ใบงานอยู่ในมือถือ ผู้บริหารดู dashboard ได้ทันที และเวลางานเอกสารลดลง <span data-odo="40%" data-odo-scrub>40%</span></p>
@@ -159,7 +190,7 @@ function consoleSec(s: ServerStatus | null): Raw {
   const allUp = days.every((d) => d >= 100);
   const when = dateMid(s.updatedAt);
   const f2 = (p: number) => (Math.max(0, Math.min(100, p)) / 100).toFixed(2).replace(/^0/, '');
-  return html`<section class="console-sec" data-console aria-labelledby="console-title">
+  return html`<section class="console-sec" data-nav="มอนิเตอร์ 24 ชม." data-console aria-labelledby="console-title">
   <div class="console-sec__stage">
     <div class="room">
       <img src="/assets/img/scene-room.webp" alt="" width="2560" height="1440" loading="lazy" decoding="async" aria-hidden="true">
@@ -199,7 +230,7 @@ function consoleSec(s: ServerStatus | null): Raw {
 }
 
 function pricing(c: SiteCtx): Raw {
-  return html`<section class="sec s-dark" id="pricing" aria-labelledby="price-title">
+  return html`<section class="sec s-dark" data-nav="แพ็กเกจราคา" id="pricing" aria-labelledby="price-title">
   <div class="sec-head"><h2 class="h2" id="price-title" data-line>แพ็กเกจที่ยืดหยุ่นตามธุรกิจ</h2><div class="sec-head__aside">${discountSwitch('plans-home')}</div></div>
   ${plans(c.home, 'plans-home', () => '/pricing', 'ตามขอบเขตงาน')}
 </section>`;
@@ -230,7 +261,7 @@ function promotions(list: Promotion[]): Raw {
 function register(c: SiteCtx): Raw {
   const r = c.home.register;
   const perks = r.privileges.map((p) => html`<li class="perk"><b>${p.t}</b><span>${p.d}</span></li>`);
-  return html`<section class="sec s-light" id="register" aria-labelledby="reg-title">
+  return html`<section class="sec s-light" data-nav="ลงทะเบียนรับสิทธิ์" id="register" aria-labelledby="reg-title">
   <div class="register__grid">
     <div class="register__copy">
       <h2 class="h2" id="reg-title" data-line>${withBreaks(r.title)}</h2>
@@ -243,15 +274,26 @@ function register(c: SiteCtx): Raw {
 </section>`;
 }
 
+/* PMN's reply under each review in the chat. The design wrote one per default review; a review
+   added in /admin/home gets the plain thank-you. */
+const CHAT_REPLIES: Record<string, string> = {
+  'ทีม PMN เข้าใจปัญหาหน้างานจริง ระบบ ERP ที่ได้ช่วยให้เราปิดบัญชีเร็วขึ้นมาก': 'ขอบคุณที่ไว้ใจ PMN ครับ ดีใจที่ช่วยให้ปิดบัญชีได้เร็วขึ้น',
+  'ทำงานออนไลน์ตลอด เห็นความคืบหน้าทุกสัปดาห์ ส่งมอบตรงเวลาแบบที่หาได้ยาก': 'ขอบคุณที่ทำงานไปด้วยกันครับ',
+  'ฐานข้อมูลที่เคยช้ามาก หลังปรับใหม่เร็วขึ้นหลายเท่า คุ้มค่ามาก': 'ยินดีมากครับ ระบบเร็วขึ้น ทีมก็ทำงานสบายขึ้น',
+};
+const DOTS = raw('<span class="msg__dots" aria-hidden="true"><i></i><i></i><i></i></span>');
+
 function testimonials(c: SiteCtx): Raw {
   if (!c.home.testimonials.length) return raw('');
-  const qs = c.home.testimonials.map(
+  const log = c.home.testimonials.map((q) => {
+    const initial = Array.from(q.n.replace(/^คุณ\s*/, '').trim())[0] ?? '';
+    const reply = CHAT_REPLIES[q.q.trim()] ?? 'ขอบคุณที่ไว้ใจ PMN ครับ';
     // role only: the design leaves the company names off
-    (q) => html`<figure class="quote"><figcaption class="quote__who"><b>${q.n}</b><span>${q.r.split(',')[0].trim()}</span></figcaption><blockquote data-line>“${q.q}”</blockquote></figure>`,
-  );
+    return html`<li class="msg msg--in" data-msg><span class="msg__av" aria-hidden="true"><span>${initial}</span></span><figure class="msg__body"><figcaption class="msg__who"><b>${q.n}</b><span>${q.r.split(',')[0].trim()}</span></figcaption><blockquote class="msg__bubble">${q.q}</blockquote></figure>${DOTS}</li><li class="msg msg--out" data-msg><div class="msg__body"><p class="msg__bubble">${reply}</p><span class="msg__meta">อ่านแล้ว <span aria-hidden="true">✓✓</span></span></div>${DOTS}</li>`;
+  });
   return html`<section class="sec s-dark proof-b" id="testimonials" aria-labelledby="t-title">
   <div class="sec-head"><h2 class="h2" id="t-title" data-line>ลูกค้าพูดถึงเรา</h2><p class="sec-head__note">จากลูกค้าจริงของเรา</p></div>
-  <div class="quotes">${qs}</div>
+  <div class="chat-wrap"><div class="chat" data-chat><div class="chat__bar"><span class="chat__logo" aria-hidden="true">${raw(CHAT_MARK)}</span><div class="chat__title"><b>ลูกค้า PMN</b><span class="chat__status"><i aria-hidden="true"></i>ออนไลน์</span></div></div><ol class="chat__log">${log}</ol></div></div>
 </section>`;
 }
 
@@ -281,7 +323,7 @@ ${clients(c)}
 
 ${services(c)}
 
-${proof(h.stats.map((s) => ({ v: statStr(s), l: s.label })), 'PMN Digital ในตัวเลข', 's-dark')}
+${bento(c)}
 
 ${why(c)}
 

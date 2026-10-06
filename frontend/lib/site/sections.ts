@@ -31,8 +31,26 @@ export function phero(o: {
 </section>`;
 }
 
+/* One 3D illustration per stage, in the order of the default five (extra stages reuse the last). */
+const PROCESS_ART = [
+  'ภาพประกอบ 3D: โต๊ะทำงานกับโน้ต การ์ดสเก็ตช์ และแว่นขยาย ช่วงทำความเข้าใจธุรกิจ',
+  'ภาพประกอบ 3D: พิมพ์เขียวสีน้ำเงินกับโครงหน้าจอ ไม้บรรทัด และไม้ฉาก ช่วงออกแบบระบบ',
+  'ภาพประกอบ 3D: แล็ปท็อปกับบล็อกสีที่ต่อกันเป็นหอคอย ช่วงพัฒนาระบบ',
+  'ภาพประกอบ 3D: เซิร์ฟเวอร์ไฟเขียวเชื่อมขึ้นคลาวด์และจรวดกำลังขึ้น ช่วงนำขึ้นใช้งานจริง',
+  'ภาพประกอบ 3D: จอแดชบอร์ด หูฟัง และเครื่องหมายถูก ช่วงดูแลต่อเนื่อง',
+];
+const processPic = (i: number) => `/assets/img/process-${Math.min(i, PROCESS_ART.length - 1) + 1}.webp`;
+
 export function processSection(h: HomeData): Raw {
-  const steps = h.process.map((s) => html`<li class="step"><h3 class="en">${s.t}</h3><p>${s.d}</p></li>`);
+  const n = h.process.length;
+  // the pinned desktop scene cross-fades .process__pic; phones show each step's own picture
+  const pics = h.process.map(
+    (_s, i) => html`<img class="process__pic" src="${processPic(i)}" alt="" width="1600" height="1200" loading="lazy" decoding="async">`,
+  );
+  const steps = h.process.map(
+    (s, i) =>
+      html`<li class="step"><span class="step__art"><img src="${processPic(i)}" alt="${PROCESS_ART[Math.min(i, PROCESS_ART.length - 1)]}" width="1600" height="1200" loading="lazy" decoding="async"></span><span class="step__no data" aria-hidden="true">${pad2(i + 1)} / ${pad2(n)}</span><h3 class="en">${s.t}</h3><p>${s.d}</p></li>`,
+  );
   const bar = h.process.map((s) => html`<span>${s.t}</span>`);
   return html`<section class="process s-light" data-process aria-labelledby="process-title">
   <div class="process__lines" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
@@ -40,6 +58,7 @@ export function processSection(h: HomeData): Raw {
     <div class="process__head"><h2 class="h2" id="process-title" data-line>กระบวนการทำงานแบบครบวงจร</h2></div>
     <p class="process__note">${h.process.length} ขั้นตอน · จบในทีมเดียว</p>
     <p class="process__num" aria-hidden="true">01</p>
+    <div class="process__art" aria-hidden="true">${pics}</div>
     <ol class="process__steps">${steps}</ol>
     <div class="process__bar" aria-hidden="true">${bar}</div>
   </div>
@@ -48,7 +67,7 @@ export function processSection(h: HomeData): Raw {
 
 export function railsBlock(h: HomeData, title: string, desc: string): Raw {
   return html`<div class="rails" data-rails>
-  <div class="rails__head"><h3 class="h3" data-line>${title}</h3><p class="mute">${desc}</p><p class="caps mute">Tech stack <span class="data">( ${pad2(h.techs.length)} )</span></p></div>
+  <div class="rails__head"><h3 class="h3" data-line>${title}</h3><p class="mute">${desc}</p></div>
   ${techRails(h.techs)}
 </div>`;
 }
@@ -87,7 +106,7 @@ export function proof(items: { v: string; l: string }[], label: string, tone: 's
   return html`<section class="sec${tight ? ' sec--tight' : ''} ${tone}" aria-label="${label}"><p class="proof">${spans.map((s, i) => (i ? html` ${s}` : s))}</p></section>`;
 }
 
-export const ILLUS_NOTE = 'ภาพประกอบ 3D อธิบายระบบ ไม่ใช่ภาพหน้าจอระบบของลูกค้า';
+export const ILLUS_NOTE = 'ภาพประกอบอธิบายระบบ ไม่ใช่ภาพจริงหรือหน้าจอระบบของลูกค้า';
 
 export interface WorkItem {
   cat: string;
@@ -100,7 +119,7 @@ export function worksGrid(items: WorkItem[], id: string): Raw {
   const arts = items.map((w, i) => {
     const art = workArt(w.tag, w.t, i);
     return html`<article class="work" data-cat="${w.cat}" data-alt="${i % 2}">
-  <div class="work__media" data-wipe><img src="${art.src}" alt="${art.alt}" width="${art.w}" height="${art.h}" loading="lazy" decoding="async" data-parallax-img></div>
+  <div class="work__media" data-wipe><img src="${art.src}" alt="${art.alt}" width="${art.w}" height="${art.h}" loading="lazy" decoding="async" data-parallax-img${art.pos ? html` style="object-position: ${art.pos}"` : ''}></div>
   <div class="work__meta">
     <h3 class="work__title">${w.t}</h3>
     <p class="work__res">${ico('i-up', 'ico--fill')}<span>${w.m}</span></p>
