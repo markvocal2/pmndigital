@@ -23,6 +23,16 @@ import { AutomationModule } from './automation/automation.module';
       autoLoadEntities: true,
       synchronize: false,
       migrationsRun: false,
+      // node-postgres pool: every wait has an end. Without these a dead socket or an unresolvable
+      // host leaves requests queued forever (13 Oct 2026: the whole site hung for hours).
+      extra: {
+        max: 20,
+        connectionTimeoutMillis: 5_000, // give up on connecting (incl. DNS) after 5 s
+        idleTimeoutMillis: 30_000,
+        keepAlive: true, // notice half-open sockets instead of writing into the void
+        statement_timeout: 15_000, // server side: no public query runs longer than 15 s
+        query_timeout: 20_000, // client side: stop waiting even if the server never answers
+      },
     }),
     MailModule,
     AuditModule,

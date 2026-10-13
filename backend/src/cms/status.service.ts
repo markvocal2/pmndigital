@@ -58,6 +58,25 @@ export class ServerStatusService {
   private readonly prom = process.env.PROMETHEUS_URL || 'http://prometheus:9090';
   private cache: { at: number; data: ServerStatus } | null = null;
   private readonly TTL = 15000;
+  /**
+   * Circuit breaker. When Prometheus cannot be reached (network error, DNS miss, timeout) every
+   * query is skipped for PROM_COOLDOWN. A status page fires ~10 queries at once; while the host
+   * was gone each one held a libuv DNS thread for 5 s, the pool filled, and the database host
+   * could no longer be resolved — the whole site hung (13 Oct 2026).
+   */
+  private promDownUntil = 0;
+  private readonly PROM_COOLDOWN = 60_000;
+
+  private promAvailable(): boolean {
+    return Date.now() >= this.promDownUntil;
+  }
+
+  private promFailed(e: unknown): void {
+    if (this.promAvailable()) {
+      this.logger.warn(`Prometheus unreachable (${e instanceof Error ? e.message : e}); skipping it for 60 s`);
+    }
+    this.promDownUntil = Date.now() + this.PROM_COOLDOWN;
+  }
 
   async getStatus(): Promise<ServerStatus> {
     const now = Date.now();
@@ -68,6 +87,7 @@ export class ServerStatusService {
   }
 
   private async query(promql: string, timeoutMs = 4000): Promise<number | null> {
+    if (!this.promAvailable()) return null;
     try {
       const r = await fetch(`${this.prom}/api/v1/query?query=${encodeURIComponent(promql)}`, {
         signal: AbortSignal.timeout(timeoutMs),
@@ -76,12 +96,14 @@ export class ServerStatusService {
       const j = (await r.json()) as { data?: { result?: { value?: [number, string] }[] } };
       const v = j?.data?.result?.[0]?.value?.[1];
       return v != null && Number.isFinite(Number(v)) ? Number(v) : null;
-    } catch {
+    } catch (e) {
+      this.promFailed(e);
       return null;
     }
   }
 
   private async queryRange(promql: string, start: number, end: number, step: number): Promise<number[]> {
+    if (!this.promAvailable()) return [];
     try {
       const url = `${this.prom}/api/v1/query_range?query=${encodeURIComponent(promql)}&start=${start}&end=${end}&step=${step}`;
       const r = await fetch(url, { signal: AbortSignal.timeout(5000) });
@@ -89,7 +111,8 @@ export class ServerStatusService {
       const j = (await r.json()) as { data?: { result?: { values?: [number, string][] }[] } };
       const values = j?.data?.result?.[0]?.values ?? [];
       return values.map((p) => Number(p[1])).filter((n) => Number.isFinite(n));
-    } catch {
+    } catch (e) {
+      this.promFailed(e);
       return [];
     }
   }
@@ -181,6 +204,7 @@ export class ServerStatusService {
   private pageCache: { at: number; data: StatusPage } | null = null;
 
   private async queryRangePairs(promql: string, start: number, end: number, step: number): Promise<[number, number][]> {
+    if (!this.promAvailable()) return [];
     try {
       const url = `${this.prom}/api/v1/query_range?query=${encodeURIComponent(promql)}&start=${start}&end=${end}&step=${step}`;
       const r = await fetch(url, { signal: AbortSignal.timeout(6000) });
@@ -190,7 +214,8 @@ export class ServerStatusService {
       return values
         .map(([t, v]) => [Number(t), Number(v)] as [number, number])
         .filter(([, v]) => Number.isFinite(v));
-    } catch {
+    } catch (e) {
+      this.promFailed(e);
       return [];
     }
   }
@@ -240,7 +265,8 @@ export class ServerStatusService {
   private async computePage(): Promise<StatusPage> {
     const WINDOW = 90;
     const port = process.env.PORT || '3001';
-    const feUrl = process.env.FRONTEND_PROBE_URL || 'http://frontend:3000/';
+    // container name, not the compose service name: "frontend" is ambiguous on the shared proxy-net
+    const feUrl = process.env.FRONTEND_PROBE_URL || 'http://main-pmndigital-app:3000/';
     const [nodeDays, stalwartDays, promDays, nodeUp, stalwartUp, promUp, webProbe, apiProbe] =
       await Promise.all([
         this.dailySeries('avg(avg_over_time(up{job="node"}[1d])) * 100', WINDOW),

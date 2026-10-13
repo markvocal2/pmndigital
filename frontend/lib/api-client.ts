@@ -2,6 +2,14 @@ import { auth } from '@/auth';
 
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://backend:3001';
 
+/*
+ * Every call to the backend has an end. Public pages render from CMS defaults when a read fails,
+ * so a slow or hung backend now costs a visitor a few seconds instead of a page that never loads
+ * (13 Oct 2026). Admin calls get longer: they include saves and media chunks.
+ */
+const PUBLIC_TIMEOUT_MS = 6_000;
+const ADMIN_TIMEOUT_MS = 60_000;
+
 export class BackendError extends Error {
   status: number;
   code?: string;
@@ -47,6 +55,7 @@ export async function backendFetch<T = unknown>(
         ? JSON.stringify(init.body)
         : undefined,
     cache: 'no-store',
+    signal: AbortSignal.timeout(ADMIN_TIMEOUT_MS),
   });
   return unwrap<T>(res);
 }
@@ -69,6 +78,7 @@ export async function publicBackendFetch<T = unknown>(
     headers: { 'Content-Type': 'application/json' },
     body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
     ...cacheOpt,
+    signal: AbortSignal.timeout(PUBLIC_TIMEOUT_MS),
   });
   return unwrap<T>(res);
 }

@@ -8,8 +8,10 @@ import {
   Post,
   Query,
   Req,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import type { Request } from 'express';
+import { DataSource } from 'typeorm';
 import { CmsService } from './cms.service';
 import { ArticlesService } from './articles.service';
 import { AnalyticsService } from './analytics.service';
@@ -38,7 +40,23 @@ export class CmsPublicController {
     private readonly leads: LeadsService,
     private readonly comments: CommentsService,
     private readonly status: ServerStatusService,
+    private readonly db: DataSource,
   ) {}
+
+  /** Liveness incl. the database (docker healthcheck + monitoring). 503 when the DB cannot answer in 3 s. */
+  @Get('health')
+  async health() {
+    const t = Date.now();
+    try {
+      await Promise.race([
+        this.db.query('SELECT 1'),
+        new Promise((_r, reject) => setTimeout(() => reject(new Error('db timeout')), 3000)),
+      ]);
+      return { ok: true, dbMs: Date.now() - t };
+    } catch (e) {
+      throw new ServiceUnavailableException({ ok: false, db: e instanceof Error ? e.message : 'db error' });
+    }
+  }
 
   @Get('settings')
   async settings() {
