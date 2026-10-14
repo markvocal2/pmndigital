@@ -49,13 +49,21 @@ export interface StatusPage {
 }
 
 /**
- * Reads ONLY high-level, benefit-framed health from Prometheus (internal, proxy-net).
+ * Reads ONLY high-level, benefit-framed health from Prometheus.
+ * Since 14 Oct 2026 that is the Prometheus on devtraffic.pmndigital.co, reached through Grafana's
+ * datasource proxy (PROMETHEUS_URL = …/api/datasources/proxy/uid/<uid>) with a Viewer service-account
+ * token (PROMETHEUS_TOKEN). That Prometheus also scrapes routers and the hypervisor, so every query is
+ * scoped to this host's jobs (PROMETHEUS_JOBS).
  * Public endpoint exposes nothing sensitive — no raw load totals, IPs, hostnames or container names.
  */
 @Injectable()
 export class ServerStatusService {
   private readonly logger = new Logger('ServerStatusService');
-  private readonly prom = process.env.PROMETHEUS_URL || 'http://prometheus:9090';
+  private readonly prom = (process.env.PROMETHEUS_URL || 'http://prometheus:9090').replace(/\/+$/, '');
+  private readonly promInit: RequestInit = process.env.PROMETHEUS_TOKEN
+    ? { headers: { Authorization: `Bearer ${process.env.PROMETHEUS_TOKEN}` } }
+    : {};
+  private readonly jobs = `job=~"${process.env.PROMETHEUS_JOBS || 'node|stalwart|cadvisor|prometheus'}"`;
   private cache: { at: number; data: ServerStatus } | null = null;
   private readonly TTL = 15000;
   /**
@@ -90,6 +98,7 @@ export class ServerStatusService {
     if (!this.promAvailable()) return null;
     try {
       const r = await fetch(`${this.prom}/api/v1/query?query=${encodeURIComponent(promql)}`, {
+        ...this.promInit,
         signal: AbortSignal.timeout(timeoutMs),
       });
       if (!r.ok) return null;
@@ -106,7 +115,7 @@ export class ServerStatusService {
     if (!this.promAvailable()) return [];
     try {
       const url = `${this.prom}/api/v1/query_range?query=${encodeURIComponent(promql)}&start=${start}&end=${end}&step=${step}`;
-      const r = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      const r = await fetch(url, { ...this.promInit, signal: AbortSignal.timeout(5000) });
       if (!r.ok) return [];
       const j = (await r.json()) as { data?: { result?: { values?: [number, string][] }[] } };
       const values = j?.data?.result?.[0]?.values ?? [];
@@ -154,19 +163,20 @@ export class ServerStatusService {
       daysRaw,
     ] = await Promise.all([
       this.probeResponseMs(),
-      this.query('count(up==1) / count(up)'),
-      this.query('avg(avg_over_time(up[30d])) * 100'),
-      this.query('avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100'),
-      this.query('avg(node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100'),
-      this.query('count(up==1)'),
-      this.query('count(up)'),
-      this.query('max((node_time_seconds - node_boot_time_seconds) / 86400)'),
-      this.query('sum(backup_stacks_failed)'),
-      this.query('max(backup_last_success_timestamp_seconds)'),
-      this.query('max(backup_stacks_total)'),
+      this.query(`count(up{${this.jobs}}==1) / count(up{${this.jobs}})`),
+      this.query(`avg(avg_over_time(up{${this.jobs}}[30d])) * 100`),
+      this.query('avg(rate(node_cpu_seconds_total{job="node",mode="idle"}[5m])) * 100'),
+      this.query('avg(node_memory_MemAvailable_bytes{job="node"} / node_memory_MemTotal_bytes{job="node"}) * 100'),
+      this.query(`count(up{${this.jobs}}==1)`),
+      this.query(`count(up{${this.jobs}})`),
+      this.query('max((node_time_seconds{job="node"} - node_boot_time_seconds{job="node"}) / 86400)'),
+      // nightly per-stack DB dumps (node textfile collector, dbdump_<stack>.prom)
+      this.query('sum(dbdump_failed{job="node"})'),
+      this.query('max(dbdump_last_success_timestamp_seconds{job="node"})'),
+      this.query('count(dbdump_ok_total{job="node"} > 0)'),
       this.query('sum(security_ip_blocked) + sum(security_authentication_ban)'),
       this.queryRange(
-        'avg(avg_over_time(up[1d])) * 100',
+        `avg(avg_over_time(up{${this.jobs}}[1d])) * 100`,
         Math.floor(Date.now() / 1000) - 7 * 86400,
         Math.floor(Date.now() / 1000),
         86400,
@@ -207,7 +217,7 @@ export class ServerStatusService {
     if (!this.promAvailable()) return [];
     try {
       const url = `${this.prom}/api/v1/query_range?query=${encodeURIComponent(promql)}&start=${start}&end=${end}&step=${step}`;
-      const r = await fetch(url, { signal: AbortSignal.timeout(6000) });
+      const r = await fetch(url, { ...this.promInit, signal: AbortSignal.timeout(6000) });
       if (!r.ok) return [];
       const j = (await r.json()) as { data?: { result?: { values?: [number, string][] }[] } };
       const values = j?.data?.result?.[0]?.values ?? [];
