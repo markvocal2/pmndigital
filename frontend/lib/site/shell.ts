@@ -4,7 +4,7 @@ import type { SiteCtx } from './data';
 
 export const SITE = 'https://pmndigital.co';
 /** Bump when anything under public/assets/{css,js} changes (cache-busting query). */
-export const ASSET_V = '202610061';
+export const ASSET_V = '202610141';
 
 export type NavKey = 'home' | 'services' | 'portfolio' | 'pricing' | 'contact' | 'blog' | 'status' | null;
 
@@ -188,7 +188,7 @@ ${o.tail ?? ''}</body>
 `;
   // Every local asset gets the release stamp: artwork keeps its filename across design updates,
   // so without it browsers and the CDN would keep serving yesterday's image.
-  return doc.value.replace(/((?:src|href|poster)=")(\/assets\/[^"?#]+)(?=")/g, `$1$2?v=${ASSET_V}`);
+  return doc.value.replace(/((?:src|srcset|href|poster)=")(\/assets\/[^"?#\s]+)(?=")/g, `$1$2?v=${ASSET_V}`);
 }
 
 /** Wrap a rendered page in a Response. */

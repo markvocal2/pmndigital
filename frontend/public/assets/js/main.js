@@ -274,14 +274,6 @@
       } else if (subWrap) {
         subWrap.style.display = 'none';
       }
-      if (html.classList.contains('home') && MOTION) {
-        mark.classList.add('is-hidden');
-        ScrollTrigger.create({
-          start: () => innerHeight * 0.1, end: 'max',
-          onEnter: () => mark.classList.remove('is-hidden'),
-          onLeaveBack: () => mark.classList.add('is-hidden'),
-        });
-      }
     }
 
     if (menu) {
@@ -425,182 +417,327 @@
 
 
   /* ------------------------------------------------------------------------
-     Hero: the PMN wordmark lights up. The page opens on a white veil (the
-     city film shows through it at 25%) with the letters as faint glass; P,
-     M and N fade up in turn, the city clear inside them and each outline
-     left as a soft cobalt glow. Scrolling down dims them again, N first.
-     Canvas 2D for the glass and the light; SVG for the soft outline glow.
+     Hero story: one business's journey in nine chapters, told on one map.
+     A small shop, then web, app, ERP/CRM, custom software, API, care and
+     Linux, walked as a ring round PMN in the middle (tools/spot_art.py).
+     The camera (the world group) flies along a white line from chapter to
+     chapter while the business rides it, the line laid behind it; each
+     chapter's scene builds as the camera arrives (every moving part carries
+     data-a / data-t). The last chapter pulls back to the whole map with a
+     line in from every chapter to PMN. The headline's verb and quoted noun
+     and the narration change with each chapter. The rail jumps to any
+     chapter (a slanted cobalt curtain cuts there), the pause stops it all,
+     and it rests off screen and in a hidden tab. Without motion the map
+     itself is the picture and the rail moves the view in place.
      ------------------------------------------------------------------------ */
-  function hero() {
-    const sec = $('[data-hero]');
+  function spot() {
+    const sec = $('[data-spot]');
     if (!sec) return;
-    const wm = $$('.hero__mark .wm-l', sec);
-    if (MOTION && wm.length) {
-      gsap.set(wm, { y: 620, x: -620 * SL, visibility: 'visible' });
-      whenReady(() => gsap.to(wm, { y: 0, x: 0, duration: 1.3, ease: EASE, stagger: 0.12, delay: 0.1 }));
-    } else {
-      gsap.set(wm, { visibility: 'visible' });
-    }
-    if (!MOTION) return;
-    const canvas = $('.hero__paper', sec);
-    const video = $('video', sec);
-    const ctx = canvas && canvas.getContext('2d');
-    if (!ctx) return;
-    html.classList.add('has-paper');
+    const world = $('.spot__world', sec);
+    const scenes = $$('.spot__sc', sec);
+    const conns = $$('.spot__conn', sec);
+    const token = $('.spot__token', sec);
+    const tiers = token ? $$('[data-tier]', token) : [];
+    const subs = $$('.spot__sub', sec);
+    const cells = $$('.spot__cell', sec);
+    const fills = cells.map((c) => $('.spot__bar i', c));
+    const curtain = $('.spot__curtain', sec);
+    const stage = $('.spot__stage', sec);
+    const pauseBtn = $('.spot__pause', sec);
+    const slots = { verb: $('[data-slot="verb"]', sec), noun: $('[data-slot="noun"]', sec) };
+    if (!world || !scenes.length) return;
+    const N = scenes.length; const LAST = N - 1;
+    const PAN = 1.5; const DONE = 9; // a camera move; a time by which every scene has finished building
+    let cur = 0; let started = false; let userPaused = false; let onScreen = true;
+    let clk = null; let move = null;
 
-    const L = [0, 1, 2].map(() => ({ charge: 0, lit: 0, flash: 0, glow: 0 })); // P, M, N; glow = the trace's brightness
-    let dpr = 1; let visible = true; let out = 0; let drain = 0;
-    const vessel = $('.glass-wm', sec);
-    const rims = vessel ? $$('.wm-rim', vessel) : [];
-    const shapes = rims.map((p) => new Path2D(p.getAttribute('d')));
-    let glyphs = [];
-    const size = () => {
-      dpr = Math.min(devicePixelRatio || 1, 1.5);
-      const cw = Math.round(sec.clientWidth * dpr); const ch = Math.round(sec.clientHeight * dpr);
-      if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; }
-      last = '';
-      if (vessel && shapes.length) {
-        // the vessel box is exactly the letters' box, so the outlines map onto the canvas one to one. Measured in
-        // layout px: the section may be scaled back at this moment (the sheet that rises over it), which a bounding
-        // box would include and the canvas, inside the same section, must not
-        const s = sec.getBoundingClientRect(); const r = vessel.getBoundingClientRect();
-        const z = s.width / sec.offsetWidth || 1;
-        const k = vessel.offsetWidth / 1612; const ox = (r.left - s.left) / z - 243 * k; const oy = (r.top - s.top) / z - 139 * k;
-        const m = new DOMMatrix([k, 0, 0, k, ox, oy]);
-        glyphs = shapes.map((sh) => { const path = new Path2D(); path.addPath(sh, m); return path; });
-      }
-      if (runs.length) runWidth();
-    };
-    // the veil is frosted glass: the film drawn small (40% of the size, softened when the browser can blur a
-    // canvas), stretched back over the hero so it reads as a blur, then a milky tint for the headline to sit on
-    const fog = d.createElement('canvas'); const fx = fog.getContext('2d');
-    const soft = 'filter' in fx;
-    // fogA eases the frost in from the plain white veil once the film has a frame, and the last frame is kept while
-    // the film seeks back to its start on each loop, so the glass never blinks white
-    let fogA = 0; let hasFog = false; let fogT = -1;
-    // a counter that steps once per decoded film frame (currentTime alone moves on every screen refresh)
-    let vframe = 0;
-    if (video && 'requestVideoFrameCallback' in video) {
-      const onFrame = () => { vframe++; video.requestVideoFrameCallback(onFrame); };
-      video.requestVideoFrameCallback(onFrame);
-    }
-    const filmAt = () => (video ? vframe || video.currentTime : 0);
-    const frost = () => {
-      const W = canvas.width; const H = canvas.height;
-      if (video && video.readyState >= 2 && video.videoWidth && filmAt() !== fogT) {
-        fogT = filmAt();
-        const fw = Math.max(32, Math.round(W / dpr / 2.5)); const fh = Math.max(18, Math.round(H / dpr / 2.5));
-        if (fog.width !== fw || fog.height !== fh) { fog.width = fw; fog.height = fh; }
-        const sc = Math.max(fw / video.videoWidth, fh / video.videoHeight);
-        const dw = video.videoWidth * sc; const dh = video.videoHeight * sc;
-        if (soft) fx.filter = 'blur(1px)';
-        // drawn a little oversized so the blur has no pale rim at the edges
-        fx.drawImage(video, (fw - dw) / 2 - 4, (fh - dh) / 2 - 4, dw + 8, dh + 8);
-        hasFog = true;
-      }
-      if (hasFog) {
-        fogA = Math.min(1, fogA + 0.025);
-        ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-        ctx.globalAlpha = fogA; ctx.drawImage(fog, 0, 0, W, H); ctx.globalAlpha = 1;
-      }
-      ctx.fillStyle = `rgba(255, 255, 255, ${(0.75 - 0.25 * fogA).toFixed(3)})`;
-      ctx.fillRect(0, 0, W, H);
-    };
-    // power per letter after scrolling: the letters go dark in reverse, N first
-    const power = (i) => 1 - gsap.utils.clamp(0, 1, drain * 1.6 - (glyphs.length - 1 - i) * 0.3);
+    // the camera: chapter i centred at full size, or the whole map
+    const centre = (i) => ({ x: +scenes[i].dataset.x + 300, y: +scenes[i].dataset.y + 260 });
+    const cam = (i) => ({ x: -(+scenes[i].dataset.x), y: -(+scenes[i].dataset.y), scale: 1 });
+    const Z = +world.dataset.zoom || 0.25;
+    const map = { x: 300 - (+world.dataset.cx) * Z, y: 268 - (+world.dataset.cy) * Z, scale: Z };
+    const view = (i) => (i === LAST ? map : cam(i));
+    // written straight to the transform attribute (translate, then scale about the map's origin)
+    const camNow = { x: 0, y: 0, scale: 1 };
+    const drawCam = () => world.setAttribute('transform', `translate(${camNow.x.toFixed(2)} ${camNow.y.toFixed(2)}) scale(${camNow.scale.toFixed(4)})`);
+    const setCam = (v) => { gsap.killTweensOf(camNow); Object.assign(camNow, v); drawCam(); };
 
-    // the wordmark can move without the section resizing (a phone centres it in the space the headline leaves,
-    // and the headline rewraps when its font arrives): re-measure whenever its layout box changes
-    let place = ''; let frame = 0; let last = '';
-    const where = () => `${vessel.offsetLeft},${vessel.offsetTop},${vessel.offsetWidth},${vessel.offsetParent ? vessel.offsetParent.offsetTop : 0},${sec.clientHeight}`;
-    const tick = () => {
-      if (!visible) return;
-      if (frame++ % 15 === 0) { const w = where(); if (w !== place) { place = w; size(); } }
-      drain += (out - drain) * 0.08;
-      if (Math.abs(out - drain) < 0.0005) drain = out;
-      const hid = vessel.style.opacity === '0';
-      const sig = `${filmAt()}|${fogA < 1 && hasFog ? fogA : 1}|${drain.toFixed(4)}|${hid}|${L.map((l) => `${l.lit.toFixed(3)},${l.glow.toFixed(3)},${l.charge}`).join(';')}|${runs.map((r) => r.pulse).join(',')}`;
-      if (sig === last) return;
-      last = sig;
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-      ctx.clearRect(0, 0, canvas.width, canvas.height); // the veil is translucent, so each frame starts clean
-      frost();
-      const hidden = vessel.style.opacity === '0'; // the logo flight has lifted the wordmark off
-      runSvg.style.opacity = hidden ? '0' : '';
-      if (hidden) return;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      glyphs.forEach((g, i) => {
-        const lit = L[i].lit * power(i);
-        ctx.save();
-        ctx.clip(g, 'evenodd');
-        // faint glass while dark, the clear city once powered
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.fillStyle = '#000';
-        ctx.globalAlpha = 0.22 + 0.78 * lit;
-        ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
-        ctx.restore();
+    const GR = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter('th', { granularity: 'grapheme' }) : null;
+    const graphemes = (s) => (GR ? Array.from(GR.segment(s), (x) => x.segment) : Array.from(s));
+    const EASES = { o: OUT, p: EASE, n: 'none', i: 'power3.in' };
+
+    // one timeline per chapter, read off the art's data attributes; resets put back what a timeline cannot rewind (text)
+    function build(g) {
+      const tl = gsap.timeline({ paused: true });
+      const resets = [];
+      $$('[data-a]', g).forEach((el) => {
+        const ds = el.dataset;
+        const t = +ds.t || 0; const dur = +ds.d || 0.6; const ease = EASES[ds.e] || OUT;
+        switch (ds.a) {
+          case 'rise': tl.fromTo(el, { y: 40, x: -40 * SL, autoAlpha: 0 }, { y: 0, x: 0, autoAlpha: 1, duration: dur, ease }, t); break;
+          case 'slide': tl.fromTo(el, { x: +ds.dx || 60, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: dur, ease }, t); break;
+          case 'drop': tl.fromTo(el, { y: -90, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: dur, ease }, t); break;
+          case 'pop': tl.fromTo(el, { scale: 0.6, autoAlpha: 0, transformOrigin: '50% 50%' }, { scale: 1, autoAlpha: 1, duration: dur, ease }, t); break;
+          case 'phone': tl.fromTo(el, { y: 140, x: -140 * SL, rotation: -9, autoAlpha: 0, transformOrigin: '50% 100%' }, { y: 0, x: 0, rotation: 0, autoAlpha: 1, duration: dur, ease }, t); break;
+          case 'slip': tl.fromTo(el, { x: -170, rotation: -14, autoAlpha: 0, transformOrigin: '50% 50%' }, { x: 0, rotation: 0, autoAlpha: 1, duration: dur, ease }, t); break;
+          case 'awn': tl.fromTo(el, { scaleY: 0, transformOrigin: '50% 0%' }, { scaleY: 1, duration: dur, ease }, t); break;
+          case 'fade': case 'in': tl.fromTo(el, { autoAlpha: 0 }, { autoAlpha: 1, duration: dur, ease: 'power1.out' }, t); break;
+          case 'out': tl.fromTo(el, { autoAlpha: 1 }, { autoAlpha: 0, duration: dur, ease: 'power1.in' }, t); break;
+          case 'grow': tl.fromTo(el, { scaleX: 0, transformOrigin: '0% 50%' }, { scaleX: 1, duration: dur, ease }, t); break;
+          case 'hgt': tl.fromTo(el, { scaleY: +ds.f || 0.5, transformOrigin: '50% 100%' }, { scaleY: 1, duration: dur, ease: EASE }, t); break;
+          case 'bob': tl.fromTo(el, { y: 0 }, { y: -9, duration: dur, ease: 'sine.inOut', yoyo: true, repeat: -1 }, t); break;
+          case 'stamp': // a rubber stamp: falls in tilted and large, lands, squashes a touch
+            tl.fromTo(el, { scale: +ds.sx || 1.6, rotation: +ds.rot || 0, autoAlpha: 0, transformOrigin: '50% 50%' }, { scale: 1, rotation: 0, autoAlpha: 1, duration: dur, ease: 'power3.in' }, t)
+              .to(el, { scaleX: 1.04, scaleY: 0.94, duration: 0.08, ease: 'power2.out' }, t + dur)
+              .to(el, { scaleX: 1, scaleY: 1, duration: 0.22, ease: OUT }, t + dur + 0.08);
+            break;
+          case 'press':
+            tl.to(el, { scale: 0.9, transformOrigin: '50% 50%', duration: 0.12, ease: 'power2.in' }, t).to(el, { scale: 1, duration: 0.32, ease: OUT }, t + 0.12);
+            break;
+          case 'move':
+            tl.fromTo(el, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2 }, t)
+              .fromTo(el, { x: +ds.fx, y: +ds.fy }, { x: +ds.tx, y: +ds.ty, duration: dur, ease: EASE }, t);
+            break;
+          case 'ring': {
+            const every = +ds.every || 0;
+            // hidden until its moment, then it spreads and fades (again and again when it has a beat)
+            tl.set(el, { scale: 0.4, autoAlpha: 1, transformOrigin: '50% 50%' }, t)
+              .to(el, { scale: +ds.s || (every ? 1.3 : 2.4), autoAlpha: 0, duration: dur, ease: 'power2.out', repeat: every ? -1 : 0, repeatDelay: every }, t);
+            break;
+          }
+          case 'flash': tl.fromTo(el, { autoAlpha: 0 }, { autoAlpha: 1, duration: dur / 2, ease: 'power1.out', yoyo: true, repeat: -1, repeatDelay: +ds.every || 0.6 }, t); break;
+          case 'blink': tl.fromTo(el, { autoAlpha: 1 }, { autoAlpha: 0.2, duration: dur, ease: 'steps(1)', yoyo: true, repeat: -1, repeatDelay: 0.2 + Math.random() * 0.7 }, t); break;
+          case 'spin': tl.fromTo(el, { rotation: 0, transformOrigin: '50% 50%' }, { rotation: 360, duration: dur, ease: 'none', repeat: -1 }, t); break;
+          case 'swing': tl.fromTo(el, { rotation: 0, transformOrigin: ds.to || '50% 50%' }, { rotation: +ds.rot || 25, duration: dur, ease: 'power1.inOut', yoyo: true, repeat: 5 }, t); break;
+          case 'draw': {
+            const dash = el.getAttribute('stroke-dasharray');
+            if (dash) { // a dotted line fades in and its dots march along it, toward where it leads
+              const cyc = dash.split(/[\s,]+/).reduce((a, b) => a + (+b || 0), 0) * 2;
+              tl.fromTo(el, { autoAlpha: 0 }, { autoAlpha: 1, duration: dur, ease: 'power1.out' }, t)
+                .fromTo(el, { strokeDashoffset: 0 }, { strokeDashoffset: -cyc, duration: 0.9, ease: 'none', repeat: -1 }, t);
+            } else {
+              const len = el.getTotalLength() + 1;
+              tl.fromTo(el, { strokeDasharray: `${len} ${len}`, strokeDashoffset: len }, { strokeDashoffset: 0, duration: dur, ease: EASE }, t);
+            }
+            break;
+          }
+          case 'type': { // grapheme by grapheme, so Thai marks never split from their letters
+            const gs = graphemes(el.textContent); const st = { k: 0 };
+            resets.push(() => { el.textContent = ''; });
+            tl.fromTo(st, { k: 0 }, { k: gs.length, duration: dur, ease: 'none', onUpdate: () => { el.textContent = gs.slice(0, Math.round(st.k)).join(''); } }, t);
+            break;
+          }
+          case 'count': {
+            const vals = (ds.v || '').split('|');
+            resets.push(() => { el.textContent = vals[0]; });
+            vals.forEach((v, k) => tl.call(() => { el.textContent = v; }, null, t + (k * dur) / vals.length));
+            break;
+          }
+          case 'flow': { // a packet riding a line, start to end (or back), over and over
+            const path = $(ds.path, g);
+            if (!path) break;
+            const len = path.getTotalLength(); const rev = ds.rev === '1'; const st = { p: 0 };
+            const place = () => {
+              const pt = path.getPointAtLength((rev ? 1 - st.p : st.p) * len);
+              el.setAttribute('transform', `translate(${pt.x.toFixed(1)} ${pt.y.toFixed(1)})`);
+            };
+            resets.push(() => { gsap.set(el, { autoAlpha: 0 }); });
+            tl.set(el, { autoAlpha: 1 }, t)
+              .fromTo(st, { p: 0 }, { p: 1, duration: dur, ease: 'power1.inOut', repeat: ds.n ? +ds.n - 1 : -1, repeatDelay: 0.3, onUpdate: place, onStart: place }, t);
+            break;
+          }
+          default: break;
+        }
       });
-      ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-      drawRuns();
+      return { tl, resets };
+    }
+
+    // the line between chapters: drawn to a fraction
+    const lens = conns.map((c) => c.getTotalLength());
+    const lay = (i, f) => {
+      const c = conns[i]; if (!c) return;
+      c.style.strokeDasharray = `${lens[i]} ${lens[i]}`;
+      c.style.strokeDashoffset = String(lens[i] * (1 - Math.max(0, Math.min(1, f))));
     };
 
-    // the current: per contour a cobalt trace that grows round the outline and a short bright head at its tip
-    const runSvg = $('.glass-wm__run', vessel);
-    const runs = runSvg ? $$('.wm-run', runSvg).map((base) => {
-      const len = base.getTotalLength(); const l = +base.dataset.l;
-      const trace = base; trace.style.stroke = '#3d8bff';
-      const tail = runSvg.appendChild(base.cloneNode()); tail.style.stroke = '#7cc4ff';
-      const head = runSvg.appendChild(base.cloneNode()); head.style.stroke = '#f2fbff';
-      return { l, len, trace, tail, head, pulse: -1 };
-    }) : [];
-    const runWidth = () => {
-      const k = vessel.offsetWidth / 1612; // layout px per outline unit (unaffected by the sheet's scale)
-      if (k) runs.forEach((r) => { r.trace.style.strokeWidth = `${2.6 / k}px`; r.tail.style.strokeWidth = `${3.4 / k}px`; r.head.style.strokeWidth = `${4.2 / k}px`; });
-    };
-    // style writes only when a value changes: each write re-renders the glow's stacked shadows
-    const put = (el, k, v) => { if (el.style[k] !== v) el.style[k] = v; };
-    const drawRuns = () => {
-      runs.forEach((r) => {
-        const st = L[r.l]; const p = power(r.l); const c = st.charge;
-        // the trace: as long as the charge has run, bright while charging, a dim powered edge once lit
-        put(r.trace, 'strokeDasharray', `${c * r.len} ${r.len}`);
-        put(r.trace, 'strokeOpacity', String(+(st.glow * p).toFixed(3)));
-        // the head: a bright spark with a long soft comet tail at the tip while charging, or a passing idle pulse
-        const charging = c > 0 && c < 1; const at = charging ? c : r.pulse;
-        if (at > 0 && at < 1 && p > 0.05) {
-          const h = r.len * 0.05; const t = r.len * 0.2;
-          const fade = Math.min(1, at * 8, (1 - at) * 8); // eases the spark in and out at the ends of the lap
-          const k = (charging ? 1 : 0.6) * p * fade;
-          r.head.style.strokeDasharray = `${h} ${r.len}`; r.head.style.strokeDashoffset = String(h - at * r.len); r.head.style.strokeOpacity = String(k);
-          r.tail.style.strokeDasharray = `${t} ${r.len}`; r.tail.style.strokeDashoffset = String(t - at * r.len); r.tail.style.strokeOpacity = String(0.55 * k);
-        } else { put(r.head, 'strokeOpacity', '0'); put(r.tail, 'strokeOpacity', '0'); }
+    const built = [];
+    const live = () => MOTION && started && !userPaused && onScreen && !d.hidden;
+    function sync() {
+      const on = live();
+      if (clk) (on ? clk.resume() : clk.pause());
+      const b = built[cur];
+      if (b) (on ? b.tl.resume() : b.tl.pause());
+    }
+    function play(i) {
+      const b = built[i]; if (!b) return;
+      b.resets.forEach((f) => f());
+      b.tl.restart();
+      if (!live()) b.tl.pause();
+    }
+    const rest = (i) => { const b = built[i]; if (b) b.tl.pause(); }; // left behind as it is: the map keeps every finished scene
+    const finish = (i) => { const b = built[i]; if (b) { b.tl.time(DONE, false); b.tl.pause(); } };
+    const clear = (i) => { const b = built[i]; if (b) { b.tl.pause(0); b.resets.forEach((f) => f()); } };
+    // the map as it stands at chapter i: everything before it told, everything after it still to come
+    function stateAt(i) {
+      scenes.forEach((_, k) => (k < i ? finish(k) : clear(k)));
+      conns.forEach((_, k) => lay(k, k < i ? 1 : 0));
+      gsap.set(token, { autoAlpha: 0 });
+      setCam(view(i));
+    }
+
+    // the business grows as the story goes: a shop, an office, a tower
+    const tier = (i) => tiers.forEach((u, n) => u.setAttribute('visibility', n === (i >= 6 ? 2 : i >= 3 ? 1 : 0) ? 'visible' : 'hidden'));
+
+    // the headline: the old word leaves upward on the slant, the new one rises in, the slot eases to its width
+    function swapWord(slot, word) {
+      if (!slot) return;
+      gsap.killTweensOf([slot, ...slot.children]);
+      while (slot.children.length > 1) slot.firstElementChild.remove();
+      const was = slot.firstElementChild;
+      was.classList.remove('is-next');
+      gsap.set([was, slot], { clearProps: 'all' });
+      if (was.textContent === word) return;
+      if (!MOTION) { was.textContent = word; return; }
+      const nxt = mk('span', 'is-next');
+      nxt.textContent = word;
+      slot.appendChild(nxt);
+      const w0 = was.getBoundingClientRect().width; const w1 = nxt.getBoundingClientRect().width;
+      const grow = w1 > w0;
+      gsap.fromTo(slot, { width: w0 }, { width: w1, duration: grow ? 0.4 : 0.6, ease: grow ? OUT : EASE, delay: grow ? 0 : 0.3, onComplete: () => gsap.set(slot, { clearProps: 'width' }) });
+      gsap.to(was, { yPercent: -85, skewX: -14, autoAlpha: 0, duration: 0.42, ease: 'power2.in' });
+      gsap.fromTo(nxt, { yPercent: 85, skewX: -14, autoAlpha: 0 }, {
+        yPercent: 0, skewX: 0, autoAlpha: 1, duration: 0.75, ease: OUT, delay: 0.36,
+        onComplete: () => { was.remove(); nxt.classList.remove('is-next'); gsap.set(nxt, { clearProps: 'all' }); },
       });
-    };
+    }
+    function swapSub(i) {
+      const a = subs.find((s) => s.classList.contains('is-on')); const b = subs[i];
+      if (!b || a === b) return;
+      if (a) { a.classList.remove('is-on'); a.setAttribute('aria-hidden', 'true'); }
+      b.classList.add('is-on'); b.removeAttribute('aria-hidden');
+      if (!MOTION) return;
+      gsap.killTweensOf([a, b]);
+      if (a) gsap.fromTo(a, { autoAlpha: 1, y: 0 }, { autoAlpha: 0, y: -14, duration: 0.3, ease: 'power2.in' });
+      gsap.fromTo(b, { autoAlpha: 0, y: 26, x: -26 * SL }, { autoAlpha: 1, y: 0, x: 0, duration: 0.75, ease: OUT, delay: 0.4 });
+    }
+    const sheetNos = $$('.spot__tbn', sec);
+    const mapCells = $$('.spot__mm [data-i]', sec);
+    const pad2 = (n) => String(n).padStart(2, '0');
+    sheetNos.forEach((el) => setOdo(el, pad2(1), { instant: true }));
+    // the chapter being told is the lit one (the full-bleed layout dims the rest of the map behind the copy)
+    const markCur = (i) => scenes.forEach((g, k) => g.classList.toggle('is-cur', k === i));
+    markCur(0);
+    function copy(i) {
+      markCur(i);
+      sheetNos.forEach((el) => setOdo(el, pad2(i + 1), { dur: 0.7, stagger: 0.06 }));
+      mapCells.forEach((r) => { r.classList.toggle('is-done', +r.dataset.i < i); r.classList.toggle('is-on', +r.dataset.i === i); });
+      swapWord(slots.verb, subs[i].dataset.verb);
+      swapWord(slots.noun, subs[i].dataset.noun);
+      swapSub(i);
+      sec.classList.toggle('on-hub', i === LAST);
+    }
 
-    size();
-    new ResizeObserver(size).observe(sec); // the hero grows when the full-width wordmark needs the room
-    if (d.fonts && d.fonts.ready) d.fonts.ready.then(size);
-    ScrollTrigger.addEventListener('refresh', size);
-    gsap.ticker.add(tick);
-    new IntersectionObserver(([en]) => {
-      visible = en.isIntersecting;
-      if (video) { if (visible) video.play().catch(() => {}); else video.pause(); }
-    }).observe(sec);
-    // the letters are dark again by the time the logo flight lifts the wordmark off (or once the hero has mostly gone)
-    const lift = $('.reel-sec__statement');
-    ScrollTrigger.create({ trigger: sec, start: 'top top', ...(lift ? { endTrigger: lift, end: 'top 92%' } : { end: 'bottom 35%' }),
-      onUpdate: (st) => { out = st.progress; } });
+    // the rail: told chapters stay full, the one being told fills over its time, the rest wait empty
+    function rail(i) {
+      cells.forEach((c, k) => c.setAttribute('aria-current', k === i ? 'true' : 'false'));
+      fills.forEach((f, k) => { gsap.killTweensOf(f); gsap.set(f, { scaleX: k < i || (!MOTION && k === i) ? 1 : 0 }); });
+    }
+    function clock(i) {
+      if (clk) clk.kill();
+      clk = null;
+      if (!MOTION) return;
+      const next = i === LAST ? 0 : i + 1;
+      clk = gsap.fromTo(fills[i], { scaleX: 0 }, { scaleX: 1, duration: +subs[i].dataset.hold || 5.6, ease: 'none', onComplete: () => go(next) });
+      if (!live()) clk.pause();
+    }
 
-    // the opening: the current runs round P, P powers on, the current jumps to M, then N
+    // on to the next chapter: the camera flies along the line, the business rides it, the line is laid behind it
+    function travel(from, to) {
+      const A = cam(from); const B = cam(to);
+      const a = centre(from); const b = centre(to);
+      const dist = Math.hypot(b.x - a.x, b.y - a.y);
+      const lead = (dist - lens[from]) / 2; // the line starts this far out from the chapter's centre
+      const st = { p: 0 };
+      tier(to);
+      const tl = gsap.timeline();
+      tl.to(st, {
+        p: 1, duration: PAN, ease: 'power2.inOut',
+        onUpdate: () => {
+          const p = st.p;
+          Object.assign(camNow, { x: A.x + (B.x - A.x) * p, y: A.y + (B.y - A.y) * p, scale: 1 });
+          drawCam();
+          token.setAttribute('transform', `translate(${(a.x + (b.x - a.x) * p).toFixed(1)} ${(a.y + (b.y - a.y) * p).toFixed(1)})`);
+          token.style.opacity = String(Math.max(0, Math.min(1, (p - 0.2) / 0.1, (0.8 - p) / 0.1)));
+          token.style.visibility = 'visible';
+          lay(from, (p * dist - lead) / lens[from]);
+        },
+      }, 0)
+        .call(() => { rest(from); play(to); }, null, PAN * 0.45);
+      tl.call(() => { const b = built[from]; if (b && b.tl.time() < DONE - 3) finish(from); }, null, PAN);
+      // the last chapter: arrive on PMN, then pull back until the whole story is in view
+      if (to === LAST) tl.to(camNow, { x: map.x, y: map.y, scale: map.scale, duration: 2.4, ease: EASE, lazy: false, onUpdate: drawCam }, PAN + 0.9);
+      return tl;
+    }
+    // a jump (or the story starting over): the curtain cuts to that chapter with the map as it would stand there
+    function cut(i) {
+      return gsap.timeline()
+        .fromTo(curtain, { x: 0, xPercent: -104, visibility: 'visible' }, { xPercent: 0, duration: 0.45, ease: 'power3.in' })
+        .call(() => { stateAt(i); tier(i); play(i); })
+        .to(curtain, { xPercent: 104, duration: 0.6, ease: OUT })
+        .set(curtain, { visibility: 'hidden' });
+    }
+
+    function go(i) {
+      if (i === cur && started) return;
+      const from = cur;
+      cur = i;
+      copy(i);
+      rail(i);
+      if (!MOTION) { setCam(view(i)); return; }
+      if (move) move.progress(1);
+      move = i === from + 1 ? travel(from, i) : cut(i);
+      clock(i);
+    }
+
+    cells.forEach((c) => c.addEventListener('click', () => { if (MOTION && !started) return; go(+c.dataset.go); }));
+    if (!MOTION) return; // the markup is the whole map, every chapter complete
+
+    sec.classList.add('is-live');
+    pauseBtn.addEventListener('click', () => {
+      userPaused = !userPaused;
+      sec.classList.toggle('is-paused', userPaused);
+      pauseBtn.setAttribute('aria-label', userPaused ? pauseBtn.dataset.labelPlay : pauseBtn.dataset.labelPause);
+      sync();
+    });
+    new IntersectionObserver(([en]) => { onScreen = en.isIntersecting; sync(); }, { threshold: 0.15 }).observe(sec);
+    d.addEventListener('visibilitychange', sync);
+
+    // every chapter's timeline up front (the map is rendered, so their boxes measure), then the story's opening state
+    scenes.forEach((g, i) => { built[i] = build(g); });
+    stateAt(0);
+    tier(0);
+
+    // the copy steps back as the page scrolls on, so the nav's PMN flies down to the reel statement through clear air
+    // (on a phone only the headline goes: the narration and buttons below it are still being read as the page moves)
+    mm.add('(min-width: 992px)', () => {
+      gsap.to($('.spot__copy', sec), { autoAlpha: 0, y: -50, ease: 'none', scrollTrigger: { trigger: sec, start: 'top top', end: '30% top', scrub: true } });
+    });
+    mm.add('(max-width: 991px)', () => {
+      gsap.to($('.spot__h1', sec), { autoAlpha: 0, y: -40, ease: 'none', scrollTrigger: { trigger: sec, start: 'top top', end: '22% top', scrub: true } });
+    });
+
+    // entrance: the plate opens on the slant, the headline rises line by line, then the shop opens
+    const lines = $$('.spot__li', sec);
+    const restOf = [$('.spot__subs', sec), $('.spot__ctas', sec), $('.spot__rail', sec)];
+    gsap.set(lines, { yPercent: 150, skewX: -14, transformOrigin: '0% 100%', visibility: 'visible' });
+    gsap.set(restOf, { autoAlpha: 0, y: 26, x: -26 * SL });
+    gsap.set(stage, { visibility: 'visible', clipPath: slantFrom(1) });
     whenReady(() => {
-      // no running current: each letter fades up in turn, its outline left as a soft glow
-      const tl = gsap.timeline({ delay: 0.9, onStart: size });
-      L.forEach((st, i) => {
-        tl.set(st, { charge: 1 }, 0)
-          .to(st, { lit: 1, duration: 1.1, ease: 'power2.inOut' }, i * 0.35)
-          .to(st, { glow: 0.4, duration: 1.4, ease: 'sine.inOut' }, i * 0.35 + 0.2);
-      });
+      gsap.timeline()
+        .to(lines, { yPercent: 0, skewX: 0, duration: 0.9, ease: EASE, stagger: 0.08 }, 0)
+        .to(stage, { clipPath: SLANT_OPEN, duration: 1.05, ease: EASE, onComplete: () => gsap.set(stage, { clearProps: 'clipPath' }) }, 0.1)
+        .to(restOf, { autoAlpha: 1, y: 0, x: 0, duration: 0.9, ease: OUT, stagger: 0.1 }, 0.35)
+        .call(() => { started = true; rail(0); play(0); clock(0); }, null, 0.45);
     });
   }
 
@@ -840,55 +977,45 @@
 
 
   /* ------------------------------------------------------------------------
-     Logo flight (home): as the reel statement scrolls up, the hero's giant
-     PMN wordmark lifts off the paper, shrinks and flies down along the scroll
-     into the statement in place of the word "PMN"; scrolling back sends it
-     home. The small nav mark stays hidden until the statement has gone by. Without motion the statement shows the logo
-     where the word was.
+     Logo flight (home): the nav's PMN lifts off with the first scroll and
+     glides down the page, growing as it goes, into the reel statement where
+     the word "PMN" stands ("[PMN] ยินดีช่วยวางระบบ…"); it lands as the
+     statement settles at a third of the screen. Scrolling back flies it home
+     to the nav. The nav's own mark steps aside while its logo is out and
+     comes back once the statement has gone by. Without motion both simply
+     show the logo.
      ------------------------------------------------------------------------ */
   function logoFlight() {
     const host = $('.reel-sec__statement');
     const mark = $('.nav__mark');
-    const big = $('.hero__mark svg');
-    if (!MOTION || !host || !big || !host.querySelector('.pmn-slot')) return;
+    const src = mark && $('.mk-pmn', mark);
+    if (!MOTION || !host || !src || !host.querySelector('.pmn-slot')) return;
     host.classList.add('logo-fly');
     const flyer = mk('div', 'logo-flyer');
     flyer.setAttribute('aria-hidden', 'true');
     flyer.innerHTML = host.querySelector('.pmn-slot').innerHTML;
     d.body.appendChild(flyer);
-    const vb = big.viewBox.baseVal; const AR = vb.width / vb.height;
-    // the letters inside the hero svg: it keeps their aspect and anchors them bottom-left (xMinYMax meet)
-    const letters = () => {
-      const r = big.getBoundingClientRect();
-      const w = Math.min(r.width, r.height * AR); const h = w / AR;
-      return { left: r.left, top: r.bottom - h, height: h };
-    };
+    const vb = src.viewBox.baseVal; const AR = vb.width / vb.height;
     let p = 0; let past = false;
-    const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - ((-2 * t + 2) ** 2) / 2);
+    const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2);
     const render = () => {
       const slot = host.querySelector('.pmn-slot svg'); // looked up each time: SplitText rebuilds the heading
       const flying = p > 0.001 && p < 0.999;
-      // the small nav mark waits until the statement has gone by; the hero wordmark itself is what travels
-      if (mark) mark.classList.toggle('is-away', !past);
-      (big.closest('.glass-wm') || big).style.opacity = p > 0.001 ? '0' : ''; // opacity, not visibility: the letters carry their own visibility from the intro
+      mark.classList.toggle('is-away', p > 0.001 && !past);
       host.classList.toggle('logo-landed', p >= 0.999);
       flyer.style.display = flying && slot ? 'block' : 'none';
-      flyer.style.opacity = String(Math.min(1, p / 0.15)); // the ink logo forms as the emptied window lifts off
       if (!flying || !slot) return;
-      const a = letters(); const b = slot.getBoundingClientRect();
-      if (!b.height || !a.height) return;
+      const a = src.getBoundingClientRect(); const b = slot.getBoundingClientRect();
+      if (!a.height || !b.height) return;
       const e = ease(p);
-      const h = a.height + (b.height - a.height) * e;
-      // ink follows the ground under it: black while over the white paper, white once over the dark statement
-      const y = a.top + (b.top - a.top) * e; const heroEdge = big.closest('[data-hero]').getBoundingClientRect().bottom;
-      flyer.style.color = y + h / 2 < heroEdge ? getComputedStyle(big).color : getComputedStyle(host).color;
-      // the slot's box is wider than its letters while the statement line still leans in on its slanted reveal:
-      // size the flyer by the wordmark's own proportions and centre it on that box, so no letter is pushed off screen
+      // the slot's box can be wider than its letters while the statement line still leans in on its reveal:
+      // size the flyer by the wordmark's own proportions and centre it on that box
       const bw = b.height * AR; const bl = b.left + (b.width - bw) / 2;
+      const h = a.height + (b.height - a.height) * e;
       flyer.style.width = `${bw}px`; flyer.style.height = `${b.height}px`;
-      flyer.style.transform = `translate(${a.left + (bl - a.left) * e}px, ${y}px) scale(${h / b.height})`;
+      flyer.style.transform = `translate(${a.left + (bl - a.left) * e}px, ${a.top + (b.top - a.top) * e}px) scale(${h / b.height})`;
     };
-    ScrollTrigger.create({ trigger: host, start: 'top 92%', end: 'top 36%', onUpdate: (st) => { p = st.progress; render(); }, onRefresh: (st) => { p = st.progress; render(); } });
+    ScrollTrigger.create({ trigger: host, start: 0, end: 'top 36%', onUpdate: (st) => { p = st.progress; render(); }, onRefresh: (st) => { p = st.progress; render(); } });
     ScrollTrigger.create({ trigger: host, start: 'bottom top', end: 'max', onToggle: (st) => { past = st.isActive; render(); }, onRefresh: (st) => { past = st.isActive; render(); } });
     gsap.ticker.add(() => { if (p > 0.001 && p < 0.999) render(); });
     render();
@@ -1681,7 +1808,7 @@
     parallax();
     figures();
     clients();
-    hero();
+    spot();
     reel();
     abacus();
     whySec();

@@ -1,10 +1,9 @@
 import { getPublicPromotions, getServerStatus, type ServerStatus, type Promotion } from '@/lib/cms';
-import { defaultHomeContent } from '@/lib/home-content';
-import { CHAT_MARK, GLASS_WM, PMN_SLOT, REEL_INK } from '../brand';
+import { CHAT_MARK, PMN_SLOT, REEL_INK } from '../brand';
+import { SPOT_HTML } from '../spot';
 import {
   clientArt,
   dateMid,
-  designOr,
   getAllArticles,
   getCats,
   indexRow,
@@ -16,7 +15,7 @@ import {
   statStr,
   type SiteCtx,
 } from '../data';
-import { html, noBreaks, raw, withBreaks, type Raw } from '../html';
+import { esc, html, noBreaks, raw, withBreaks, type Raw } from '../html';
 import { discountSwitch, ILLUS_NOTE, plans, processSection, railsBlock, registerForm, worksGrid } from '../sections';
 import { ARW, ASSET_V, ico, renderPage } from '../shell';
 
@@ -25,28 +24,13 @@ const SVC_OBJ: Record<string, string> = { db: 'svc-database-sm.webp', erp: 'svc-
 const WHY_ICONS = ['why-online-sm.webp', 'why-secure-sm.webp', 'why-ontime-sm.webp', 'why-support-sm.webp'];
 const SVC_ANCHOR: Record<string, string> = { db: 'database', erp: 'erp', crm: 'crm', code: 'custom' };
 
+/* Home hero: the design's nine-scene story ("ออกแบบ “ระบบ”" → website → app → ERP/CRM → … → servers)
+   over the blue city, driven by main.js. Copy is the design's own (spot.ts, generated); only the
+   proof figures in the last scene come from the CMS stats. */
 function hero(c: SiteCtx): Raw {
-  const h = c.home.hero;
   const s = c.home.stats;
-  const proofLine = s.length >= 2 ? `${statStr(s[1])} องค์กร · ${statStr(s[0])} โปรเจกต์` : h.statNote;
-  // the big PMN is a glass of water over the IT city: main.js fills the letters from the rim paths
-  return html`<section class="hero" data-hero aria-label="PMN Digital">
-  <div class="hero__media" aria-hidden="true"><video src="/assets/video/hero-city-loop.mp4" poster="/assets/img/scene-city.webp" muted loop playsinline preload="auto"></video></div>
-  <canvas class="hero__paper" aria-hidden="true"></canvas>
-  <div class="hero__ui">
-    <div class="hero__intro">
-      <div class="hero__head">
-        <h1 class="hero__title" data-line data-intro>${h.title1} ${h.highlight} <span class="nw">${h.title2}</span></h1>
-        <div class="hero__meta" data-fade data-intro data-delay="1"><p class="caps nw">Digital agency<span class="hide-sm"> · 100% online</span></p><p class="data">${proofLine}</p></div>
-      </div>
-      <div class="hero__side">
-        <p class="hero__lead" data-line data-intro data-delay=".15">${h.subtitle}</p>
-        <div class="hero__ctas" data-fade data-intro data-delay=".55"><a class="badge badge--fill" href="#register">${h.ctaPrimary} ${ARW}</a><a class="badge" href="/services">${designOr(h.ctaSecondary, defaultHomeContent.hero.ctaSecondary, 'ดูบริการ')} ${ARW}</a></div>
-      </div>
-    </div>
-    <div class="hero__mark">${raw(GLASS_WM)}</div>
-  </div>
-</section>`;
+  const proofLine = s.length >= 2 ? `${statStr(s[1])} องค์กร · ${statStr(s[0])} โปรเจกต์` : c.home.hero.statNote;
+  return raw(SPOT_HTML.replace('{{PROOF}}', esc(proofLine)));
 }
 
 /* "[PMN] ยินดีช่วยวางระบบให้ธุรกิจของคุณ…" — the wordmark sits in the sentence, "คุณ" rotates through
