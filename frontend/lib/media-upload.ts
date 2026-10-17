@@ -1,6 +1,42 @@
 'use client';
 
+import { useEffect } from 'react';
 import { uploadMediaChunkAction } from './cms-actions';
+
+/** Clip formats the site can play back; keep in step with the file inputs' accept lists. */
+export const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
+export const MEDIA_ACCEPT = ['image/*', ...VIDEO_TYPES].join(',');
+const UNSUPPORTED_MSG = 'รองรับเฉพาะรูปภาพ และวิดีโอ MP4 / WebM / MOV';
+
+/**
+ * Image (and, when allowed, video) files from a drop or paste, in order. Until 17 Oct 2026 the
+ * editor, cover field and media library only took files from the file picker: a clip dragged
+ * onto them was ignored, and the browser then opened it in place of the half-written article.
+ */
+export function pickMediaFiles(
+  dt: DataTransfer | null,
+  allowVideo = true,
+): { files: File[]; rejected: string | null } {
+  const all = dt ? Array.from(dt.files) : [];
+  const files = all.filter((f) => f.type.startsWith('image/') || (allowVideo && VIDEO_TYPES.includes(f.type)));
+  const rejected = all.length > files.length ? (allowVideo ? UNSUPPORTED_MSG : 'ช่องนี้รับเฉพาะรูปภาพ') : null;
+  return { files, rejected };
+}
+
+/** Stop a file dropped outside a drop target from navigating away from the form. */
+export function useBlockFileDropNavigation() {
+  useEffect(() => {
+    const stop = (e: DragEvent) => {
+      if (e.dataTransfer?.types.includes('Files')) e.preventDefault();
+    };
+    window.addEventListener('dragover', stop);
+    window.addEventListener('drop', stop);
+    return () => {
+      window.removeEventListener('dragover', stop);
+      window.removeEventListener('drop', stop);
+    };
+  }, []);
+}
 
 /** Largest file the CMS accepts (keep in step with MAX_BYTES in backend cms.service.ts). */
 export const MAX_UPLOAD_BYTES = 1024 * 1024 * 1024;

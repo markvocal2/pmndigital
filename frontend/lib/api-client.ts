@@ -34,6 +34,8 @@ export async function backendFetch<T = unknown>(
     body?: unknown;
     headers?: Record<string, string>;
     formData?: FormData;
+    /** Defaults to ADMIN_TIMEOUT_MS. The last media chunk streams the whole file to Drive. */
+    timeoutMs?: number;
   } = {},
 ): Promise<T> {
   const session = await auth();
@@ -55,7 +57,7 @@ export async function backendFetch<T = unknown>(
         ? JSON.stringify(init.body)
         : undefined,
     cache: 'no-store',
-    signal: AbortSignal.timeout(ADMIN_TIMEOUT_MS),
+    signal: AbortSignal.timeout(init.timeoutMs ?? ADMIN_TIMEOUT_MS),
   });
   return unwrap<T>(res);
 }

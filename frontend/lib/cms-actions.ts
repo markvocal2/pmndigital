@@ -57,6 +57,8 @@ export async function uploadMediaChunkAction(
     const d = await backendFetch<{ received: number; url?: string }>('/admin/media/chunk', {
       method: 'POST',
       formData,
+      // the last piece assembles the file and streams it to Drive: ~1 min per GB measured, allow 10
+      timeoutMs: 10 * 60_000,
     });
     return { ok: true, data: d };
   } catch (e) {

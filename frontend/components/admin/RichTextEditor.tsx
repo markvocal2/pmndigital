@@ -7,7 +7,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import Image from '@tiptap/extension-image';
 import { Video } from './tiptapVideo';
 import { isVideoUrl } from '@/lib/cms';
-import { tooLargeMessage, uploadMedia } from '@/lib/media-upload';
+import { MEDIA_ACCEPT, pickMediaFiles, tooLargeMessage, uploadMedia, useBlockFileDropNavigation } from '@/lib/media-upload';
 import { MediaPicker } from './MediaPicker';
 import { ARTICLE_BODY_CLASS } from '@/lib/articleBodyClass';
 
@@ -39,39 +39,28 @@ function Sep() {
   return <span className="mx-1 h-5 w-px self-center bg-white/10" />;
 }
 
-function Toolbar({ editor }: { editor: Editor }) {
+// Uploads, drops, pastes and the media library all land here: a clip has to become a <video>
+// node, not an <img> pointed at an .mp4. `pos` places a dropped file where it was let go.
+function insertMedia(editor: Editor, url: string, pos?: number) {
+  if (!url) return;
+  const node = isVideoUrl(url) ? { type: 'video', attrs: { src: url } } : { type: 'image', attrs: { src: url } };
+  const chain = editor.chain().focus();
+  (pos === undefined ? chain.insertContent(node) : chain.insertContentAt(pos, node)).run();
+}
+
+function Toolbar({
+  editor, busy, pct, onFiles,
+}: {
+  editor: Editor; busy: boolean; pct: number; onFiles: (files: File[]) => void;
+}) {
   const [pick, setPick] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [pct, setPct] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Uploads and the media library both land here: a clip has to become a <video> node,
-  // not an <img> pointed at an .mp4.
-  const insertMedia = useCallback((url: string) => {
-    if (!url) return;
-    if (isVideoUrl(url)) {
-      editor.chain().focus().insertContent({ type: 'video', attrs: { src: url } }).run();
-    } else {
-      editor.chain().focus().setImage({ src: url }).run();
-    }
-  }, [editor]);
-
-  const onFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
-    if (!file) return;
-    const big = tooLargeMessage(file);
-    if (big) { alert(big); return; }
-    setBusy(true);
-    setPct(0);
-    try {
-      insertMedia(await uploadMedia(file, setPct));
-    } catch (ex) {
-      alert(ex instanceof Error && ex.message ? ex.message : 'อัปโหลดไม่สำเร็จ — การเชื่อมต่อมีปัญหา');
-    } finally {
-      setBusy(false);
-    }
-  }, [insertMedia]);
+    if (file) onFiles([file]);
+  }, [onFiles]);
 
   const setLink = useCallback(() => {
     if (editor.isActive('link')) { editor.chain().focus().unsetLink().run(); return; }
@@ -140,11 +129,11 @@ function Toolbar({ editor }: { editor: Editor }) {
 
       {/* link + image */}
       <Btn title="ลิงก์" active={editor.isActive('link')} onClick={setLink}>🔗</Btn>
-      <input ref={fileRef} type="file" accept="image/*,video/mp4,video/webm,video/quicktime" className="hidden" onChange={onFile} />
-      <Btn title="แทรกรูป/วิดีโอ (อัปโหลด)" disabled={busy} onClick={() => fileRef.current?.click()}>{busy ? `${pct}%` : '🖼️'}</Btn>
+      <input ref={fileRef} type="file" accept={MEDIA_ACCEPT} className="hidden" onChange={onFile} />
+      <Btn title="แทรกรูป/วิดีโอ (อัปโหลด หรือลากไฟล์มาวางในเนื้อหา)" disabled={busy} onClick={() => fileRef.current?.click()}>{busy ? `${pct}%` : '🖼️'}</Btn>
       <Btn title="แทรกจากคลังสื่อ" onClick={() => setPick(true)}>คลัง</Btn>
 
-      <MediaPicker open={pick} onClose={() => setPick(false)} onPick={insertMedia} />
+      <MediaPicker open={pick} onClose={() => setPick(false)} onPick={(url) => insertMedia(editor, url)} />
     </div>
   );
 }
@@ -156,6 +145,12 @@ export function RichTextEditor({
   value: string;
   onChange: (html: string) => void;
 }) {
+  const [busy, setBusy] = useState(false);
+  const [pct, setPct] = useState(0);
+  useBlockFileDropNavigation();
+  // editorProps are fixed when the editor is created; drop/paste reach the current uploader through this ref
+  const filesRef = useRef<(files: File[], pos?: number) => void>(() => {});
+
   const editor = useEditor({
     immediatelyRender: false, // avoid Next.js SSR hydration mismatch
     extensions: [
@@ -172,9 +167,46 @@ export function RichTextEditor({
       attributes: {
         class: `${ARTICLE_BODY_CLASS} min-h-[360px] rounded-b-md border border-white/10 bg-white/[0.03] px-4 py-3 outline-none focus:border-blue-400/60`,
       },
+      handleDrop: (view, event, _slice, moved) => {
+        if (moved) return false; // dragging content around inside the editor
+        const { files, rejected } = pickMediaFiles(event.dataTransfer);
+        if (!files.length && !rejected) return false;
+        event.preventDefault();
+        if (rejected) alert(rejected);
+        const pos = view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos;
+        if (files.length) filesRef.current(files, pos);
+        return true;
+      },
+      handlePaste: (_view, event) => {
+        const { files, rejected } = pickMediaFiles(event.clipboardData);
+        if (!files.length && !rejected) return false;
+        event.preventDefault();
+        if (rejected) alert(rejected);
+        if (files.length) filesRef.current(files);
+        return true;
+      },
     },
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
   });
+
+  const uploadFiles = useCallback(async (files: File[], pos?: number) => {
+    if (!editor) return;
+    for (const file of files) {
+      const big = tooLargeMessage(file);
+      if (big) { alert(big); continue; }
+      setBusy(true);
+      setPct(0);
+      try {
+        insertMedia(editor, await uploadMedia(file, setPct), pos);
+        pos = undefined; // the next file follows the one just inserted
+      } catch (ex) {
+        alert(ex instanceof Error && ex.message ? ex.message : 'อัปโหลดไม่สำเร็จ — การเชื่อมต่อมีปัญหา');
+      } finally {
+        setBusy(false);
+      }
+    }
+  }, [editor]);
+  filesRef.current = uploadFiles;
 
   // Re-render the toolbar on every transaction so active states stay in sync.
   const [, force] = useState(0);
@@ -191,8 +223,9 @@ export function RichTextEditor({
 
   return (
     <div>
-      <Toolbar editor={editor} />
+      <Toolbar editor={editor} busy={busy} pct={pct} onFiles={uploadFiles} />
       <EditorContent editor={editor} />
+      {busy && <p className="mt-1 text-xs text-slate-400">กำลังอัปโหลด {pct}% — แก้ไขเนื้อหาต่อได้ระหว่างรอ</p>}
     </div>
   );
 }

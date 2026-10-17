@@ -5,7 +5,7 @@ import type { MediaItem } from '@/lib/cms';
 import { isVideoUrl } from '@/lib/cms';
 import { MediaImg } from '@/components/ui/Skeleton';
 import { listMediaAction, deleteMediaAction } from '@/lib/cms-actions';
-import { tooLargeMessage, uploadMedia } from '@/lib/media-upload';
+import { tooLargeMessage, uploadMedia, useBlockFileDropNavigation } from '@/lib/media-upload';
 
 function fmtSize(b: number) {
   return b < 1024 ? b + ' B' : b < 1048576 ? (b / 1024).toFixed(0) + ' KB' : (b / 1048576).toFixed(1) + ' MB';
@@ -24,6 +24,8 @@ export function MediaBrowser({ onPick }: { onPick?: (url: string) => void }) {
   const [pct, setPct] = useState(0);
   const [q, setQ] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
+  const [over, setOver] = useState(false);
+  useBlockFileDropNavigation();
 
   useEffect(() => {
     load();
@@ -36,24 +38,39 @@ export function MediaBrowser({ onPick }: { onPick?: (url: string) => void }) {
     setLoading(false);
   }
 
-  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
+  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
     e.target.value = '';
-    if (!f) return;
+    uploadAll(files);
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setOver(false);
+    if (!busy) uploadAll(Array.from(e.dataTransfer.files));
+  }
+
+  // The library takes any file type, one after another; with a picker open the last one is picked.
+  async function uploadAll(files: File[]) {
+    if (!files.length) return;
     setMsg(null);
-    const big = tooLargeMessage(f);
-    if (big) {
-      setMsg(big);
-      return;
-    }
     setBusy(true);
-    setPct(0);
+    let url = '';
     try {
-      const url = await uploadMedia(f, setPct);
+      for (const f of files) {
+        const big = tooLargeMessage(f);
+        if (big) {
+          setMsg(big);
+          continue;
+        }
+        setPct(0);
+        url = await uploadMedia(f, setPct);
+      }
       await load();
-      if (onPick) onPick(url);
+      if (url && onPick) onPick(url);
     } catch (ex) {
       setMsg(ex instanceof Error && ex.message ? ex.message : 'อัปโหลดไม่สำเร็จ — การเชื่อมต่อมีปัญหา');
+      await load();
     } finally {
       setBusy(false);
     }
@@ -79,12 +96,18 @@ export function MediaBrowser({ onPick }: { onPick?: (url: string) => void }) {
   const filtered = items.filter((i) => i.filename.toLowerCase().includes(q.toLowerCase()));
 
   return (
-    <div>
+    <div
+      onDragOver={(e) => { if (e.dataTransfer.types.includes('Files')) { e.preventDefault(); setOver(true); } }}
+      onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOver(false); }}
+      onDrop={onDrop}
+      className={over ? 'rounded-lg outline-dashed outline-2 outline-offset-4 outline-blue-400/70' : undefined}
+    >
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <label className="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500">
           {busy ? `กำลังอัปโหลด ${pct}%` : '+ อัปโหลดไฟล์'}
-          <input type="file" className="hidden" onChange={onFile} disabled={busy} />
+          <input type="file" multiple className="hidden" onChange={onFile} disabled={busy} />
         </label>
+        <span className="text-xs text-slate-500">หรือลากไฟล์มาวางในหน้านี้</span>
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, type ReactNode } from 'react';
-import { tooLargeMessage, uploadMedia } from '@/lib/media-upload';
+import { MEDIA_ACCEPT, pickMediaFiles, tooLargeMessage, uploadMedia, useBlockFileDropNavigation } from '@/lib/media-upload';
 import { MediaPicker } from './MediaPicker';
 import { isVideoUrl } from '@/lib/cms';
 
@@ -153,11 +153,25 @@ export function ImageUpload({
   const [err, setErr] = useState<string | null>(null);
   const [pick, setPick] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [over, setOver] = useState(false);
+  useBlockFileDropNavigation();
 
-  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = '';
-    if (!file) return;
+    if (file) upload(file);
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setOver(false);
+    if (busy) return;
+    const { files, rejected } = pickMediaFiles(e.dataTransfer, allowVideo);
+    if (files.length) upload(files[0]);
+    else if (rejected) setErr(rejected);
+  }
+
+  async function upload(file: File) {
     setErr(null);
     const big = tooLargeMessage(file);
     if (big) {
@@ -178,15 +192,21 @@ export function ImageUpload({
   return (
     <div>
       <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-slate-400">{label}</span>
-      <div className="flex items-center gap-3">
-        <input ref={fileRef} type="file" accept={allowVideo ? 'image/*,video/mp4,video/webm,video/quicktime' : 'image/*'} className="hidden" onChange={onFile} disabled={busy} />
+      <div
+        className="flex items-center gap-3"
+        onDragOver={(e) => { if (e.dataTransfer.types.includes('Files')) { e.preventDefault(); setOver(true); } }}
+        onDragLeave={() => setOver(false)}
+        onDrop={onDrop}
+      >
+        <input ref={fileRef} type="file" accept={allowVideo ? MEDIA_ACCEPT : 'image/*'} className="hidden" onChange={onFile} disabled={busy} />
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={busy}
-          title={allowVideo ? 'คลิกเพื่ออัปโหลดรูป/วิดีโอ' : 'คลิกเพื่ออัปโหลดรูป'}
+          title={allowVideo ? 'คลิกหรือลากรูป/วิดีโอมาวาง' : 'คลิกหรือลากรูปมาวาง'}
           className={[
-            'group relative grid h-16 w-28 place-items-center overflow-hidden rounded-md border border-white/10 transition hover:border-blue-400/50',
+            'group relative grid h-16 w-28 place-items-center overflow-hidden rounded-md border transition hover:border-blue-400/50',
+            over ? 'border-blue-400 ring-2 ring-blue-400/40' : 'border-white/10',
             dark ? 'bg-[#0b1020]' : 'bg-white',
           ].join(' ')}
         >
