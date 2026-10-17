@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { adminListArticles, adminGetSparklines, adminGetTraffic, isScheduled, type TrafficBreakdown } from '@/lib/cms';
+import { adminListArticles, adminGetSparklines, adminGetTraffic, isScheduled, type Article, type TrafficBreakdown } from '@/lib/cms';
 import { Sparkline } from '@/components/admin/Sparkline';
 
 export const dynamic = 'force-dynamic';
@@ -22,7 +22,7 @@ const SOURCE_COLOR: Record<string, string> = {
 };
 const nf = (n: number) => n.toLocaleString('th-TH');
 /** Readable on the public site right now: published and not waiting for a scheduled time. */
-const isLive = (a: { status: string; publishedAt: string | null }) => a.status === 'PUBLISHED' && !isScheduled(a);
+const isLive = (a: Pick<Article, 'status' | 'publishedAt'>) => a.status === 'PUBLISHED' && !isScheduled(a);
 
 function TrafficPanel({ t }: { t: TrafficBreakdown }) {
   const denom = t.human + t.bot;
