@@ -21,6 +21,8 @@ const SOURCE_COLOR: Record<string, string> = {
   campaign: 'bg-pink-400',
 };
 const nf = (n: number) => n.toLocaleString('th-TH');
+/** Readable on the public site right now: published and not waiting for a scheduled time. */
+const isLive = (a: { status: string; publishedAt: string | null }) => a.status === 'PUBLISHED' && !isScheduled(a);
 
 function TrafficPanel({ t }: { t: TrafficBreakdown }) {
   const denom = t.human + t.bot;
@@ -136,7 +138,7 @@ export default async function AdminArticlesPage() {
                   <div className="font-mono text-xs text-slate-500">/blog/{art.slug}</div>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={isScheduled(art) ? 'rounded-full bg-amber-500/15 px-2 py-0.5 text-xs text-amber-300' : art.status === 'PUBLISHED' ? 'rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs text-emerald-300' : 'rounded-full bg-white/10 px-2 py-0.5 text-xs text-slate-300'}>
+                  <span className={'inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs ' + (isScheduled(art) ? 'bg-amber-500/15 text-amber-300' : art.status === 'PUBLISHED' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/10 text-slate-300')}>
                     {isScheduled(art) ? '⏳ ตั้งเวลา' : art.status === 'PUBLISHED' ? 'เผยแพร่' : 'ฉบับร่าง'}
                   </span>
                 </td>
@@ -145,8 +147,28 @@ export default async function AdminArticlesPage() {
                   <Sparkline data={sparks[art.id] ?? []} />
                   <div className="mt-0.5 text-[10px] text-slate-500">ทั้งหมด {nf(art.viewCount)}</div>
                 </td>
-                <td className="px-4 py-3 text-right">
-                  <Link href={`/admin/articles/${art.id}/edit`} className="text-blue-300 hover:text-blue-200">แก้ไข</Link>
+                <td className="px-4 py-3">
+                  <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+                    {isLive(art) ? (
+                      <a
+                        href={`/blog/${art.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="เปิดบทความบนเว็บไซต์ (แท็บใหม่)"
+                        className="rounded-md border border-white/10 px-2.5 py-1 text-xs text-slate-200 transition hover:border-blue-400/50 hover:text-white"
+                      >
+                        เปิดอ่าน ↗
+                      </a>
+                    ) : (
+                      <span
+                        title={isScheduled(art) ? 'ยังไม่ถึงเวลาเผยแพร่ — เปิดอ่านได้เมื่อถึงเวลา' : 'ฉบับร่าง — เผยแพร่ก่อนจึงเปิดอ่านบนเว็บได้'}
+                        className="cursor-not-allowed rounded-md border border-white/5 px-2.5 py-1 text-xs text-slate-600"
+                      >
+                        เปิดอ่าน ↗
+                      </span>
+                    )}
+                    <Link href={`/admin/articles/${art.id}/edit`} className="rounded-md bg-blue-500/15 px-2.5 py-1 text-xs text-blue-200 transition hover:bg-blue-500/25">แก้ไข</Link>
+                  </div>
                 </td>
               </tr>
             ))}
