@@ -48,23 +48,7 @@ export async function updateHomeAction(
   }
 }
 
-/* ---------------- media upload ---------------- */
-/** One piece of a chunked upload (see lib/media-upload.ts); the last piece answers with the url. */
-export async function uploadMediaChunkAction(
-  formData: FormData,
-): Promise<ActionResult<{ received: number; url?: string }>> {
-  try {
-    const d = await backendFetch<{ received: number; url?: string }>('/admin/media/chunk', {
-      method: 'POST',
-      formData,
-      // the last piece assembles the file and streams it to Drive: ~1 min per GB measured, allow 10
-      timeoutMs: 10 * 60_000,
-    });
-    return { ok: true, data: d };
-  } catch (e) {
-    return { ok: false, error: explain(e) };
-  }
-}
+/* media upload: app/api/admin/media-chunk/route.ts (a Server Action got blocked by Cloudflare's WAF) */
 
 /* ---------------- articles ---------------- */
 export type ArticleInput = Partial<Article> & { title: string; slug: string };
