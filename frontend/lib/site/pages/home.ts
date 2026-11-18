@@ -62,9 +62,11 @@ function clients(c: SiteCtx): Raw {
     const imgs = html`<img class="client__ink" src="${a.src}" alt="${a.alt}" width="${a.w}" height="${a.h}" loading="lazy" decoding="async" style="--h:${a.hPct}"><img class="client__color" src="${a.src}" alt="" width="${a.w}" height="${a.h}" loading="lazy" decoding="async" style="--h:${a.hPct}" aria-hidden="true">`;
     return l.url ? html`<li class="client"><a href="${l.url}" target="_blank" rel="noopener" data-no-transition>${imgs}</a></li>` : html`<li class="client">${imgs}</li>`;
   });
+  // desktop: rows of up to 8, split evenly so no row ends in a grey hole (14 → 7 × 2, 16 → 8 × 2)
+  const cols = Math.ceil(logos.length / Math.ceil(logos.length / 8));
   return html`<section class="sec sec--tight s-dark clients" aria-labelledby="clients-title">
   <div class="clients__head"><h2 class="h3" id="clients-title" data-line>${th}</h2></div>
-  <ul class="clients__grid">${items}</ul>
+  <ul class="clients__grid" style="--cols:${cols}">${items}</ul>
   ${raw('<svg class="sr-only" aria-hidden="true" focusable="false"><filter id="ink-grey" color-interpolation-filters="sRGB"><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncR type="gamma" exponent="2"/><feFuncG type="gamma" exponent="2"/><feFuncB type="gamma" exponent="2"/></feComponentTransfer></filter></svg>')}
 </section>`;
 }

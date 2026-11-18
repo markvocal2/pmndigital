@@ -472,8 +472,10 @@ html:not(.js) .menu__list { visibility: visible; }
    Clients board
    -------------------------------------------------------------------------- */
 .clients__head { display: flex; justify-content: space-between; align-items: end; gap: 2rem; margin-bottom: 2.5rem; }
-.clients__grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+.clients__grid { display: grid; grid-template-columns: repeat(var(--cols, 7), minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
 .client { position: relative; background: #fff; height: clamp(6.5rem, 9vw, 10.5rem); display: grid; grid-template: 100% / 100%; place-items: center; padding: 1rem; overflow: hidden; }
+/* a mark that links to the client's site: the link fills the tile and centres the mark the same way */
+.client > a { grid-area: 1 / 1; place-self: stretch; display: grid; grid-template: 100% / 100%; place-items: center; }
 /* each mark is centred and sized by optical area (--h from the build): wide wordmarks shorter, square seals taller */
 .client img { grid-area: 1 / 1; height: var(--h, 40%); width: auto; max-width: 80%; object-fit: contain; mix-blend-mode: multiply; transition: opacity .55s var(--ease), transform .55s var(--ease-out); }
 /* resting: greyscale with a gamma curve, so pale marks (krungsri, open durian) darken while white stays white */
@@ -1143,8 +1145,9 @@ html:not(.js) .menu__list { visibility: visible; }
   .reel { aspect-ratio: 16 / 9; height: auto; }
   .reel-sec__caption { margin-top: 1.5rem; }
   .clients__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  /* 14 marks in 3 columns leave one cell over: the last mark takes the rest of its row instead of a grey hole */
+  /* marks left over in the last row of 3 (14 leave one cell, 16 leave two): the last mark takes the rest of its row instead of a grey hole */
   .client:last-child:nth-child(3n + 2) { grid-column: span 2; }
+  .client:last-child:nth-child(3n + 1) { grid-column: span 3; }
   .clients__head { flex-direction: column; align-items: flex-start; }
   .svc__row { grid-template-columns: 1fr; row-gap: .5rem; }
   .svc__th, .svc__en, .svc__desc { grid-column: 1; }
@@ -1276,7 +1279,7 @@ html:not(.js) .menu__list { visibility: visible; }
 @media (max-width: 600px) {
   /* client marks: two narrow columns, so each mark gets more of its tile */
   .client { padding: .6rem; }
-  .client:last-child:nth-child(3n + 2) { grid-column: auto; }
+  .client:last-child:nth-child(3n + 2), .client:last-child:nth-child(3n + 1) { grid-column: auto; }
   .client img { height: min(78%, calc(var(--h, 40%) * 1.3)); max-width: 86%; }
   /* why PMN: one reason per row, icon beside the words */
   .why-cards { grid-template-columns: 1fr; margin-top: 3rem; }

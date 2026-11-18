@@ -167,6 +167,8 @@ const CLIENT_ART: (ClientArt & { re: RegExp })[] = [
   { re: /toyota/i, src: '/assets/img/clients/toyota.webp', alt: 'Toyota', w: 427, h: 104, hPct: '32.0%' },
   { re: /กรุงศรี|krungsri/i, src: '/assets/img/clients/krungsri.webp', alt: 'ธนาคารกรุงศรี', w: 480, h: 181, hPct: '39.8%' },
   { re: /huawei/i, src: '/assets/img/clients/huawei.webp', alt: 'Huawei', w: 236, h: 240, hPct: '65.4%' },
+  { re: /pnma/i, src: '/assets/img/clients/pnma.webp', alt: 'สมาคมผู้ผลิตอาหารทารกและเด็กเล็ก (PNMA)', w: 619, h: 270, hPct: '44.0%' },
+  { re: /reynolds/i, src: '/assets/img/clients/reynolds.webp', alt: 'Reynolds Interior Construction Master', w: 459, h: 64, hPct: '26.0%' },
 ];
 export function clientArt(l: { name: string; logoUrl: string }): ClientArt {
   const hit = CLIENT_ART.find((c) => c.re.test(l.name.trim()));
